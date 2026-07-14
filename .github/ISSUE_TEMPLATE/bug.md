@@ -1,5 +1,5 @@
 ---
-name: "[BUG] 작업 내용"
+name: "[🐛BUG] 작업 내용"
 about: 오류 해결을 위한 작업
 title: "[BUG] "
 ---
