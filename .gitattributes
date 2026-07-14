@@ -1,0 +1,20 @@
+# Git이 알아서 OS에 맞게 줄바꿈을 변환해 주도록 강제
+* text=auto
+
+# 윈도우 배치 파일은 무조건 CRLF로 고정
+*.bat text eol=crlf
+*.cmd text eol=crlf
+
+# 리눅스/맥용 셸 스크립트는 무조건 LF로 고정
+gradlew text eol=lf
+*.sh text eol=lf
+
+# 이미지/압축파일 등은 바이너리로 취급 (줄바꿈 변환 시도 방지)
+*.jar binary
+*.class binary
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.ico binary
+*.zip binary
