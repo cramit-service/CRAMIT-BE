@@ -1,5 +1,5 @@
 ---
-name: "[CHORE] 작업 내용"
+name: "[⚙️CHORE] 작업 내용"
 about: 잡무성 작업
 title: "[CHORE] "
 ---
