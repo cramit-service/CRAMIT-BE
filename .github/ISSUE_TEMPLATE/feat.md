@@ -1,5 +1,5 @@
 ---
-name: "[FEAT] 작업 내용"
+name: "[✨FEAT] 작업 내용"
 about: 새로운 기능 추가
 title: "[FEAT] "
 ---
