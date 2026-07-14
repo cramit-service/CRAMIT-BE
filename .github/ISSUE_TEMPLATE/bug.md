@@ -1,7 +1,7 @@
 ---
 name: "[BUG] 작업 내용"
-about: 새로운 기능 추가 또는 잡무성 작업
-title: "[FEAT] "
+about: 오류 해결을 위한 작업
+title: "[BUG] "
 ---
 
 ## 📌 작업 요약

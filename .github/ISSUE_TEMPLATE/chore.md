@@ -1,7 +1,7 @@
 ---
 name: "[CHORE] 작업 내용"
 about: 잡무성 작업
-title: "[FEAT] "
+title: "[CHORE] "
 ---
 
 ## 📌 작업 요약
