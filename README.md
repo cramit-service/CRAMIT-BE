@@ -8,8 +8,8 @@
 
 ## ⚡️ CRAMIT
 
-> **AI 기반 스마트 학습 어시스턴트**
-
+> **"CRAM IT: Cram more in less time." <br> 더 적은 시간에, 더 많은 것을 머릿속에 채우다.**
+ 
 </div>
 
 <br>
