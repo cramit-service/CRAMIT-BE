@@ -52,10 +52,11 @@ out/
 Thumbs.db
 desktop.ini
 
-# 로컬 환경변수 (application-local.yml.example은 커밋 대상)
+# 로컬 환경변수 (application-local.yml.example, .env.example은 커밋 대상)
 application-local.yml
 .env
 .env.*
+!.env.example
 
 # 암호키 및 인증서 관련 파일
 *.key
