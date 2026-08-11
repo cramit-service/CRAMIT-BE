@@ -1,0 +1,18 @@
+name: cramit
+
+services:
+  postgres:
+    image: postgres:16
+    container_name: cramit-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: cramit
+      POSTGRES_USER: cramit
+      POSTGRES_PASSWORD: cramit
+    ports:
+      - "5432:5432"
+    volumes:
+      - cramit-postgres-data:/var/lib/postgresql/data
+
+volumes:
+  cramit-postgres-data:
