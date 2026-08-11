@@ -15,7 +15,7 @@ spring:
     enabled: true
 
 jwt:
-  secret: local-dev-secret-change-me
+  secret: ${JWT_SECRET}
   access-token-expiration: 3600000
   refresh-token-expiration: 1209600000
 
