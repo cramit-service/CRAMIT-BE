@@ -13,7 +13,9 @@ CREATE TABLE member (
     profile_image_url VARCHAR(2048),
     social_provider   VARCHAR(20) NOT NULL
         CHECK (social_provider IN ('GOOGLE', 'KAKAO')),
-    social_id         VARCHAR(255) NOT NULL
+    social_id         VARCHAR(255) NOT NULL,
+    CONSTRAINT uq_member_social_identity
+        UNIQUE (social_provider, social_id)
 );
 COMMENT ON COLUMN member.member_id IS '회원 고유 식별자';
 COMMENT ON COLUMN member.created_at IS '회원 가입일시';
@@ -29,7 +31,8 @@ CREATE TABLE plan (
     plan_id     BIGSERIAL PRIMARY KEY,
     type        VARCHAR(20) NOT NULL
         CHECK (type IN ('FREE', 'BASIC', 'PREMIUM')),
-    price       INT NOT NULL DEFAULT 0,
+    price       INT NOT NULL DEFAULT 0
+        CHECK (price >= 0),
     description VARCHAR(255)
 );
 COMMENT ON COLUMN plan.type IS 'FREE/BASIC/PREMIUM';
@@ -251,7 +254,9 @@ CREATE TABLE subscription (
         CHECK (status IN ('ACTIVE', 'CANCELED', 'EXPIRED')),
     start_date      DATE NOT NULL,
     end_date        DATE NOT NULL,
-    auto_renew      BOOLEAN NOT NULL DEFAULT TRUE
+    auto_renew      BOOLEAN NOT NULL DEFAULT TRUE,
+    CONSTRAINT ck_subscription_date_range
+        CHECK (end_date >= start_date)
 );
 COMMENT ON COLUMN subscription.status IS 'ACTIVE/CANCELED/EXPIRED';
 
