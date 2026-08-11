@@ -1,0 +1,44 @@
+# 이 파일을 복사해서 application-local.yml로 저장한 뒤 실제 값을 채워주세요.
+# application-local.yml은 .gitignore에 포함되어 있어 커밋되지 않습니다.
+#   cp src/main/resources/application-local.yml.example src/main/resources/application-local.yml
+
+spring:
+  datasource:
+    url: jdbc:postgresql://localhost:5432/cramit
+    username: postgres
+    password: postgres
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    show-sql: true
+  flyway:
+    enabled: true
+
+jwt:
+  secret: local-dev-secret-change-me
+  access-token-expiration: 3600000
+  refresh-token-expiration: 1209600000
+
+oauth:
+  kakao:
+    client-id: your-kakao-client-id
+    client-secret: your-kakao-client-secret
+    redirect-uri: http://localhost:8080/login/oauth2/code/kakao
+  google:
+    client-id: your-google-client-id
+    client-secret: your-google-client-secret
+    redirect-uri: http://localhost:8080/login/oauth2/code/google
+
+gemini:
+  api-key: your-gemini-api-key
+
+stt:
+  google:
+    credentials-path: your-gcp-service-account-json-path
+
+aws:
+  access-key: your-aws-access-key
+  secret-key: your-aws-secret-key
+  region: ap-northeast-2
+  s3:
+    bucket: your-s3-bucket-name
