@@ -61,6 +61,10 @@ application-local.yml
 *.key
 *.pem
 *.jks
+*.p12
+*.pfx
+*.crt
+*.der
 
 # Claude Code
 /.claude/
