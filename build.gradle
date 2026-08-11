@@ -77,20 +77,16 @@ tasks.named('test') {
 }
 
 // ---- QueryDSL Q-type 생성 경로 설정 ----
-def querydslDir = "$buildDir/generated/querydsl"
+def querydslDir = layout.buildDirectory.dir("generated/querydsl")
 
 sourceSets {
 	main {
 		java {
-			srcDirs += [querydslDir]
+			srcDir(querydslDir)
 		}
 	}
 }
 
 tasks.withType(JavaCompile).configureEach {
-	options.getGeneratedSourceOutputDirectory().set(file(querydslDir))
-}
-
-clean {
-	delete file(querydslDir)
+	options.getGeneratedSourceOutputDirectory().set(querydslDir)
 }
