@@ -8,9 +8,9 @@ services:
     environment:
       POSTGRES_DB: cramit
       POSTGRES_USER: cramit
-      POSTGRES_PASSWORD: cramit
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-cramit}
     ports:
-      - "5432:5432"
+      - "127.0.0.1:${DB_PORT:-5432}:5432"
     volumes:
       - cramit-postgres-data:/var/lib/postgresql/data
 
