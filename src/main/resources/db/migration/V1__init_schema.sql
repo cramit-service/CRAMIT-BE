@@ -11,7 +11,8 @@ CREATE TABLE member (
     created_at        TIMESTAMP NOT NULL,
     is_deleted        BOOLEAN NOT NULL DEFAULT FALSE,
     profile_image_url VARCHAR(2048),
-    social_provider   VARCHAR(20) NOT NULL,
+    social_provider   VARCHAR(20) NOT NULL
+        CHECK (social_provider IN ('GOOGLE', 'KAKAO')),
     social_id         VARCHAR(255) NOT NULL
 );
 COMMENT ON COLUMN member.member_id IS '회원 고유 식별자';
@@ -26,7 +27,8 @@ COMMENT ON COLUMN member.social_id IS '구글/카카오의 고유 식별 번호'
 -- ---------------------------------------------------------
 CREATE TABLE plan (
     plan_id     BIGSERIAL PRIMARY KEY,
-    type        VARCHAR(20) NOT NULL,
+    type        VARCHAR(20) NOT NULL
+        CHECK (type IN ('FREE', 'BASIC', 'PREMIUM')),
     price       INT NOT NULL DEFAULT 0,
     description VARCHAR(255)
 );
@@ -58,7 +60,8 @@ CREATE TABLE week (
     title             VARCHAR(255) NOT NULL,
     week_date         DATE NOT NULL,
     professor_name    VARCHAR(100),
-    status            VARCHAR(20) NOT NULL DEFAULT 'BEFORE',
+    status            VARCHAR(20) NOT NULL DEFAULT 'BEFORE'
+        CHECK (status IN ('BEFORE', 'IN_PROCESS', 'COMPLETED')),
     created_at        TIMESTAMP NOT NULL,
     first_summary_md  TEXT
 );
@@ -96,6 +99,7 @@ CREATE TABLE lecture_audio (
     uploaded_at      TIMESTAMP NOT NULL,
     duration_sec     INT,
     stt_status       VARCHAR(20) NOT NULL DEFAULT 'PENDING'
+        CHECK (stt_status IN ('PENDING', 'PROCESSING', 'COMPLETED', 'FAILED'))
 );
 COMMENT ON COLUMN lecture_audio.stt_status IS 'PENDING/PROCESSING/COMPLETED/FAILED';
 
@@ -126,7 +130,8 @@ CREATE TABLE summary (
     summary_id BIGSERIAL PRIMARY KEY,
     member_id  BIGINT NOT NULL,
     week_id    BIGINT NOT NULL,
-    status     VARCHAR(20) NOT NULL DEFAULT 'PENDING',
+    status     VARCHAR(20) NOT NULL DEFAULT 'PENDING'
+        CHECK (status IN ('PENDING', 'PROCESSING', 'COMPLETED', 'FAILED')),
     updated_at TIMESTAMP NOT NULL,
     content    TEXT
 );
@@ -162,11 +167,17 @@ CREATE TABLE todo (
     content      VARCHAR(255) NOT NULL,
     memo         TEXT,
     due_date     TIMESTAMP,
-    todo_type    VARCHAR(20) NOT NULL DEFAULT 'USER',
+    todo_type    VARCHAR(20) NOT NULL DEFAULT 'USER'
+        CHECK (todo_type IN ('USER', 'AI')),
     is_completed BOOLEAN NOT NULL DEFAULT FALSE,
     completed_at TIMESTAMP,
     created_at   TIMESTAMP NOT NULL,
-    sort_order   INT NOT NULL DEFAULT 0
+    sort_order   INT NOT NULL DEFAULT 0,
+    CONSTRAINT ck_todo_completion
+        CHECK (
+            (is_completed AND completed_at IS NOT NULL)
+            OR (NOT is_completed AND completed_at IS NULL)
+        )
 );
 COMMENT ON COLUMN todo.memo IS '선택 사항';
 COMMENT ON COLUMN todo.due_date IS '마감 날짜 + 시간';
@@ -180,8 +191,11 @@ CREATE TABLE member_lecture (
     member_lecture_id BIGSERIAL PRIMARY KEY,
     member_id         BIGINT NOT NULL,
     lecture_id        BIGINT NOT NULL,
-    role              VARCHAR(20) NOT NULL,
-    joined_at         TIMESTAMP NOT NULL
+    role              VARCHAR(20) NOT NULL
+        CHECK (role IN ('OWNER', 'MEMBER')),
+    joined_at         TIMESTAMP NOT NULL,
+    CONSTRAINT uq_member_lecture_member_lecture
+        UNIQUE (member_id, lecture_id)
 );
 COMMENT ON COLUMN member_lecture.member_lecture_id IS '공유 고유번호';
 COMMENT ON COLUMN member_lecture.role IS 'OWNER/MEMBER';
@@ -204,19 +218,20 @@ COMMENT ON COLUMN lecture_board.file_name IS '예: 자료구조론_필기';
 CREATE TABLE chat_bot_session (
     chat_bot_session_id BIGSERIAL PRIMARY KEY,
     member_id           BIGINT NOT NULL,
-    lecture_id          BIGINT NOT NULL,
     week_id             BIGINT NOT NULL,
     title               VARCHAR(255),
     created_at          TIMESTAMP NOT NULL
 );
 COMMENT ON COLUMN chat_bot_session.title IS '세션 목록에 표시되는 제목';
+-- 강의(lecture_id)는 week_id -> week.lecture_id로 조회. 중복 저장 시 week와 불일치할 수 있어 컬럼 자체를 두지 않음
 
 CREATE TABLE chat_bot (
     chat_message_id     BIGSERIAL PRIMARY KEY,
     member_id           BIGINT NOT NULL,
     week_id             BIGINT NOT NULL,
     chat_bot_session_id BIGINT NOT NULL,
-    sender_type         VARCHAR(20) NOT NULL DEFAULT 'USER',
+    sender_type         VARCHAR(20) NOT NULL DEFAULT 'USER'
+        CHECK (sender_type IN ('USER', 'AI')),
     message              TEXT,
     referenced_page      INT,
     created_at            TIMESTAMP NOT NULL
@@ -232,7 +247,8 @@ CREATE TABLE subscription (
     subscription_id BIGSERIAL PRIMARY KEY,
     member_id       BIGINT NOT NULL,
     plan_id         BIGINT NOT NULL,
-    status          VARCHAR(20) NOT NULL,
+    status          VARCHAR(20) NOT NULL
+        CHECK (status IN ('ACTIVE', 'CANCELED', 'EXPIRED')),
     start_date      DATE NOT NULL,
     end_date        DATE NOT NULL,
     auto_renew      BOOLEAN NOT NULL DEFAULT TRUE
@@ -245,7 +261,12 @@ CREATE TABLE member_term (
     member_id      BIGINT NOT NULL,
     is_agreed      BOOLEAN NOT NULL DEFAULT FALSE,
     agreed_at      TIMESTAMP,
-    rejected_at    TIMESTAMP
+    rejected_at    TIMESTAMP,
+    CONSTRAINT ck_member_term_consistency
+        CHECK (
+            (is_agreed AND agreed_at IS NOT NULL AND rejected_at IS NULL)
+            OR (NOT is_agreed AND agreed_at IS NULL)
+        )
 );
 
 CREATE TABLE notification_setting (
@@ -285,7 +306,6 @@ ALTER TABLE member_lecture ADD CONSTRAINT fk_member_lecture_lecture FOREIGN KEY 
 ALTER TABLE lecture_board ADD CONSTRAINT fk_lecture_board_member_lecture FOREIGN KEY (member_lecture_id) REFERENCES member_lecture (member_lecture_id);
 
 ALTER TABLE chat_bot_session ADD CONSTRAINT fk_chat_bot_session_member FOREIGN KEY (member_id) REFERENCES member (member_id);
-ALTER TABLE chat_bot_session ADD CONSTRAINT fk_chat_bot_session_lecture FOREIGN KEY (lecture_id) REFERENCES lecture (lecture_id);
 ALTER TABLE chat_bot_session ADD CONSTRAINT fk_chat_bot_session_week FOREIGN KEY (week_id) REFERENCES week (week_id);
 
 ALTER TABLE chat_bot ADD CONSTRAINT fk_chat_bot_member FOREIGN KEY (member_id) REFERENCES member (member_id);
