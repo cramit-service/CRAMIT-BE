@@ -194,12 +194,12 @@
 │  │  │  │  ├─ 📁 security         # JWT, OAuth2 관련
 │  │  │  │  └─ 📁 common           # 공통 응답 포맷, 유틸
 │  │  │  └─ 📁 domain
-│  │  │     ├─ 📁 user             # 회원가입 / 로그인 / 프로필
-│  │  │     ├─ 📁 project          # 프로젝트 CRUD
-│  │  │     ├─ 📁 lecture          # PDF 업로드 / 녹음 / STT / 페이지 매핑
+│  │  │     ├─ 📁 member           # 회원가입 / 로그인 / 프로필
+│  │  │     ├─ 📁 lecture          # 강의 CRUD
+│  │  │     ├─ 📁 week             # PDF 업로드 / 녹음 / STT / 페이지 매핑
 │  │  │     ├─ 📁 summary          # AI 요약본 생성·조회
-│  │  │     ├─ 📁 learning         # 학습 포인트 / 메모 / 학습 내용 적용
-│  │  │     ├─ 📁 share            # 프로젝트 공유
+│  │  │     ├─ 📁 learning         # 학습 포인트 / 학습 메모
+│  │  │     ├─ 📁 share            # 강의 공유 / 공유 게시판
 │  │  │     ├─ 📁 chat             # AI 챗봇
 │  │  │     ├─ 📁 todo             # TODO (AI 생성 + 수동)
 │  │  │     ├─ 📁 exam             # 시험 일정
