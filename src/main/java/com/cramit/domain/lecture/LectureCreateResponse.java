@@ -1,9 +1,9 @@
 package com.cramit.domain.lecture;
 
-import java.time.LocalTime;
+import java.time.LocalDateTime;
 
 public record LectureCreateResponse(
         Long lectureId,
-        LocalTime createdAt
+        LocalDateTime createdAt
 ) {
 }

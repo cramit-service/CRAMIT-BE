@@ -15,7 +15,7 @@ public class Lecture {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private int lectureId;
+    private Long lectureId;
 
     @Column(nullable = false)
     private Long memberId;
