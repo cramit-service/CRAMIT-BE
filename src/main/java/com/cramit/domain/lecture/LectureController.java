@@ -32,4 +32,13 @@ public class LectureController {
 
         return ResponseEntity.ok(ApiResponse.of(response));
     }
+
+    @GetMapping("/{lectureId}")
+    public ResponseEntity<ApiResponse<LectureDetailResponse>> getLectureDetail(
+            @PathVariable Long lectureId) {
+        Long memberId = 1L; //Todo: 인증 공통 구조 완성되면 실제 로그인 회원 ID로 교체
+
+        return ResponseEntity.ok(ApiResponse.of(
+                lectureService.getLectureDetail(lectureId,memberId)));
+    }
 }

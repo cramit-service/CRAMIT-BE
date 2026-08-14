@@ -44,4 +44,20 @@ public class LectureService {
 
         return new  LectureListResponse(mySummaries, sharedSummaries);
     }
+
+    @Transactional(readOnly = true)
+    public LectureDetailResponse getLectureDetail(Long lectureId, Long memberId) {
+        Lecture lecture = lectureRepository.findById(lectureId)
+                .orElseThrow(()->new IllegalArgumentException("강의를 찾을 수 없습니다.")); //전역 예외 생기면 여기만 교체
+
+        return new LectureDetailResponse(
+                lecture.getLectureId(),
+                lecture.getTitle(),
+                lecture.getProfessorName(),
+                lecture.isOwnedBy(memberId),
+                null, //Todo: Member 엔티티 완성되면 소유자 닉네임 조회
+                1, //Todo: MemberLecture 완성되면 참여 인원 수 조회
+                lecture.getCreatedAt().toString()
+        );
+    }
 }
