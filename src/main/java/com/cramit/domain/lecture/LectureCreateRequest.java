@@ -6,7 +6,6 @@ import jakarta.validation.constraints.Size;
 public record LectureCreateRequest(
 
         @NotBlank
-        @Size(max = 100)
         String title,
 
         @Size(max = 100)
