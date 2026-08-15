@@ -60,4 +60,22 @@ public class LectureService {
                 lecture.getCreatedAt().toString()
         );
     }
+
+    @Transactional
+    public LectureUpdateResponse updateLecture(LectureUpdateRequest request, Long lectureId, Long currentMemberId) {
+        Lecture lecture = lectureRepository.findById(lectureId)
+                .orElseThrow(() -> new IllegalArgumentException("존재하지 않는 강의입니다."));
+
+        if (!lecture.isOwnedBy(currentMemberId)) {
+            throw new IllegalStateException("접근 권한이 없습니다.");
+        }
+
+        String professorName = request.professorName() != null
+                ? request.professorName()
+                : lecture.getProfessorName();
+
+        lecture.update(request.title(), professorName); // TODO: Exam 엔티티 완성되면 request.examDate() 반영
+
+        return new  LectureUpdateResponse(lecture.getLectureId());
+    }
 }

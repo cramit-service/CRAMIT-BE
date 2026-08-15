@@ -41,4 +41,14 @@ public class LectureController {
         return ResponseEntity.ok(ApiResponse.of(
                 lectureService.getLectureDetail(lectureId,memberId)));
     }
+
+    @PatchMapping("/{lectureId}")
+    public ResponseEntity<ApiResponse<LectureUpdateResponse>> updateLecture(
+            @PathVariable Long lectureId,
+            @Valid @RequestBody LectureUpdateRequest request){
+        Long currentMemberId = 1L;
+        LectureUpdateResponse response = lectureService.updateLecture(request, lectureId, currentMemberId);
+
+        return ResponseEntity.ok(ApiResponse.of(response));
+    }
 }
