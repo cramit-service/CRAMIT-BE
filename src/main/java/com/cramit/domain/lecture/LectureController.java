@@ -51,4 +51,13 @@ public class LectureController {
 
         return ResponseEntity.ok(ApiResponse.of(response));
     }
+
+    @DeleteMapping("/{lectureId}")
+    public ResponseEntity<ApiResponse<Void>> deleteLecture(@PathVariable Long lectureId) {
+        Long currentMemberId = 1L; //Todo: 인증 구조 완성되면 실제 로그인 회원 ID로 교체
+
+        lectureService.deleteLecture(lectureId,  currentMemberId);
+
+        return ResponseEntity.ok(ApiResponse.empty());
+    }
 }

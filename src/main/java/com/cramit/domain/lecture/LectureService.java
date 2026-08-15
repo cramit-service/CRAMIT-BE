@@ -78,4 +78,16 @@ public class LectureService {
 
         return new  LectureUpdateResponse(lecture.getLectureId());
     }
+
+    @Transactional
+    public void deleteLecture(Long lectureId, Long currentMemberId) {
+        Lecture lecture = lectureRepository.findById(lectureId)
+                .orElseThrow(() -> new IllegalArgumentException("존재하지 않는 강의입니다."));
+
+        if (!lecture.isOwnedBy(currentMemberId)) {
+            throw new IllegalStateException("접근 권한이 없습니다.");
+        }
+
+        lectureRepository.deleteById(lectureId);
+    }
 }
