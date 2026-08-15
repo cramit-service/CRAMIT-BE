@@ -6,7 +6,7 @@ package com.cramit.global.async;
  * 상태 조회 API는 이 값을 그대로 응답한다.
  */
 public enum AsyncJobStatus {
-	READY,
+	PENDING,
 	PROCESSING,
 	COMPLETED,
 	FAILED
