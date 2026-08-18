@@ -12,3 +12,56 @@ springdoc:
 
 server:
   port: 8080
+
+logging:
+  pattern:
+    console: "%d{yyyy-MM-dd HH:mm:ss} [%X{traceId}] %-5level %logger{36} - %msg%n"
+
+# 기본 aspect 순서는 @Retry가 @CircuitBreaker를 감싸는 구조라, CircuitBreaker의
+# sliding window(minimum-number-of-calls 등)는 "외부 API 호출 시도 1회당 1건"으로 집계된다.
+# (재시도로 인한 재호출도 각각 별도 시도로 집계됨, 논리적인 call() 요청 1건 기준이 아님)
+# 이 기준을 "call() 요청 수"로 바꾸려면 circuitBreakerAspectOrder를 retryAspectOrder보다
+# 낮게 설정해서 CircuitBreaker가 재시도 전체를 감싸도록 순서를 바꿔야 한다.
+resilience4j:
+  timelimiter:
+    instances:
+      oauth:
+        timeout-duration: 5s
+      stt:
+        timeout-duration: 30s
+      gemini:
+        timeout-duration: 20s
+  retry:
+    instances:
+      oauth:
+        max-attempts: 3
+        wait-duration: 500ms
+        enable-exponential-backoff: true
+      stt:
+        max-attempts: 3
+        wait-duration: 500ms
+        enable-exponential-backoff: true
+      gemini:
+        max-attempts: 3
+        wait-duration: 500ms
+        enable-exponential-backoff: true
+  circuitbreaker:
+    instances:
+      oauth:
+        sliding-window-size: 5
+        minimum-number-of-calls: 5
+        failure-rate-threshold: 100
+        wait-duration-in-open-state: 60s
+        permitted-number-of-calls-in-half-open-state: 1
+      stt:
+        sliding-window-size: 5
+        minimum-number-of-calls: 5
+        failure-rate-threshold: 100
+        wait-duration-in-open-state: 60s
+        permitted-number-of-calls-in-half-open-state: 1
+      gemini:
+        sliding-window-size: 5
+        minimum-number-of-calls: 5
+        failure-rate-threshold: 100
+        wait-duration-in-open-state: 60s
+        permitted-number-of-calls-in-half-open-state: 1
