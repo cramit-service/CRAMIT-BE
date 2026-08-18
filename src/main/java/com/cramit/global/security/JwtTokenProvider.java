@@ -6,6 +6,7 @@ import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.security.Keys;
 import java.nio.charset.StandardCharsets;
 import java.util.Date;
+import java.util.Optional;
 import javax.crypto.SecretKey;
 import org.springframework.stereotype.Component;
 
@@ -31,20 +32,37 @@ public class JwtTokenProvider {
 	}
 
 	public boolean validateToken(String token) {
-		try {
-			parseClaims(token);
-			return true;
-		} catch (JwtException | IllegalArgumentException e) {
-			return false;
-		}
+		return parseIfValid(token).isPresent();
 	}
 
 	public boolean isTokenType(String token, TokenType tokenType) {
-		return tokenType.name().equals(parseClaims(token).get(CLAIM_TOKEN_TYPE, String.class));
+		return parseIfValid(token)
+				.map(claims -> isTokenType(claims, tokenType))
+				.orElse(false);
 	}
 
 	public Long getMemberId(String token) {
-		return Long.valueOf(parseClaims(token).getSubject());
+		return memberIdOf(parseClaims(token));
+	}
+
+	/**
+	 * 서명/만료를 한 번만 검증하고 재사용 가능한 Claims를 반환한다.
+	 * 유효하지 않은 토큰이면 빈 값을 반환한다 (매 호출마다 재파싱하지 않도록 호출부에서 이 결과를 재사용할 것).
+	 */
+	public Optional<Claims> parseIfValid(String token) {
+		try {
+			return Optional.of(parseClaims(token));
+		} catch (JwtException | IllegalArgumentException e) {
+			return Optional.empty();
+		}
+	}
+
+	public boolean isTokenType(Claims claims, TokenType tokenType) {
+		return tokenType.name().equals(claims.get(CLAIM_TOKEN_TYPE, String.class));
+	}
+
+	public Long memberIdOf(Claims claims) {
+		return Long.valueOf(claims.getSubject());
 	}
 
 	private String createToken(Long memberId, TokenType tokenType, long expirationMillis) {

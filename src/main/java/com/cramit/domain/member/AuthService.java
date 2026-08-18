@@ -5,6 +5,8 @@ import com.cramit.global.exception.BusinessException;
 import com.cramit.global.exception.ErrorCode;
 import com.cramit.global.security.JwtTokenProvider;
 import com.cramit.global.security.TokenType;
+import io.jsonwebtoken.Claims;
+import java.util.Optional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
@@ -21,11 +23,12 @@ public class AuthService {
 	}
 
 	public TokenResponse reissueAccessToken(String refreshToken) {
-		if (!jwtTokenProvider.validateToken(refreshToken) || !jwtTokenProvider.isTokenType(refreshToken, TokenType.REFRESH)) {
+		Optional<Claims> claims = jwtTokenProvider.parseIfValid(refreshToken);
+		if (claims.isEmpty() || !jwtTokenProvider.isTokenType(claims.get(), TokenType.REFRESH)) {
 			throw new BusinessException(ErrorCode.AUTH_INVALID_TOKEN);
 		}
 
-		Long memberId = jwtTokenProvider.getMemberId(refreshToken);
+		Long memberId = jwtTokenProvider.memberIdOf(claims.get());
 		return new TokenResponse(jwtTokenProvider.createAccessToken(memberId), refreshToken);
 	}
 

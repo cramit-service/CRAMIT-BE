@@ -2,6 +2,7 @@ package com.cramit.domain.member;
 
 import com.cramit.domain.member.dto.RefreshTokenRequest;
 import com.cramit.domain.member.dto.TokenResponse;
+import com.cramit.global.common.ApiResponse;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -18,8 +19,8 @@ public class AuthController {
 	private final AuthService authService;
 
 	@PostMapping("/refresh")
-	public ResponseEntity<TokenResponse> refresh(@RequestBody @Valid RefreshTokenRequest request) {
-		return ResponseEntity.ok(authService.reissueAccessToken(request.refreshToken()));
+	public ResponseEntity<ApiResponse<TokenResponse>> refresh(@RequestBody @Valid RefreshTokenRequest request) {
+		return ResponseEntity.ok(ApiResponse.of(authService.reissueAccessToken(request.refreshToken())));
 	}
 
 }

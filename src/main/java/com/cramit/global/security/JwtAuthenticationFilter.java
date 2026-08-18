@@ -1,11 +1,13 @@
 package com.cramit.global.security;
 
+import io.jsonwebtoken.Claims;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.util.List;
+import java.util.Optional;
 import org.springframework.http.HttpHeaders;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
@@ -28,11 +30,14 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 			throws ServletException, IOException {
 		String token = resolveToken(request);
 
-		if (token != null && jwtTokenProvider.validateToken(token) && jwtTokenProvider.isTokenType(token, TokenType.ACCESS)) {
-			Long memberId = jwtTokenProvider.getMemberId(token);
-			Authentication authentication = new UsernamePasswordAuthenticationToken(
-					memberId, null, List.of(new SimpleGrantedAuthority("ROLE_USER")));
-			SecurityContextHolder.getContext().setAuthentication(authentication);
+		if (token != null) {
+			Optional<Claims> claims = jwtTokenProvider.parseIfValid(token);
+			if (claims.isPresent() && jwtTokenProvider.isTokenType(claims.get(), TokenType.ACCESS)) {
+				Long memberId = jwtTokenProvider.memberIdOf(claims.get());
+				Authentication authentication = new UsernamePasswordAuthenticationToken(
+						memberId, null, List.of(new SimpleGrantedAuthority("ROLE_USER")));
+				SecurityContextHolder.getContext().setAuthentication(authentication);
+			}
 		}
 
 		filterChain.doFilter(request, response);

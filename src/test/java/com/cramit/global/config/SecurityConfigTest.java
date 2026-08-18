@@ -7,6 +7,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import com.cramit.global.security.JwtTokenProvider;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
@@ -23,6 +24,9 @@ class SecurityConfigTest {
 	@Autowired
 	private MockMvc mockMvc;
 
+	@Autowired
+	private JwtTokenProvider jwtTokenProvider;
+
 	@Test
 	void 인증되지_않은_요청은_401과_표준_에러_포맷을_반환한다() throws Exception {
 		mockMvc.perform(get("/api/member/me"))
@@ -38,12 +42,31 @@ class SecurityConfigTest {
 	}
 
 	@Test
-	void refresh_요청은_인증_없이_컨트롤러까지_도달한다() throws Exception {
+	void oauth2_authorization_요청은_구글_인가_엔드포인트로_리다이렉트된다() throws Exception {
+		mockMvc.perform(get("/oauth2/authorization/google"))
+				.andExpect(status().is3xxRedirection())
+				.andExpect(header().string("Location", startsWith("https://accounts.google.com/o/oauth2/v2/auth")));
+	}
+
+	@Test
+	void 유효하지_않은_refresh_토큰은_401을_반환한다() throws Exception {
 		mockMvc.perform(post("/api/auth/refresh")
 						.contentType(MediaType.APPLICATION_JSON)
 						.content("{\"refreshToken\":\"invalid-token\"}"))
 				.andExpect(status().isUnauthorized())
 				.andExpect(jsonPath("$.error.code").value("AUTH_INVALID_TOKEN"));
+	}
+
+	@Test
+	void 유효한_refresh_토큰으로_인증_없이_컨트롤러까지_도달해_access_토큰을_재발급받는다() throws Exception {
+		String refreshToken = jwtTokenProvider.createRefreshToken(1L);
+
+		mockMvc.perform(post("/api/auth/refresh")
+						.contentType(MediaType.APPLICATION_JSON)
+						.content("{\"refreshToken\":\"" + refreshToken + "\"}"))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.data.accessToken").exists())
+				.andExpect(jsonPath("$.data.refreshToken").value(refreshToken));
 	}
 
 }
