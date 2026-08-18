@@ -8,11 +8,12 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import com.cramit.global.security.JwtTokenProvider;
+import com.cramit.global.security.RefreshTokenCookieProvider;
+import jakarta.servlet.http.Cookie;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.http.MediaType;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 
@@ -49,24 +50,28 @@ class SecurityConfigTest {
 	}
 
 	@Test
-	void 유효하지_않은_refresh_토큰은_401을_반환한다() throws Exception {
-		mockMvc.perform(post("/api/auth/refresh")
-						.contentType(MediaType.APPLICATION_JSON)
-						.content("{\"refreshToken\":\"invalid-token\"}"))
+	void refresh_쿠키가_없으면_401을_반환한다() throws Exception {
+		mockMvc.perform(post("/api/auth/refresh"))
 				.andExpect(status().isUnauthorized())
 				.andExpect(jsonPath("$.error.code").value("AUTH_INVALID_TOKEN"));
 	}
 
 	@Test
-	void 유효한_refresh_토큰으로_인증_없이_컨트롤러까지_도달해_access_토큰을_재발급받는다() throws Exception {
+	void 유효하지_않은_refresh_쿠키는_401을_반환한다() throws Exception {
+		mockMvc.perform(post("/api/auth/refresh")
+						.cookie(new Cookie(RefreshTokenCookieProvider.COOKIE_NAME, "invalid-token")))
+				.andExpect(status().isUnauthorized())
+				.andExpect(jsonPath("$.error.code").value("AUTH_INVALID_TOKEN"));
+	}
+
+	@Test
+	void 유효한_refresh_쿠키로_인증_없이_컨트롤러까지_도달해_access_토큰을_재발급받는다() throws Exception {
 		String refreshToken = jwtTokenProvider.createRefreshToken(1L);
 
 		mockMvc.perform(post("/api/auth/refresh")
-						.contentType(MediaType.APPLICATION_JSON)
-						.content("{\"refreshToken\":\"" + refreshToken + "\"}"))
+						.cookie(new Cookie(RefreshTokenCookieProvider.COOKIE_NAME, refreshToken)))
 				.andExpect(status().isOk())
-				.andExpect(jsonPath("$.data.accessToken").exists())
-				.andExpect(jsonPath("$.data.refreshToken").value(refreshToken));
+				.andExpect(jsonPath("$.data.accessToken").exists());
 	}
 
 }

@@ -2,19 +2,25 @@ package com.cramit.domain.member;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.ArgumentMatchers.anyLong;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
+import com.cramit.domain.member.dto.AccessTokenResponse;
 import com.cramit.domain.member.dto.TokenResponse;
 import com.cramit.global.exception.BusinessException;
 import com.cramit.global.exception.ErrorCode;
 import com.cramit.global.security.JwtProperties;
 import com.cramit.global.security.JwtTokenProvider;
+import java.util.Optional;
 import org.junit.jupiter.api.Test;
 
 class AuthServiceTest {
 
 	private final JwtTokenProvider jwtTokenProvider =
 			new JwtTokenProvider(new JwtProperties("test-jwt-secret-key-for-unit-tests-only-32bytes+", 3600000L, 1209600000L));
-	private final AuthService authService = new AuthService(jwtTokenProvider);
+	private final MemberRepository memberRepository = mock(MemberRepository.class);
+	private final AuthService authService = new AuthService(jwtTokenProvider, memberRepository);
 
 	@Test
 	void 로그인_성공시_access_refresh_토큰을_모두_발급한다() {
@@ -25,12 +31,11 @@ class AuthServiceTest {
 	}
 
 	@Test
-	void refresh_토큰으로_access_토큰을_재발급하면_refresh_토큰은_그대로_유지된다() {
+	void refresh_토큰으로_새로운_access_토큰을_재발급한다() {
 		TokenResponse issued = authService.issueTokens(1L);
 
-		TokenResponse reissued = authService.reissueAccessToken(issued.refreshToken());
+		AccessTokenResponse reissued = authService.reissueAccessToken(issued.refreshToken());
 
-		assertThat(reissued.refreshToken()).isEqualTo(issued.refreshToken());
 		assertThat(jwtTokenProvider.getMemberId(reissued.accessToken())).isEqualTo(1L);
 	}
 
@@ -50,6 +55,26 @@ class AuthServiceTest {
 				.isInstanceOf(BusinessException.class)
 				.extracting("errorCode")
 				.isEqualTo(ErrorCode.AUTH_INVALID_TOKEN);
+	}
+
+	@Test
+	void 회원_탈퇴시_deleted_플래그가_true로_바뀐다() {
+		Member member = Member.ofSocialSignup("서윤", SocialProvider.KAKAO, "12345", null);
+		when(memberRepository.findById(1L)).thenReturn(Optional.of(member));
+
+		authService.withdraw(1L);
+
+		assertThat(member.isDeleted()).isTrue();
+	}
+
+	@Test
+	void 존재하지_않는_회원은_탈퇴할_수_없다() {
+		when(memberRepository.findById(anyLong())).thenReturn(Optional.empty());
+
+		assertThatThrownBy(() -> authService.withdraw(999L))
+				.isInstanceOf(BusinessException.class)
+				.extracting("errorCode")
+				.isEqualTo(ErrorCode.ENTITY_NOT_FOUND);
 	}
 
 }
