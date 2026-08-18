@@ -42,6 +42,7 @@ jwt:
   refresh-token-expiration: 1209600000
 
 app:
+  frontend-origin: ${FRONTEND_ORIGIN}
   oauth2:
     success-redirect-uri: ${FRONTEND_OAUTH_SUCCESS_REDIRECT_URI}
     failure-redirect-uri: ${FRONTEND_OAUTH_FAILURE_REDIRECT_URI}
