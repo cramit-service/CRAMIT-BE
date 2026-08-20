@@ -1,5 +1,7 @@
 package com.cramit.domain.lecture;
 
+import java.time.LocalDateTime;
+
 public record LectureDetailResponse(
         Long lectureId,
         String title,
@@ -7,6 +9,6 @@ public record LectureDetailResponse(
         Boolean isOwner,
         String ownerNickname,
         Integer memberCount,
-        String createdAt
+        LocalDateTime createdAt
 ) {
 }

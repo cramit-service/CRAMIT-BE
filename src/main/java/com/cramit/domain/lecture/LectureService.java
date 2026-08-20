@@ -1,5 +1,7 @@
 package com.cramit.domain.lecture;
 
+import com.cramit.global.exception.BusinessException;
+import com.cramit.global.exception.ErrorCode;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -48,7 +50,7 @@ public class LectureService {
     @Transactional(readOnly = true)
     public LectureDetailResponse getLectureDetail(Long lectureId, Long memberId) {
         Lecture lecture = lectureRepository.findById(lectureId)
-                .orElseThrow(()->new IllegalArgumentException("강의를 찾을 수 없습니다.")); //전역 예외 생기면 여기만 교체
+                .orElseThrow(() -> new BusinessException(ErrorCode.ENTITY_NOT_FOUND));
 
         return new LectureDetailResponse(
                 lecture.getLectureId(),
@@ -57,17 +59,17 @@ public class LectureService {
                 lecture.isOwnedBy(memberId),
                 null, //Todo: Member 엔티티 완성되면 소유자 닉네임 조회
                 1, //Todo: MemberLecture 완성되면 참여 인원 수 조회
-                lecture.getCreatedAt().toString()
+                lecture.getCreatedAt()
         );
     }
 
     @Transactional
     public LectureUpdateResponse updateLecture(LectureUpdateRequest request, Long lectureId, Long currentMemberId) {
         Lecture lecture = lectureRepository.findById(lectureId)
-                .orElseThrow(() -> new IllegalArgumentException("존재하지 않는 강의입니다."));
+                .orElseThrow(() -> new BusinessException(ErrorCode.ENTITY_NOT_FOUND));
 
         if (!lecture.isOwnedBy(currentMemberId)) {
-            throw new IllegalStateException("접근 권한이 없습니다.");
+            throw new BusinessException(ErrorCode.LECTURE_ACCESS_DENIED);
         }
 
         String professorName = request.professorName() != null
@@ -82,12 +84,12 @@ public class LectureService {
     @Transactional
     public void deleteLecture(Long lectureId, Long currentMemberId) {
         Lecture lecture = lectureRepository.findById(lectureId)
-                .orElseThrow(() -> new IllegalArgumentException("존재하지 않는 강의입니다."));
+                .orElseThrow(() -> new BusinessException(ErrorCode.ENTITY_NOT_FOUND));
 
         if (!lecture.isOwnedBy(currentMemberId)) {
             throw new IllegalStateException("접근 권한이 없습니다.");
         }
 
-        lectureRepository.deleteById(lectureId);
+        lectureRepository.delete(lecture);
     }
 }
