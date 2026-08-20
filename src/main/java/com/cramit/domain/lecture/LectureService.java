@@ -87,7 +87,7 @@ public class LectureService {
                 .orElseThrow(() -> new BusinessException(ErrorCode.ENTITY_NOT_FOUND));
 
         if (!lecture.isOwnedBy(currentMemberId)) {
-            throw new IllegalStateException("접근 권한이 없습니다.");
+            throw new BusinessException(ErrorCode.LECTURE_ACCESS_DENIED);
         }
 
         lectureRepository.delete(lecture);
