@@ -41,9 +41,6 @@ public class Week extends BaseEntity {
     @Column(nullable = false)
     private WeekStatus status;
 
-    @Column(nullable = false)
-    private LocalDateTime createdAt;
-
     @Column(columnDefinition = "TEXT")
     private String firstSummaryMd; // STT 완료 후 AI가 자동 생성하는 1차요약본 (nullable)
 
