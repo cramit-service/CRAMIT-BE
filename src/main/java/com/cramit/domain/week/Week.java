@@ -13,7 +13,7 @@ import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
-import java.time.LocalDate;
+import java.time.LocalDateTime;
 
 @Entity
 @Getter
@@ -31,7 +31,7 @@ public class Week extends BaseEntity {
     private String title;
 
     @Column(nullable = false)
-    private LocalDate weekDate;
+    private LocalDateTime weekDate;
 
     @Column(nullable = false)
     private String professorName;
@@ -44,7 +44,7 @@ public class Week extends BaseEntity {
     private String firstSummaryMd; // STT 완료 후 AI가 자동 생성하는 1차요약본 (nullable)
 
     @Builder
-    public Week(Long lectureId, String title, LocalDate weekDate, String professorName) {
+    public Week(Long lectureId, String title, LocalDateTime weekDate, String professorName) {
         this.lectureId = lectureId;
         this.title = title;
         this.weekDate = weekDate;
@@ -53,7 +53,7 @@ public class Week extends BaseEntity {
     }
 
     //수정
-    public void update(String title, LocalDate weekDate, String professorName) {
+    public void update(String title, LocalDateTime weekDate, String professorName) {
         this.title = title;
         this.weekDate = weekDate;
         this.professorName = professorName;
