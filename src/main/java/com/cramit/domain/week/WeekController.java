@@ -5,6 +5,7 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -48,12 +49,22 @@ public class WeekController {
 
     @PatchMapping("/api/weeks/{weekId}")
     public ResponseEntity<ApiResponse<WeekUpdateResponse>> updateWeek(
-            @PathVariable Long lectureId,
             @PathVariable Long weekId,
             @Valid @RequestBody WeekUpdateRequest request
     ){
         Long memberId = 1L; // TODO: 인증 공통 구조 merge되면 실제 로그인 회원 ID로 교체
-        WeekUpdateResponse response = weekService.updateWeek(lectureId, weekId, request, memberId);
+
+        WeekUpdateResponse response = weekService.updateWeek(weekId, request, memberId);
+
         return ResponseEntity.ok(ApiResponse.of(response));
+    }
+
+    @DeleteMapping("/api/weeks/{weekId}")
+    public ResponseEntity<ApiResponse<Void>> deleteWeek(@PathVariable Long weekId) {
+        Long memberId = 1L; // TODO: 인증 공통 구조 merge되면 실제 로그인 회원 ID로 교체
+
+        weekService.deleteWeek(weekId, memberId);
+
+        return ResponseEntity.ok(ApiResponse.empty());
     }
 }

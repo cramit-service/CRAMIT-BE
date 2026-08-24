@@ -93,8 +93,8 @@ public class WeekService {
     }
 
     @Transactional
-    public WeekUpdateResponse updateWeek(Long lectureId, Long weekId, WeekUpdateRequest request, Long memberId) {
-        Lecture lecture =  lectureRepository.findById(lectureId)
+    public WeekUpdateResponse updateWeek(Long weekId, WeekUpdateRequest request, Long memberId) {
+        Lecture lecture =  lectureRepository.findById(weekId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.ENTITY_NOT_FOUND));
 
         if (!lecture.isOwnedBy(memberId)) {
@@ -103,10 +103,6 @@ public class WeekService {
 
         Week week = weekRepository.findById(weekId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.ENTITY_NOT_FOUND));
-
-        if (!week.getLectureId().equals(lectureId)) {
-            throw new BusinessException(ErrorCode.ENTITY_NOT_FOUND);
-        }
 
         week.update(request.title(), request.weekDate(), request.professorName());
 
@@ -155,5 +151,25 @@ public class WeekService {
                 audio != null ? audio.getLectureAudioId() : null,
                 audio != null ? audio.getSttStatus() : null
         );
+    }
+
+    @Transactional
+    public void deleteWeek(Long weekId, Long memberId) {
+        Week week = weekRepository.findById(weekId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.ENTITY_NOT_FOUND));
+
+        Lecture lecture = lectureRepository.findById(week.getLectureId())
+                .orElseThrow(() -> new BusinessException(ErrorCode.ENTITY_NOT_FOUND));
+
+        if (!lecture.isOwnedBy(memberId)) {
+            throw new BusinessException(ErrorCode.LECTURE_ACCESS_DENIED);
+        }
+
+        lecturePptRepository.findByWeekId(weekId)
+                .ifPresent(lecturePptRepository::delete);
+        lectureAudioRepository.findByWeekId(weekId)
+                .ifPresent(lectureAudioRepository::delete);
+
+        weekRepository.delete(week);
     }
 }
