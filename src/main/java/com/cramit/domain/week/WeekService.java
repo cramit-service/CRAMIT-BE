@@ -97,7 +97,7 @@ public class WeekService {
         Week week = weekRepository.findById(weekId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.ENTITY_NOT_FOUND));
 
-        Lecture lecture =  lectureRepository.findById(weekId)
+        Lecture lecture =  lectureRepository.findById(week.getLectureId())
                 .orElseThrow(() -> new BusinessException(ErrorCode.ENTITY_NOT_FOUND));
 
         if (!lecture.isOwnedBy(memberId)) {
