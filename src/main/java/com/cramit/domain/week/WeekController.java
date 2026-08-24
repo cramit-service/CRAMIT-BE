@@ -67,4 +67,16 @@ public class WeekController {
 
         return ResponseEntity.ok(ApiResponse.empty());
     }
+
+    @PatchMapping("/api/weeks/{weekId}/status")
+    public ResponseEntity<ApiResponse<WeekStatusUpdateResponse>> updateWeekStatus(
+            @PathVariable Long weekId,
+            @Valid @RequestBody WeekStatusUpdateRequest request
+    ){
+        Long memberId = 1L; // TODO: 인증 공통 구조 merge되면 실제 로그인 회원 ID로 교체
+
+        WeekStatusUpdateResponse response = weekService.updateWeekStatus(weekId, request, memberId);
+
+        return ResponseEntity.ok(ApiResponse.of(response));
+    }
 }

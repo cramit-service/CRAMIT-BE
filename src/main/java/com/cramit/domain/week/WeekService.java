@@ -172,4 +172,21 @@ public class WeekService {
 
         weekRepository.delete(week);
     }
+
+    @Transactional
+    public WeekStatusUpdateResponse updateWeekStatus(Long weekId, WeekStatusUpdateRequest request, Long memberId) {
+        Week week = weekRepository.findById(weekId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.ENTITY_NOT_FOUND));
+
+        Lecture lecture = lectureRepository.findById(week.getLectureId())
+                .orElseThrow(() -> new BusinessException(ErrorCode.ENTITY_NOT_FOUND));
+
+        if (!lecture.isOwnedBy(memberId)) {
+            throw new BusinessException(ErrorCode.LECTURE_ACCESS_DENIED);
+        }
+
+        week.updateStatus(request.status());
+
+        return new WeekStatusUpdateResponse(week.getWeekId(), week.getStatus());
+    }
 }
