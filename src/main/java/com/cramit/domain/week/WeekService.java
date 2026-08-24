@@ -94,15 +94,15 @@ public class WeekService {
 
     @Transactional
     public WeekUpdateResponse updateWeek(Long weekId, WeekUpdateRequest request, Long memberId) {
+        Week week = weekRepository.findById(weekId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.ENTITY_NOT_FOUND));
+
         Lecture lecture =  lectureRepository.findById(weekId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.ENTITY_NOT_FOUND));
 
         if (!lecture.isOwnedBy(memberId)) {
             throw new BusinessException(ErrorCode.LECTURE_ACCESS_DENIED);
         }
-
-        Week week = weekRepository.findById(weekId)
-                .orElseThrow(() -> new BusinessException(ErrorCode.ENTITY_NOT_FOUND));
 
         week.update(request.title(), request.weekDate(), request.professorName());
 
@@ -191,7 +191,7 @@ public class WeekService {
     }
 
     @Transactional(readOnly = true)
-    public WeekFirstSummaryResponse getWeekFirstSummary(Long weekId, Long memberId) {
+    public WeekFirstSummaryResponse getFirstSummary(Long weekId, Long memberId) {
         Week week = weekRepository.findById(weekId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.ENTITY_NOT_FOUND));
 
