@@ -8,6 +8,8 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.List;
+
 @Service
 @RequiredArgsConstructor
 public class WeekService {
@@ -66,5 +68,27 @@ public class WeekService {
                 sttStatus,
                 week.getCreatedAt()
         );
+    }
+
+    @Transactional(readOnly = true)
+    public List<WeekListResponse> getWeeks(Long lectureId, Long memberId) {
+        Lecture lecture = lectureRepository.findById(lectureId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.ENTITY_NOT_FOUND));
+
+        if (!lecture.isOwnedBy(memberId)) {
+            throw new BusinessException(ErrorCode.LECTURE_ACCESS_DENIED);
+        } // TODO: MemberLecture 도메인 완성되면 공유받은 회원도 접근 가능하도록 조건 추가
+
+        List<Week> weeks = weekRepository.findByLectureIdOrderByWeekDateDesc(lectureId);
+
+        return weeks.stream()
+                .map(week -> new WeekListResponse(
+                        week.getWeekId(),
+                        week.getTitle(),
+                        week.getWeekDate(),
+                        week.getProfessorName(),
+                        week.getStatus()
+                ))
+                .toList();
     }
 }
