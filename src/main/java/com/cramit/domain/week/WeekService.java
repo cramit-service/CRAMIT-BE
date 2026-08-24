@@ -189,4 +189,24 @@ public class WeekService {
 
         return new WeekStatusUpdateResponse(week.getWeekId(), week.getStatus());
     }
+
+    @Transactional(readOnly = true)
+    public WeekFirstSummaryResponse getWeekFirstSummary(Long weekId, Long memberId) {
+        Week week = weekRepository.findById(weekId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.ENTITY_NOT_FOUND));
+
+        Lecture lecture = lectureRepository.findById(week.getLectureId())
+                .orElseThrow(() -> new BusinessException(ErrorCode.ENTITY_NOT_FOUND));
+
+        if (!lecture.isOwnedBy(memberId)) {
+            throw new BusinessException(ErrorCode.LECTURE_ACCESS_DENIED);
+        }
+
+        if (week.getFirstSummaryMd()  == null || week.getFirstSummaryMd().isBlank()) {
+            throw new BusinessException(ErrorCode.FIRST_SUMMARY_NOT_READY);
+        }
+
+        return  new WeekFirstSummaryResponse(week.getWeekId(), week.getFirstSummaryMd());
+    }
+
 }
