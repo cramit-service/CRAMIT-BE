@@ -6,5 +6,5 @@ import java.util.Optional;
 
 public interface LecturePptRepository extends JpaRepository<LecturePpt, Long> {
 
-    Optional<LecturePpt> findByWeek(Long weekId);
+    Optional<LecturePpt> findByWeekId(Long weekId);
 }
