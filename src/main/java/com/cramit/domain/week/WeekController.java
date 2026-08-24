@@ -1,5 +1,6 @@
 package com.cramit.domain.week;
 
+import com.cramit.global.common.ApiResponse;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -21,7 +22,7 @@ public class WeekController {
     private final WeekService weekService;
 
     @PostMapping
-    public ResponseEntity<WeekCreateResponse> createWeek(
+    public ResponseEntity<ApiResponse<WeekCreateResponse>> createWeek(
             @PathVariable Long lectureId,
             @Valid @RequestBody WeekCreateRequest request
     ){
@@ -29,15 +30,15 @@ public class WeekController {
 
         WeekCreateResponse response = weekService.createWeek(lectureId, request, memberId);
 
-        return ResponseEntity.status(HttpStatus.CREATED).body(response);
+        return ResponseEntity.status(HttpStatus.CREATED).body(ApiResponse.of(response));
     }
 
     @GetMapping
-    public ResponseEntity<List<WeekListResponse>> getWeeks(@PathVariable Long lectureId){
+    public ResponseEntity<ApiResponse<List<WeekListResponse>>> getWeeks(@PathVariable Long lectureId){
         Long memberId = 1L; //TODO: 인증 api merge되면 실제 ID로 교체
 
         List<WeekListResponse> response = weekService.getWeeks(lectureId, memberId);
 
-        return ResponseEntity.ok(response);
+        return ResponseEntity.ok(ApiResponse.of(response));
     }
 }

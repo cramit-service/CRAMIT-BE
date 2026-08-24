@@ -33,7 +33,6 @@ public class Week extends BaseEntity {
     @Column(nullable = false)
     private LocalDateTime weekDate;
 
-    @Column(nullable = false)
     private String professorName;
 
     @Enumerated(EnumType.STRING)
