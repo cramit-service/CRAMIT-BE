@@ -13,21 +13,46 @@ spring:
     show-sql: true
   flyway:
     enabled: true
+  security:
+    oauth2:
+      client:
+        registration:
+          kakao:
+            client-id: your-kakao-rest-api-key
+            client-secret: your-kakao-client-secret
+            redirect-uri: http://localhost:8080/login/oauth2/code/kakao
+            authorization-grant-type: authorization_code
+            client-authentication-method: client_secret_post
+            scope: profile_nickname, profile_image
+          google:
+            client-id: your-google-client-id
+            client-secret: your-google-client-secret
+            redirect-uri: http://localhost:8080/login/oauth2/code/google
+            authorization-grant-type: authorization_code
+            # openid를 빼서 OIDC가 아닌 일반 OAuth2 흐름(CustomOAuth2UserService)을 타도록 함
+            scope: profile, email
+        provider:
+          kakao:
+            authorization-uri: https://kauth.kakao.com/oauth/authorize
+            token-uri: https://kauth.kakao.com/oauth/token
+            user-info-uri: https://kapi.kakao.com/v2/user/me
+            user-name-attribute: id
+          google:
+            # openid 스코프 없이도 동작하는 구 버전(v2) userinfo 엔드포인트로 명시 지정
+            user-info-uri: https://www.googleapis.com/oauth2/v2/userinfo
+            user-name-attribute: id
 
 jwt:
+  # HS256은 최소 32바이트(256비트) 키가 필요합니다.
   secret: ${JWT_SECRET}
   access-token-expiration: 3600000
   refresh-token-expiration: 1209600000
 
-oauth:
-  kakao:
-    client-id: your-kakao-client-id
-    client-secret: your-kakao-client-secret
-    redirect-uri: http://localhost:8080/login/oauth2/code/kakao
-  google:
-    client-id: your-google-client-id
-    client-secret: your-google-client-secret
-    redirect-uri: http://localhost:8080/login/oauth2/code/google
+app:
+  frontend-origin: http://localhost:3000
+  oauth2:
+    success-redirect-uri: http://localhost:3000/oauth/callback
+    failure-redirect-uri: http://localhost:3000/login
 
 gemini:
   api-key: your-gemini-api-key
