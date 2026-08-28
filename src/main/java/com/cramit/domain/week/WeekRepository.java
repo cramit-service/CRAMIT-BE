@@ -7,5 +7,4 @@ import java.util.List;
 public interface WeekRepository extends JpaRepository<Week, Long> {
     List<Week> findByLectureIdOrderByWeekDateDesc(Long lectureId);
 
-    List<Week> findByLectureId(Long lectureId);
 }
