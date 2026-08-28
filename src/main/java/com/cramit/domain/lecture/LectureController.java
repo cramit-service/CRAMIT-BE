@@ -5,6 +5,7 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
@@ -23,8 +24,8 @@ public class LectureController {
 
     @PostMapping
     public ResponseEntity<ApiResponse<LectureCreateResponse>> createLecture(
+            @AuthenticationPrincipal Long memberId,
             @Valid @RequestBody LectureCreateRequest request) {
-        Long memberId = 1L; //Todo: 인증 공통 구조 완성되면 실제 로그인 회원 ID로 교체
 
         LectureCreateResponse response = lectureService.createLecture(request, memberId);
 
@@ -32,8 +33,7 @@ public class LectureController {
     }
 
     @GetMapping
-    public ResponseEntity<ApiResponse<LectureListResponse>> getLectures() {
-        Long memberId = 1L; //Todo: 인증 공통 구조 완성되면 실제 로그인 회원 ID로 교체
+    public ResponseEntity<ApiResponse<LectureListResponse>> getLectures(@AuthenticationPrincipal Long memberId) {
 
         LectureListResponse response = lectureService.getLectures(memberId);
 
@@ -42,8 +42,8 @@ public class LectureController {
 
     @GetMapping("/{lectureId}")
     public ResponseEntity<ApiResponse<LectureDetailResponse>> getLectureDetail(
+            @AuthenticationPrincipal Long memberId,
             @PathVariable Long lectureId) {
-        Long memberId = 1L; //Todo: 인증 공통 구조 완성되면 실제 로그인 회원 ID로 교체
 
         return ResponseEntity.ok(ApiResponse.of(
                 lectureService.getLectureDetail(lectureId,memberId)));
@@ -51,17 +51,18 @@ public class LectureController {
 
     @PatchMapping("/{lectureId}")
     public ResponseEntity<ApiResponse<LectureUpdateResponse>> updateLecture(
+            @AuthenticationPrincipal Long currentMemberId,
             @PathVariable Long lectureId,
             @Valid @RequestBody LectureUpdateRequest request){
-        Long currentMemberId = 1L;
         LectureUpdateResponse response = lectureService.updateLecture(request, lectureId, currentMemberId);
 
         return ResponseEntity.ok(ApiResponse.of(response));
     }
 
     @DeleteMapping("/{lectureId}")
-    public ResponseEntity<ApiResponse<Void>> deleteLecture(@PathVariable Long lectureId) {
-        Long currentMemberId = 1L; //Todo: 인증 구조 완성되면 실제 로그인 회원 ID로 교체
+    public ResponseEntity<ApiResponse<Void>> deleteLecture(
+            @AuthenticationPrincipal Long currentMemberId,
+            @PathVariable Long lectureId) {
 
         lectureService.deleteLecture(lectureId,  currentMemberId);
 
