@@ -59,6 +59,7 @@ public class WeekController {
             @AuthenticationPrincipal Long memberId,
             @PathVariable Long weekId
     ) {
+        weekService.deleteWeek(weekId, memberId);
 
         return ResponseEntity.ok(ApiResponse.empty());
     }
@@ -74,9 +75,9 @@ public class WeekController {
 
     @GetMapping("/api/weeks/{weekId}/first-summary")
     public ResponseEntity<ApiResponse<WeekFirstSummaryResponse>> getWeekFirstSummary(
-            @AuthenticationPrincipal Long memberId,
-            @PathVariable Long weekId
+            @PathVariable Long weekId,
+            @AuthenticationPrincipal Long memberId
     ){
-        return ResponseEntity.ok(ApiResponse.of(weekService.getFirstSummary(memberId, weekId)));
+        return ResponseEntity.ok(ApiResponse.of(weekService.getFirstSummary(weekId, memberId)));
     }
 }
