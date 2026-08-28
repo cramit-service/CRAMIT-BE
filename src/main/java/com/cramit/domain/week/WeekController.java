@@ -5,6 +5,7 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
@@ -23,23 +24,20 @@ public class WeekController {
 
     @PostMapping("/api/lectures/{lectureId}/weeks")
     public ResponseEntity<ApiResponse<WeekCreateResponse>> createWeek(
+            @AuthenticationPrincipal Long memberId,
             @PathVariable Long lectureId,
             @Valid @RequestBody WeekCreateRequest request
     ){
-        Long memberId = 1L; // TODO: 인증 공통 구조 merge되면 실제 로그인 회원 ID로 교체
-
-        WeekCreateResponse response = weekService.createWeek(lectureId, request, memberId);
-
-        return ResponseEntity.status(HttpStatus.CREATED).body(ApiResponse.of(response));
+        return ResponseEntity.status(HttpStatus.CREATED)
+                .body(ApiResponse.of(weekService.createWeek(lectureId, request, memberId)));
     }
 
     @GetMapping("/api/lectures/{lectureId}/weeks")
-    public ResponseEntity<ApiResponse<List<WeekListResponse>>> getWeeks(@PathVariable Long lectureId){
-        Long memberId = 1L; //TODO: 인증 api merge되면 실제 ID로 교체
-
-        List<WeekListResponse> response = weekService.getWeeks(lectureId, memberId);
-
-        return ResponseEntity.ok(ApiResponse.of(response));
+    public ResponseEntity<ApiResponse<List<WeekListResponse>>> getWeeks(
+            @AuthenticationPrincipal Long memberId,
+            @PathVariable Long lectureId
+    ){
+        return ResponseEntity.ok(ApiResponse.of(weekService.getWeeks(lectureId, memberId)));
     }
 
     /*
@@ -49,43 +47,36 @@ public class WeekController {
 
     @PatchMapping("/api/weeks/{weekId}")
     public ResponseEntity<ApiResponse<WeekUpdateResponse>> updateWeek(
+            @AuthenticationPrincipal Long memberId,
             @PathVariable Long weekId,
             @Valid @RequestBody WeekUpdateRequest request
     ){
-        Long memberId = 1L; // TODO: 인증 공통 구조 merge되면 실제 로그인 회원 ID로 교체
-
-        WeekUpdateResponse response = weekService.updateWeek(weekId, request, memberId);
-
-        return ResponseEntity.ok(ApiResponse.of(response));
+        return ResponseEntity.ok(ApiResponse.of(weekService.updateWeek(weekId, request, memberId)));
     }
 
     @DeleteMapping("/api/weeks/{weekId}")
-    public ResponseEntity<ApiResponse<Void>> deleteWeek(@PathVariable Long weekId) {
-        Long memberId = 1L; // TODO: 인증 공통 구조 merge되면 실제 로그인 회원 ID로 교체
-
-        weekService.deleteWeek(weekId, memberId);
+    public ResponseEntity<ApiResponse<Void>> deleteWeek(
+            @AuthenticationPrincipal Long memberId,
+            @PathVariable Long weekId
+    ) {
 
         return ResponseEntity.ok(ApiResponse.empty());
     }
 
     @PatchMapping("/api/weeks/{weekId}/status")
     public ResponseEntity<ApiResponse<WeekStatusUpdateResponse>> updateWeekStatus(
+            @AuthenticationPrincipal Long memberId,
             @PathVariable Long weekId,
             @Valid @RequestBody WeekStatusUpdateRequest request
     ){
-        Long memberId = 1L; // TODO: 인증 공통 구조 merge되면 실제 로그인 회원 ID로 교체
-
-        WeekStatusUpdateResponse response = weekService.updateWeekStatus(weekId, request, memberId);
-
-        return ResponseEntity.ok(ApiResponse.of(response));
+        return ResponseEntity.ok(ApiResponse.of(weekService.updateWeekStatus(weekId, request, memberId)));
     }
 
     @GetMapping("/api/weeks/{weekId}/first-summary")
-    public ResponseEntity<ApiResponse<WeekFirstSummaryResponse>> getWeekFirstSummary(@PathVariable Long weekId){
-        Long memberId = 1L; // TODO: 인증 공통 구조 merge되면 실제 로그인 회원 ID로 교체
-
-        WeekFirstSummaryResponse response = weekService.getFirstSummary(weekId, memberId);
-
-        return ResponseEntity.ok(ApiResponse.of(response));
+    public ResponseEntity<ApiResponse<WeekFirstSummaryResponse>> getWeekFirstSummary(
+            @AuthenticationPrincipal Long memberId,
+            @PathVariable Long weekId
+    ){
+        return ResponseEntity.ok(ApiResponse.of(weekService.getFirstSummary(memberId, weekId)));
     }
 }
