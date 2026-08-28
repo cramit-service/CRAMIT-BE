@@ -1,5 +1,9 @@
 package com.cramit.domain.lecture;
 
+import com.cramit.domain.week.LectureAudioRepository;
+import com.cramit.domain.week.LecturePptRepository;
+import com.cramit.domain.week.Week;
+import com.cramit.domain.week.WeekRepository;
 import com.cramit.global.exception.BusinessException;
 import com.cramit.global.exception.ErrorCode;
 import lombok.RequiredArgsConstructor;
@@ -13,6 +17,12 @@ import java.util.List;
 @RequiredArgsConstructor
 public class LectureService {
     private final LectureRepository lectureRepository;
+
+    private final LecturePptRepository lecturePptRepository;
+
+    private final LectureAudioRepository  lectureAudioRepository;
+
+    private final WeekRepository weekRepository;
 
     @Transactional
     public LectureCreateResponse createLecture(LectureCreateRequest request, Long memberId) {
@@ -89,6 +99,16 @@ public class LectureService {
         if (!lecture.isOwnedBy(currentMemberId)) {
             throw new BusinessException(ErrorCode.LECTURE_ACCESS_DENIED);
         }
+
+        List<Week> weeks = weekRepository.findByLectureIdOrderByWeekDateDesc(lectureId);
+        List<Long> weekIds = weeks.stream().map(Week::getWeekId).toList();
+
+        if (!weekIds.isEmpty()) {
+            lecturePptRepository.deleteAllByWeekIdIn(weekIds);
+            lectureAudioRepository.deleteAllByWeekIdIn(weekIds);
+            // TODO: script, summary, todo, chatBotSession 등 도메인 완성되면 여기 추가
+        }
+        weekRepository.deleteAll(weeks);
 
         lectureRepository.delete(lecture);
     }

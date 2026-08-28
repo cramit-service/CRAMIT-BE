@@ -170,7 +170,7 @@ public class WeekService {
         lectureAudioRepository.findByWeekId(weekId)
                 .ifPresent(lectureAudioRepository::delete);
 
-        weekRepository.delete(week);
+        weekRepository.delete(week); // TODO: script, summary, todo, chatBotSession 도메인 완성되면 여기도 연쇄 삭제 추가
     }
 
     @Transactional
