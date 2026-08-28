@@ -2,22 +2,25 @@ package com.cramit.domain.week;
 
 import com.cramit.domain.lecture.Lecture;
 import com.cramit.domain.lecture.LectureRepository;
+import com.cramit.domain.lecture.LectureService;
 import com.cramit.global.config.JpaAuditingConfig;
 import com.cramit.global.exception.BusinessException;
 import com.cramit.global.exception.ErrorCode;
+import jakarta.persistence.EntityManager;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
+import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.context.annotation.Import;
 import org.springframework.test.context.ActiveProfiles;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
-@DataJpaTest
+@SpringBootTest
 @Import({WeekService.class, JpaAuditingConfig.class})
 @ActiveProfiles("test")
 class WeekServiceTest {
@@ -40,6 +43,12 @@ class WeekServiceTest {
 
     @Autowired
     private LectureAudioRepository lectureAudioRepository;
+
+    @Autowired
+    private LectureService lectureService;
+
+    @Autowired
+    private EntityManager em; // jakarta.persistence.EntityManager
 
     @Test
     @DisplayName("주차를 생성하면 PPT/음성과 함께 저장되고 목록에서 조회된다.")
@@ -223,5 +232,33 @@ class WeekServiceTest {
 
     private WeekCreateRequest createRequest(String title, LocalDateTime weekDate) {
         return new WeekCreateRequest(title, weekDate, null, null);
+    }
+
+    @Test
+    @Transactional
+    @DisplayName("강의를 삭제하면 연관된 주차와 주차 하위 자료들도 함께 연쇄 삭제된다.")
+    void deleteLectureCascadesToWeeksAndMaterials() {
+        Long lectureId = saveLecture(MEMBER_ID);
+
+        WeekCreateRequest request = new WeekCreateRequest(
+                "1주차",
+                LocalDateTime.now(),
+                new WeekCreateRequest.PptInfo("slide.pdf", "https://file/slide.pdf", 1024L),
+                new WeekCreateRequest.AudioInfo("audio.mp3", "https://file/audio.mp3", 3600L)
+        );
+        WeekCreateResponse createdWeek = weekService.createWeek(lectureId, request, MEMBER_ID);
+
+        lectureService.deleteLecture(lectureId, MEMBER_ID);
+
+        em.flush();
+        em.clear();
+
+        assertThatThrownBy(() -> lectureService.getLectureDetail(lectureId, MEMBER_ID))
+                .isInstanceOf(BusinessException.class)
+                .hasFieldOrPropertyWithValue("errorCode", ErrorCode.ENTITY_NOT_FOUND);
+
+        assertThat(weekRepository.findById(createdWeek.weekId())).isEmpty();
+        assertThat(lecturePptRepository.findById(createdWeek.lecturePptId())).isEmpty();
+        assertThat(lectureAudioRepository.findById(createdWeek.lectureAudioId())).isEmpty();
     }
 }
