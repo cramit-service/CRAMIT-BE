@@ -16,25 +16,6 @@ public record WeekUpdateRequest(
         LocalDateTime weekDate,
 
         @Size(max = 100)
-        String professorName,
-
-        @Valid
-        WeekCreateRequest.PptInfo ppt,
-
-        @Valid
-        WeekCreateRequest.AudioInfo audio
+        String professorName
 ) {
-    public record PptInfo(
-            @NotBlank String fileName,
-            @NotBlank String fileUrl,
-            Long fileSize
-    ){
-    }
-
-    public record AudioInfo(
-            @NotBlank String fileName,
-            @NotBlank String fileUrl,
-            Long durationSec
-    ){
-    }
 }

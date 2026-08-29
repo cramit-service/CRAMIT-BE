@@ -106,50 +106,9 @@ public class WeekService {
 
         week.update(request.title(), request.weekDate(), request.professorName());
 
-        LecturePpt ppt = lecturePptRepository.findByWeekId(weekId).orElse(null);
-        if (request.ppt() != null) {
-            if (ppt != null) {
-                ppt.update(
-                        request.ppt().fileName(),
-                        request.ppt().fileUrl(),
-                        request.ppt().fileSize(),
-                        ppt.getPageCount()
-                );
-            } else{
-                ppt = LecturePpt.builder()
-                        .weekId(weekId)
-                        .fileName(request.ppt().fileName())
-                        .fileUrl(request.ppt().fileUrl())
-                        .fileSize(request.ppt().fileSize())
-                        .build();
-                lecturePptRepository.save(ppt);
-            }
-        }
-
-        LectureAudio audio = lectureAudioRepository.findByWeekId(weekId).orElse(null);
-        if (request.audio() != null) {
-            if (audio != null) {
-                audio.update(
-                        request.audio().fileName(),
-                        request.audio().fileUrl(),
-                        request.audio().durationSec()
-                );
-            } else {
-                audio = LectureAudio.builder()
-                        .weekId(weekId)
-                        .fileName(request.audio().fileName())
-                        .fileUrl(request.audio().fileUrl())
-                        .durationSec(request.audio().durationSec())
-                        .build();
-                lectureAudioRepository.save(audio);
-            }
-        } // TODO: STT 도메인 완성되면 연결
-
         return  new WeekUpdateResponse(
                 week.getWeekId(),
-                ppt != null ? ppt.getLecturePptId() : null,
-                audio != null ? audio.getLectureAudioId() : null,
-                audio != null ? audio.getSttStatus() : null
+                week.getWeekDate()
         );
     }
 
