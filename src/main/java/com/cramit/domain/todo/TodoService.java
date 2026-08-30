@@ -100,4 +100,18 @@ public class TodoService {
 
         todoRepository.deleteById(todoId);
     }
+
+    @Transactional
+    public TodoToggleResponse toggleTodo(Long todoId, Long memberId) {
+        Todo todo =   todoRepository.findById(todoId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.ENTITY_NOT_FOUND));
+
+        if (!todo.isOwnedBy(memberId)){
+            throw new BusinessException(ErrorCode.TODO_ACCESS_DENIED);
+        }
+
+        todo.toggleComplete();
+
+        return new TodoToggleResponse(todo.getTodoId(), todo.isCompleted(), todo.getCompletedAt());
+    }
 }

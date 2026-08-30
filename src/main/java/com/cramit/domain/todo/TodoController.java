@@ -66,4 +66,14 @@ public class TodoController {
 
         return ResponseEntity.ok(ApiResponse.empty());
     }
+
+    @PatchMapping("/{todoId}/toggle")
+    public ResponseEntity<ApiResponse<TodoToggleResponse>> toggleTodo(
+            @AuthenticationPrincipal Long memberId,
+            @PathVariable Long todoId
+    ){
+        TodoToggleResponse response = todoService.toggleTodo(todoId, memberId);
+
+        return ResponseEntity.ok(ApiResponse.of(response));
+    }
 }
