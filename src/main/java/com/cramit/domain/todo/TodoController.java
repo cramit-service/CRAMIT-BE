@@ -7,6 +7,8 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PatchMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -39,6 +41,17 @@ public class TodoController {
             @RequestParam(required = false) TodoFilterStatus status
     ){
         List<TodoListResponse> response = todoService.getTodos(memberId, weekId, status);
+
+        return ResponseEntity.ok(ApiResponse.of(response));
+    }
+
+    @PatchMapping("/{todoId}")
+    public ResponseEntity<ApiResponse<TodoUpdateResponse>> updateTodo(
+            @AuthenticationPrincipal Long memberId,
+            @PathVariable Long todoId,
+            @Valid @RequestBody TodoUpdateRequest request
+    ){
+        TodoUpdateResponse response = todoService.updateTodo(todoId, request, memberId);
 
         return ResponseEntity.ok(ApiResponse.of(response));
     }

@@ -69,4 +69,23 @@ public class TodoService {
                 ))
                 .toList();
     }
+
+    @Transactional
+    public TodoUpdateResponse updateTodo(Long todoId, TodoUpdateRequest request, Long memberId) {
+        Todo todo = todoRepository.findById(todoId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.ENTITY_NOT_FOUND));
+
+        if (!todo.isOwnedBy(memberId)){
+            throw new BusinessException(ErrorCode.TODO_ACCESS_DENIED);
+        }
+
+        if (request.weekId() != null){
+            weekRepository.findById(request.weekId())
+                    .orElseThrow(() -> new BusinessException(ErrorCode.ENTITY_NOT_FOUND));
+        }
+
+        todo.update(request.weekId(), request.content(), request.memo(), request.dueDate());
+
+        return new TodoUpdateResponse(todo.getTodoId(), todo.getWeekId());
+    }
 }

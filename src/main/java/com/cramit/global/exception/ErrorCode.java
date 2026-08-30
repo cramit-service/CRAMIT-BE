@@ -55,7 +55,10 @@ public enum ErrorCode {
 	AI_TIMEOUT(HttpStatus.GATEWAY_TIMEOUT, "답변 생성이 지연되고 있습니다."),
 
 	// AI 학습 TODO (Phase 9)
-	INVALID_DDAY(HttpStatus.UNPROCESSABLE_ENTITY, "시험 날짜가 이미 지났습니다.");
+	INVALID_DDAY(HttpStatus.UNPROCESSABLE_ENTITY, "시험 날짜가 이미 지났습니다."),
+
+	// TODO 관리
+	TODO_ACCESS_DENIED(HttpStatus.FORBIDDEN, "접근 권한이 없는 할 일입니다.");
 
 	private final HttpStatus status;
 	private final String message;
