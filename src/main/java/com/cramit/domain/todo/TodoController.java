@@ -57,7 +57,7 @@ public class TodoController {
         return ResponseEntity.ok(ApiResponse.of(response));
     }
 
-    @DeleteMapping("/todoId}")
+    @DeleteMapping("/{todoId}")
     public ResponseEntity<ApiResponse<Void>> deleteTodo(
             @AuthenticationPrincipal Long memberId,
             @PathVariable Long todoId
