@@ -88,4 +88,16 @@ public class TodoService {
 
         return new TodoUpdateResponse(todo.getTodoId(), todo.getWeekId());
     }
+
+    @Transactional
+    public void deleteTodo(Long todoId, Long memberId) {
+        Todo todo =  todoRepository.findById(todoId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.ENTITY_NOT_FOUND));
+
+        if (!todo.isOwnedBy(memberId)){
+            throw new BusinessException(ErrorCode.TODO_ACCESS_DENIED);
+        }
+
+        todoRepository.deleteById(todoId);
+    }
 }
