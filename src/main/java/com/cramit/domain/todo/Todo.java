@@ -77,6 +77,7 @@ public class Todo extends BaseEntity  {
         this.dueDate = dueDate;
     }
 
+    // TODO: 순서 변경 API 도입 여부 팀 논의 필요 (현재 API 미구현, 이 메서드도 미사용 상태)
     public void updateSortOrder(int sortOrder) {
         this.sortOrder = sortOrder;
     }
