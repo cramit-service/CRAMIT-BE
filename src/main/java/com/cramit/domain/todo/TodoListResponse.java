@@ -5,7 +5,7 @@ import java.time.LocalDateTime;
 public record TodoListResponse(
         Long todoId,
         Long weekId,
-        String Content,
+        String content,
         String memo,
         LocalDateTime dueDate,
         TodoType todoType,
