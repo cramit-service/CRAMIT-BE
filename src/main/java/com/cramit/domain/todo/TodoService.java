@@ -7,6 +7,9 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDateTime;
+import java.util.List;
+
 @Service
 @RequiredArgsConstructor
 public class TodoService {
@@ -34,5 +37,36 @@ public class TodoService {
 
         return new TodoCreateResponse(todo.getTodoId(), todo.getCreatedAt());
 
+    }
+
+    @Transactional(readOnly = true)
+    public List<TodoListResponse> getTodos(Long memberId, Long weekId, TodoFilterStatus status){
+        List<Todo> todos;
+
+        if (status != null) {
+            LocalDateTime now = LocalDateTime.now();
+            todos = switch (status) {
+                case UPCOMING -> todoRepository.findUpcoming(memberId, now);
+                case OVERDUE -> todoRepository.findOverdue(memberId, now);
+                case COMPLETED -> todoRepository.findByMemberIdAndIsCompletedTrueOrderBySortOrderAsc(memberId);
+            };
+        } else if (weekId != null){
+            todos = todoRepository.findByMemberIdAndWeekIdOrderBySortOrderAsc(memberId, weekId);
+        } else{
+            todos = todoRepository.findByMemberIdOrderBySortOrderAsc(memberId);
+        }
+
+        return todos.stream()
+                .map(todo -> new TodoListResponse(
+                        todo.getTodoId(),
+                        todo.getWeekId(),
+                        todo.getContent(),
+                        todo.getMemo(),
+                        todo.getDueDate(),
+                        todo.getTodoType(),
+                        todo.isCompleted(),
+                        todo.getSortOrder()
+                ))
+                .toList();
     }
 }
