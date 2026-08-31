@@ -1,5 +1,8 @@
 package com.cramit.domain.todo;
 
+import com.cramit.domain.lecture.Lecture;
+import com.cramit.domain.lecture.LectureRepository;
+import com.cramit.domain.week.Week;
 import com.cramit.domain.week.WeekRepository;
 import com.cramit.global.exception.BusinessException;
 import com.cramit.global.exception.ErrorCode;
@@ -16,12 +19,12 @@ public class TodoService {
 
     private final TodoRepository todoRepository;
     private final WeekRepository weekRepository;
+    private final LectureRepository lectureRepository;
 
     @Transactional
     public TodoCreateResponse createTodo(TodoCreateRequest request, Long memberId) {
         if (request.weekId() != null){
-            weekRepository.findById(request.weekId())
-                    .orElseThrow(() -> new BusinessException(ErrorCode.ENTITY_NOT_FOUND));
+            validateWeekOwnership(request.weekId(), memberId);
         }
 
         Todo todo = Todo.builder()
@@ -80,13 +83,24 @@ public class TodoService {
         }
 
         if (request.weekId() != null){
-            weekRepository.findById(request.weekId())
-                    .orElseThrow(() -> new BusinessException(ErrorCode.ENTITY_NOT_FOUND));
+           validateWeekOwnership(request.weekId(), memberId);
         }
 
         todo.update(request.weekId(), request.content(), request.memo(), request.dueDate());
 
         return new TodoUpdateResponse(todo.getTodoId(), todo.getWeekId());
+    }
+
+    private void validateWeekOwnership(Long weekId, Long memberId){
+        Week week = weekRepository.findById(weekId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.ENTITY_NOT_FOUND));
+
+        Lecture lecture = lectureRepository.findById(week.getLectureId())
+                .orElseThrow(() -> new BusinessException(ErrorCode.ENTITY_NOT_FOUND));
+
+        if (!lecture.isOwnedBy(memberId)){
+            throw new BusinessException(ErrorCode.TODO_ACCESS_DENIED);
+        }
     }
 
     @Transactional
