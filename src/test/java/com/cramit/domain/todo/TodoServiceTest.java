@@ -236,5 +236,60 @@ class TodoServiceTest {
                         .build()
         ).getWeekId();
     }
+
+    @Test
+    @DisplayName("다른 회원 소유의 week로 todo를 생성하면 예외가 발생한다.")
+    void createTodoWithOtherMembersWeek() {
+        Long lectureId = lectureRepository.save(
+                Lecture.builder()
+                        .memberId(OTHER_MEMBER_ID)
+                        .title("다른 사람 강의")
+                        .professorName("교수님")
+                        .build()
+        ).getLectureId();
+
+        Long weekId = weekRepository.save(
+                Week.builder()
+                        .lectureId(lectureId)
+                        .title("1주차")
+                        .weekDate(WEEK_DATE)
+                        .build()
+        ).getWeekId();
+
+        TodoCreateRequest request = new TodoCreateRequest(weekId, "몰래 붙이기", null, null);
+
+        assertThatThrownBy(() -> todoService.createTodo(request, MEMBER_ID))
+                .isInstanceOfSatisfying(BusinessException.class, ex ->
+                        assertThat(ex.getErrorCode()).isEqualTo(ErrorCode.TODO_ACCESS_DENIED));
+    }
+
+    @Test
+    @DisplayName("다른 회원 소유의 week로 todo를 수정하면 예외가 발생한다.")
+    void updateTodoWithOtherMembersWeek() {
+        TodoCreateResponse created = todoService.createTodo(
+                new TodoCreateRequest(null, "내 할일", null, null), MEMBER_ID);
+
+        Long lectureId = lectureRepository.save(
+                Lecture.builder()
+                        .memberId(OTHER_MEMBER_ID)
+                        .title("다른 사람 강의")
+                        .professorName("교수님")
+                        .build()
+        ).getLectureId();
+
+        Long weekId = weekRepository.save(
+                Week.builder()
+                        .lectureId(lectureId)
+                        .title("1주차")
+                        .weekDate(WEEK_DATE)
+                        .build()
+        ).getWeekId();
+
+        TodoUpdateRequest request = new TodoUpdateRequest(weekId, "수정 시도", null, null);
+
+        assertThatThrownBy(() -> todoService.updateTodo(created.todoId(), request, MEMBER_ID))
+                .isInstanceOfSatisfying(BusinessException.class, ex ->
+                        assertThat(ex.getErrorCode()).isEqualTo(ErrorCode.TODO_ACCESS_DENIED));
+    }
 }
 
