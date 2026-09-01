@@ -60,16 +60,7 @@ public class TodoService {
         }
 
         return todos.stream()
-                .map(todo -> new TodoListResponse(
-                        todo.getTodoId(),
-                        todo.getWeekId(),
-                        todo.getContent(),
-                        todo.getMemo(),
-                        todo.getDueDate(),
-                        todo.getTodoType(),
-                        todo.isCompleted(),
-                        todo.getSortOrder()
-                ))
+                .map(TodoListResponse::from)
                 .toList();
     }
 
