@@ -1,5 +1,12 @@
 package com.cramit.domain.lecture;
 
+import com.cramit.domain.lecture.dto.LectureCreateRequest;
+import com.cramit.domain.lecture.dto.LectureCreateResponse;
+import com.cramit.domain.lecture.dto.LectureDetailResponse;
+import com.cramit.domain.lecture.dto.LectureUpdateRequest;
+import com.cramit.domain.lecture.dto.LectureUpdateResponse;
+import com.cramit.domain.lecture.dto.MyLectureItem;
+import com.cramit.domain.lecture.dto.SharedLectureItem;
 import com.cramit.global.exception.BusinessException;
 import com.cramit.global.exception.ErrorCode;
 import lombok.RequiredArgsConstructor;
@@ -28,23 +35,17 @@ public class LectureService {
     }
 
     @Transactional(readOnly = true)
-    public LectureListResponse getLectures(Long memberId) {
+    public List<MyLectureItem> getMyLectures(Long memberId) {
         List<Lecture> myLectures = lectureRepository.findByMemberId(memberId);
+        return myLectures.stream()
+                .map(MyLectureItem::from)
+                .toList();
+    }
 
-        List<LectureListResponse.LectureSummary> mySummaries = myLectures.stream()
-                .map(lecture -> new LectureListResponse.LectureSummary(
-                        lecture.getLectureId(),
-                        lecture.getTitle(),
-                        lecture.getProfessorName(),
-                        0, // TODO: Week 엔티티 완성되면 실제 주차 개수로 교체
-                        null, // 내 강의는 ownerNickname 없음
-                        null // TODO: Exam 엔티티 완성되면 가장 가까운 시험 계산 로직 추가
-                )).toList();
-
-        // TODO: MemberLecture 엔티티/Repository 완성되면 공유 강의 목록 조회 로직 추가
-        List<LectureListResponse.LectureSummary> sharedSummaries = Collections.emptyList();
-
-        return new  LectureListResponse(mySummaries, sharedSummaries);
+    @Transactional(readOnly = true)
+    // TODO: MemberLecture 도메인 완성되면 실제 공유 강의 조회 로직 구현
+    public List<SharedLectureItem> getSharedLectures(Long memberId) {
+        return Collections.emptyList();
     }
 
     @Transactional(readOnly = true)
