@@ -1,5 +1,8 @@
 package com.cramit.domain.lecture;
 
+import com.cramit.global.config.JpaAuditingConfig;
+import com.cramit.global.exception.BusinessException;
+import com.cramit.global.exception.ErrorCode;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -11,7 +14,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 @DataJpaTest
-@Import(LectureService.class)
+@Import({LectureService.class, JpaAuditingConfig.class})
 @ActiveProfiles("test")
 class LectureServiceTest {
 
@@ -96,14 +99,16 @@ class LectureServiceTest {
         LectureUpdateRequest request = new LectureUpdateRequest("알고리즘(수정됨)", "박지훈", null);
 
         assertThatThrownBy(() -> lectureService.updateLecture(request, 999L, MEMBER_ID))
-                .isInstanceOf(IllegalArgumentException.class);
+                .isInstanceOfSatisfying(BusinessException.class, ex ->
+                        assertThat(ex.getErrorCode()).isEqualTo(ErrorCode.ENTITY_NOT_FOUND));
     }
 
     @Test
     @DisplayName("존재하지 않는 강의를 삭제하면 예외가 발생한다.")
     void deleteLectureNotFound() {
         assertThatThrownBy(() -> lectureService.deleteLecture(999L, MEMBER_ID))
-                .isInstanceOf(IllegalArgumentException.class);
+                .isInstanceOfSatisfying(BusinessException.class, ex ->
+                        assertThat(ex.getErrorCode()).isEqualTo(ErrorCode.ENTITY_NOT_FOUND));
     }
 
     @Test
@@ -121,7 +126,9 @@ class LectureServiceTest {
 
         // when & then
         assertThatThrownBy(() -> lectureService.updateLecture(request, lectureId, MEMBER_ID))
-                .isInstanceOf(IllegalStateException.class);
+                .isInstanceOfSatisfying(BusinessException.class, ex ->
+                        assertThat(ex.getErrorCode()).isEqualTo(ErrorCode.LECTURE_ACCESS_DENIED));
+
     }
 
     @Test
@@ -138,7 +145,8 @@ class LectureServiceTest {
 
         // when & then
         assertThatThrownBy(() -> lectureService.deleteLecture(lectureId, MEMBER_ID))
-                .isInstanceOf(IllegalStateException.class);
+                .isInstanceOfSatisfying(BusinessException.class, ex ->
+                        assertThat(ex.getErrorCode()).isEqualTo(ErrorCode.LECTURE_ACCESS_DENIED));
     }
 }
 
