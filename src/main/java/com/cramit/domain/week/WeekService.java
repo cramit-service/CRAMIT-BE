@@ -61,15 +61,10 @@ public class WeekService {
             sttStatus = audio.getSttStatus();
         } //TODO: STT 도메인 완성되면 연결
 
-        return new WeekCreateResponse(
-                week.getWeekId(),
-                lecturePptId,
-                lectureAudioId,
-                sttStatus,
-                week.getCreatedAt()
-        );
+        return WeekCreateResponse.of(week, lecturePptId, lectureAudioId, sttStatus);
     }
 
+    // 한 강의당 주차 개수가 제한적(보통 학기 기준 15주 안팎)이라 페이지네이션 미적용
     @Transactional(readOnly = true)
     public List<WeekListResponse> getWeeks(Long lectureId, Long memberId) {
         Lecture lecture = lectureRepository.findById(lectureId)
@@ -82,13 +77,7 @@ public class WeekService {
         List<Week> weeks = weekRepository.findByLectureIdOrderByWeekDateDesc(lectureId);
 
         return weeks.stream()
-                .map(week -> new WeekListResponse(
-                        week.getWeekId(),
-                        week.getTitle(),
-                        week.getWeekDate(),
-                        week.getProfessorName(),
-                        week.getStatus()
-                ))
+                .map(WeekListResponse::from)
                 .toList();
     }
 
