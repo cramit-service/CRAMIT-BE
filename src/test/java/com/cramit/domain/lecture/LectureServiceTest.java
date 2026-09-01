@@ -7,6 +7,9 @@ import com.cramit.domain.lecture.dto.LectureUpdateRequest;
 import com.cramit.domain.lecture.dto.LectureUpdateResponse;
 import com.cramit.domain.lecture.dto.MyLectureItem;
 import com.cramit.domain.lecture.dto.SharedLectureItem;
+import com.cramit.domain.member.Member;
+import com.cramit.domain.member.MemberRepository;
+import com.cramit.domain.member.SocialProvider;
 import com.cramit.global.config.JpaAuditingConfig;
 import com.cramit.global.exception.BusinessException;
 import com.cramit.global.exception.ErrorCode;
@@ -35,6 +38,9 @@ class LectureServiceTest {
 
     @Autowired
     private LectureRepository lectureRepository;
+
+    @Autowired
+    private MemberRepository memberRepository;
 
     @Test
     @DisplayName("강의를 생성하면 내 강의 목록에서 조회된다.")
@@ -66,20 +72,25 @@ class LectureServiceTest {
     }
 
     @Test
-    @DisplayName("강의 상세 조회 시 생성자면 isOwner가 true이다.")
+    @DisplayName("강의 상세 조회 시 생성자면 isOwner가 true이고 소유자 닉네임이 조회된다.")
     void getLectureDetail() {
         // given
+        Long memberId = memberRepository.save(
+                Member.ofSocialSignup("김번개", SocialProvider.GOOGLE, "google-1234", null)
+        ).getId();
+
         Long lectureId = lectureService.createLecture(
-                new LectureCreateRequest("알고리즘", "박지훈"), MEMBER_ID).lectureId();
+                new LectureCreateRequest("알고리즘", "박지훈"), memberId).lectureId();
 
         // when
-        LectureDetailResponse response = lectureService.getLectureDetail(lectureId, MEMBER_ID);
+        LectureDetailResponse response = lectureService.getLectureDetail(lectureId, memberId);
 
         // then
         assertThat(response.lectureId()).isEqualTo(lectureId);
         assertThat(response.title()).isEqualTo("알고리즘");
         assertThat(response.professorName()).isEqualTo("박지훈");
         assertThat(response.isOwner()).isTrue();
+        assertThat(response.ownerNickname()).isEqualTo("김번개");
     }
 
     @Test

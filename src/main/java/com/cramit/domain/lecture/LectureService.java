@@ -7,6 +7,8 @@ import com.cramit.domain.lecture.dto.LectureUpdateRequest;
 import com.cramit.domain.lecture.dto.LectureUpdateResponse;
 import com.cramit.domain.lecture.dto.MyLectureItem;
 import com.cramit.domain.lecture.dto.SharedLectureItem;
+import com.cramit.domain.member.Member;
+import com.cramit.domain.member.MemberRepository;
 import com.cramit.global.exception.BusinessException;
 import com.cramit.global.exception.ErrorCode;
 import lombok.RequiredArgsConstructor;
@@ -20,6 +22,7 @@ import java.util.List;
 @RequiredArgsConstructor
 public class LectureService {
     private final LectureRepository lectureRepository;
+    private final MemberRepository memberRepository;
 
     @Transactional
     public LectureCreateResponse createLecture(LectureCreateRequest request, Long memberId) {
@@ -53,14 +56,14 @@ public class LectureService {
         Lecture lecture = lectureRepository.findById(lectureId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.ENTITY_NOT_FOUND));
 
-        return new LectureDetailResponse(
-                lecture.getLectureId(),
-                lecture.getTitle(),
-                lecture.getProfessorName(),
-                lecture.isOwnedBy(memberId),
-                null, //Todo: Member 엔티티 완성되면 소유자 닉네임 조회
-                1, //Todo: MemberLecture 완성되면 참여 인원 수 조회
-                lecture.getCreatedAt()
+        Member owner = memberRepository.findById(lecture.getMemberId())
+                .orElseThrow(() -> new BusinessException(ErrorCode.ENTITY_NOT_FOUND));
+
+        return LectureDetailResponse.from(
+                lecture,
+                memberId,
+                owner.getNickname(),
+                1 // TODO: MemberLecture 완성되면 참여 인원 수 조회
         );
     }
 
