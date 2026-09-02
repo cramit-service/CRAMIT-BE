@@ -1,9 +1,9 @@
 package com.cramit.domain.lecture;
 
-import com.cramit.domain.week.LectureAudioRepository;
-import com.cramit.domain.week.LecturePptRepository;
-import com.cramit.domain.week.Week;
-import com.cramit.domain.week.WeekRepository;
+import com.cramit.domain.week.repository.LectureAudioRepository;
+import com.cramit.domain.week.repository.LecturePptRepository;
+import com.cramit.domain.week.entity.Week;
+import com.cramit.domain.week.repository.WeekRepository;
 import com.cramit.global.exception.BusinessException;
 import com.cramit.global.exception.ErrorCode;
 import lombok.RequiredArgsConstructor;

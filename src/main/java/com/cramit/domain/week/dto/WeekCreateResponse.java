@@ -1,7 +1,9 @@
-package com.cramit.domain.week;
+package com.cramit.domain.week.dto;
 
 import java.time.LocalDateTime;
 
+import com.cramit.domain.week.entity.Week;
+import com.cramit.domain.week.enums.SttStatus;
 import lombok.Builder;
 
 @Builder

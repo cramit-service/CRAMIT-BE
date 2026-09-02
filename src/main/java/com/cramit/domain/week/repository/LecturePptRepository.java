@@ -1,5 +1,6 @@
-package com.cramit.domain.week;
+package com.cramit.domain.week.repository;
 
+import com.cramit.domain.week.entity.LecturePpt;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 import java.util.List;

@@ -2,6 +2,21 @@ package com.cramit.domain.week;
 
 import com.cramit.domain.lecture.Lecture;
 import com.cramit.domain.lecture.LectureRepository;
+import com.cramit.domain.week.dto.WeekCreateRequest;
+import com.cramit.domain.week.dto.WeekCreateResponse;
+import com.cramit.domain.week.dto.WeekFirstSummaryResponse;
+import com.cramit.domain.week.dto.WeekListResponse;
+import com.cramit.domain.week.dto.WeekStatusUpdateRequest;
+import com.cramit.domain.week.dto.WeekStatusUpdateResponse;
+import com.cramit.domain.week.dto.WeekUpdateRequest;
+import com.cramit.domain.week.dto.WeekUpdateResponse;
+import com.cramit.domain.week.entity.LectureAudio;
+import com.cramit.domain.week.entity.LecturePpt;
+import com.cramit.domain.week.entity.Week;
+import com.cramit.domain.week.enums.SttStatus;
+import com.cramit.domain.week.repository.LectureAudioRepository;
+import com.cramit.domain.week.repository.LecturePptRepository;
+import com.cramit.domain.week.repository.WeekRepository;
 import com.cramit.global.exception.BusinessException;
 import com.cramit.global.exception.ErrorCode;
 import lombok.RequiredArgsConstructor;
@@ -16,8 +31,8 @@ public class WeekService {
 
     private final WeekRepository weekRepository;
     private final LectureRepository lectureRepository;
-    private final LectureAudioRepository  lectureAudioRepository;
-    private final LecturePptRepository  lecturePptRepository;
+    private final LectureAudioRepository lectureAudioRepository;
+    private final LecturePptRepository lecturePptRepository;
 
     @Transactional
     public WeekCreateResponse createWeek(Long lectureId, WeekCreateRequest request, Long memberId) {

@@ -1,5 +1,13 @@
 package com.cramit.domain.week;
 
+import com.cramit.domain.week.dto.WeekCreateRequest;
+import com.cramit.domain.week.dto.WeekCreateResponse;
+import com.cramit.domain.week.dto.WeekFirstSummaryResponse;
+import com.cramit.domain.week.dto.WeekListResponse;
+import com.cramit.domain.week.dto.WeekStatusUpdateRequest;
+import com.cramit.domain.week.dto.WeekStatusUpdateResponse;
+import com.cramit.domain.week.dto.WeekUpdateRequest;
+import com.cramit.domain.week.dto.WeekUpdateResponse;
 import com.cramit.global.common.ApiResponse;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;

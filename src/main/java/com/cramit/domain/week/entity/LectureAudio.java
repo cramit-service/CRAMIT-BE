@@ -1,5 +1,6 @@
-package com.cramit.domain.week;
+package com.cramit.domain.week.entity;
 
+import com.cramit.domain.week.enums.SttStatus;
 import com.cramit.global.common.BaseEntity;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;

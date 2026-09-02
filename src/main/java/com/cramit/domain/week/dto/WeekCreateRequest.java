@@ -1,4 +1,4 @@
-package com.cramit.domain.week;
+package com.cramit.domain.week.dto;
 
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
