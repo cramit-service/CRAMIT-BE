@@ -1,24 +1,25 @@
 package com.cramit.domain.todo;
 
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 import java.time.LocalDateTime;
-import java.util.List;
 
 public interface TodoRepository extends JpaRepository<Todo, Long> {
 
-    List<Todo> findByMemberIdOrderBySortOrderAsc(Long memberId);
-    List<Todo> findByMemberIdAndWeekIdOrderBySortOrderAsc(Long memberId, Long weekId);
+    Page<Todo> findByMemberIdOrderBySortOrderAsc(Long memberId, Pageable pageable);
+    Page<Todo> findByMemberIdAndWeekIdOrderBySortOrderAsc(Long memberId, Long weekId, Pageable pageable);
 
     @Query("SELECT t FROM Todo t WHERE t.memberId = :memberId AND t.isCompleted = false " +
             "AND (t.dueDate IS NULL OR t.dueDate >= :now) ORDER BY t.sortOrder ASC")
-    List<Todo> findUpcoming(@Param("memberId") Long memberId, @Param("now") LocalDateTime now);
+    Page<Todo> findUpcoming(@Param("memberId") Long memberId, @Param("now") LocalDateTime now, Pageable pageable);
 
     @Query("SELECT t FROM Todo t WHERE t.memberId = :memberId AND t.isCompleted = false " +
             "AND t.dueDate < :now ORDER BY t.sortOrder ASC")
-    List<Todo> findOverdue(@Param("memberId") Long memberId, @Param("now") LocalDateTime now);
+    Page<Todo> findOverdue(@Param("memberId") Long memberId, @Param("now") LocalDateTime now, Pageable pageable);
 
-    List<Todo> findByMemberIdAndIsCompletedTrueOrderBySortOrderAsc(Long memberId);
+    Page<Todo> findByMemberIdAndIsCompletedTrueOrderBySortOrderAsc(Long memberId, Pageable pageable);
 }

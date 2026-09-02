@@ -3,6 +3,9 @@ package com.cramit.domain.todo;
 import com.cramit.global.common.ApiResponse;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.web.PageableDefault;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -36,12 +39,13 @@ public class TodoController {
     }
 
     @GetMapping
-    public ResponseEntity<ApiResponse<List<TodoListResponse>>> getTodos(
+    public ResponseEntity<ApiResponse<Page<TodoListResponse>>> getTodos(
             @AuthenticationPrincipal Long memberId,
             @RequestParam(required = false) Long weekId,
-            @RequestParam(required = false) TodoFilterStatus status
+            @RequestParam(required = false) TodoFilterStatus status,
+            @PageableDefault(size = 20) Pageable pageable
     ){
-        List<TodoListResponse> response = todoService.getTodos(memberId, weekId, status);
+        Page<TodoListResponse> response = todoService.getTodos(memberId, weekId, status, pageable);
 
         return ResponseEntity.ok(ApiResponse.of(response));
     }

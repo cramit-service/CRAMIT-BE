@@ -12,6 +12,8 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
 import org.springframework.context.annotation.Import;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.test.context.ActiveProfiles;
 
 import java.time.LocalDateTime;
@@ -91,7 +93,7 @@ class TodoServiceTest {
         todoService.createTodo(new TodoCreateRequest(null, "B", null, null), MEMBER_ID);
 
         // when
-        List<TodoListResponse> response = todoService.getTodos(MEMBER_ID, null, null);
+        Page<TodoListResponse> response = todoService.getTodos(MEMBER_ID, null, null, PageRequest.of(0, 10));
 
         // then
         assertThat(response).hasSize(2);
@@ -106,11 +108,11 @@ class TodoServiceTest {
         todoService.createTodo(new TodoCreateRequest(null, "개인 할일", null, null), MEMBER_ID);
 
         // when
-        List<TodoListResponse> response = todoService.getTodos(MEMBER_ID, weekId, null);
+        Page<TodoListResponse> response = todoService.getTodos(MEMBER_ID, weekId, null, PageRequest.of(0, 10));
 
         // then
         assertThat(response).hasSize(1);
-        assertThat(response.get(0).content()).isEqualTo("복습");
+        assertThat(response.getContent().get(0).content()).isEqualTo("복습");
     }
 
     @Test
@@ -123,11 +125,11 @@ class TodoServiceTest {
         todoService.createTodo(new TodoCreateRequest(null, "미완료", null, null), MEMBER_ID);
 
         // when
-        List<TodoListResponse> response = todoService.getTodos(MEMBER_ID, null, TodoFilterStatus.COMPLETED);
+        Page<TodoListResponse> response = todoService.getTodos(MEMBER_ID, null, TodoFilterStatus.COMPLETED, PageRequest.of(0, 10));
 
         // then
         assertThat(response).hasSize(1);
-        assertThat(response.get(0).content()).isEqualTo("복습");
+        assertThat(response.getContent().get(0).content()).isEqualTo("복습");
     }
 
     @Test
