@@ -1,5 +1,7 @@
-package com.cramit.domain.todo;
+package com.cramit.domain.todo.dto;
 
+import com.cramit.domain.todo.Todo;
+import com.cramit.domain.todo.enums.TodoType;
 import lombok.Builder;
 
 import java.time.LocalDateTime;

@@ -1,5 +1,6 @@
 package com.cramit.domain.todo;
 
+import com.cramit.domain.todo.enums.TodoType;
 import com.cramit.global.common.BaseEntity;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;

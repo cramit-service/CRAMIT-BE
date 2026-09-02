@@ -1,17 +1,17 @@
-package com.cramit.domain.todo;
+package com.cramit.domain.todo.dto;
 
 import jakarta.validation.constraints.NotBlank;
 
 import java.time.LocalDateTime;
 
-public record TodoCreateRequest(
+public record TodoUpdateRequest(
         Long weekId,
 
         @NotBlank
         String content,
 
-        LocalDateTime dueDate,
+        String memo,
 
-        String memo
+        LocalDateTime dueDate
 ) {
 }

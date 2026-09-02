@@ -1,4 +1,4 @@
-package com.cramit.domain.todo;
+package com.cramit.domain.todo.dto;
 
 public record TodoUpdateResponse(
         Long todoId,

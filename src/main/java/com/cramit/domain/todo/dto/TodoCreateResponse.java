@@ -1,4 +1,4 @@
-package com.cramit.domain.todo;
+package com.cramit.domain.todo.dto;
 
 import java.time.LocalDateTime;
 
