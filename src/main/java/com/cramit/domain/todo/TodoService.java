@@ -15,8 +15,6 @@ import com.cramit.domain.week.WeekRepository;
 import com.cramit.global.exception.BusinessException;
 import com.cramit.global.exception.ErrorCode;
 import lombok.RequiredArgsConstructor;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -52,23 +50,25 @@ public class TodoService {
     }
 
     @Transactional(readOnly = true)
-    public Page<TodoListResponse> getTodos(Long memberId, Long weekId, TodoFilterStatus status, Pageable pageable) {
-        Page<Todo> todos;
+    public List<TodoListResponse> getTodos(Long memberId, Long weekId, TodoFilterStatus status){
+        List<Todo> todos;
 
         if (status != null) {
             LocalDateTime now = LocalDateTime.now();
             todos = switch (status) {
-                case UPCOMING -> todoRepository.findUpcoming(memberId, now, pageable);
-                case OVERDUE -> todoRepository.findOverdue(memberId, now, pageable);
-                case COMPLETED -> todoRepository.findByMemberIdAndIsCompletedTrueOrderBySortOrderAsc(memberId, pageable);
+                case UPCOMING -> todoRepository.findUpcoming(memberId, now);
+                case OVERDUE -> todoRepository.findOverdue(memberId, now);
+                case COMPLETED -> todoRepository.findByMemberIdAndIsCompletedTrueOrderBySortOrderAsc(memberId);
             };
         } else if (weekId != null){
-            todos = todoRepository.findByMemberIdAndWeekIdOrderBySortOrderAsc(memberId, weekId, pageable);
+            todos = todoRepository.findByMemberIdAndWeekIdOrderBySortOrderAsc(memberId, weekId);
         } else{
-            todos = todoRepository.findByMemberIdOrderBySortOrderAsc(memberId, pageable);
+            todos = todoRepository.findByMemberIdOrderBySortOrderAsc(memberId);
         }
 
-        return todos.map(TodoListResponse::from);
+        return todos.stream()
+                .map(TodoListResponse::from)
+                .toList();
     }
 
     @Transactional
