@@ -180,5 +180,23 @@ class LectureServiceTest {
                 .isInstanceOfSatisfying(BusinessException.class, ex ->
                         assertThat(ex.getErrorCode()).isEqualTo(ErrorCode.LECTURE_ACCESS_DENIED));
     }
+
+    @Test
+    @DisplayName("생성자가 아니면 강의 상세 조회를 할 수 없다.")
+    void getLectureDetailForbidden() {
+        // given
+        Long lectureId = lectureRepository.save(
+                Lecture.builder()
+                        .memberId(OTHER_MEMBER_ID)
+                        .title("알고리즘")
+                        .professorName("박지훈")
+                        .build()
+        ).getLectureId();
+
+        // when & then
+        assertThatThrownBy(() -> lectureService.getLectureDetail(lectureId, MEMBER_ID))
+                .isInstanceOfSatisfying(BusinessException.class, ex ->
+                        assertThat(ex.getErrorCode()).isEqualTo(ErrorCode.LECTURE_ACCESS_DENIED));
+    }
 }
 
