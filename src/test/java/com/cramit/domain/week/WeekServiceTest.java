@@ -28,7 +28,7 @@ import org.springframework.context.annotation.Import;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.time.LocalDateTime;
+import java.time.LocalDate;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -40,7 +40,7 @@ class WeekServiceTest {
 
     private static final Long MEMBER_ID = 1L;
     private static final Long OTHER_MEMBER_ID = 2L;
-    private static final LocalDateTime WEEK_DATE = LocalDateTime.of(2026, 7, 14, 9, 0);
+    private static final LocalDate WEEK_DATE = LocalDate.of(2026, 7, 14);
 
     @Autowired
     private WeekService weekService;
@@ -239,7 +239,7 @@ class WeekServiceTest {
         ).getLectureId();
     }
 
-    private WeekCreateRequest createRequest(String title, LocalDateTime weekDate) {
+    private WeekCreateRequest createRequest(String title, LocalDate weekDate) {
         return new WeekCreateRequest(title, weekDate, null, null);
     }
 
@@ -251,7 +251,7 @@ class WeekServiceTest {
 
         WeekCreateRequest request = new WeekCreateRequest(
                 "1주차",
-                LocalDateTime.now(),
+                LocalDate.now(),
                 new WeekCreateRequest.PptInfo("slide.pdf", "https://file/slide.pdf", 1024L),
                 new WeekCreateRequest.AudioInfo("audio.mp3", "https://file/audio.mp3", 3600L)
         );

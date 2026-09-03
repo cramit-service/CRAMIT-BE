@@ -4,13 +4,13 @@ import com.cramit.domain.week.entity.Week;
 import com.cramit.domain.week.enums.WeekStatus;
 import lombok.Builder;
 
-import java.time.LocalDateTime;
+import java.time.LocalDate;
 
 @Builder
 public record WeekListResponse(
         Long weekId,
         String title,
-        LocalDateTime weekDate,
+        LocalDate weekDate,
         String professorName,
         WeekStatus status
 ) {
