@@ -128,7 +128,6 @@ class LectureServiceTest {
         assertThatThrownBy(() -> lectureService.updateLecture(request, lectureId, MEMBER_ID))
                 .isInstanceOfSatisfying(BusinessException.class, ex ->
                         assertThat(ex.getErrorCode()).isEqualTo(ErrorCode.LECTURE_ACCESS_DENIED));
-
     }
 
     @Test
