@@ -8,10 +8,9 @@ import com.cramit.domain.todo.dto.TodoListResponse;
 import com.cramit.domain.todo.dto.TodoToggleResponse;
 import com.cramit.domain.todo.dto.TodoUpdateRequest;
 import com.cramit.domain.todo.dto.TodoUpdateResponse;
-import com.cramit.domain.todo.enums.TodoFilterStatus;
 import com.cramit.domain.todo.enums.TodoType;
-import com.cramit.domain.week.Week;
-import com.cramit.domain.week.WeekRepository;
+import com.cramit.domain.week.entity.Week;
+import com.cramit.domain.week.repository.WeekRepository;
 import com.cramit.global.config.JpaAuditingConfig;
 import com.cramit.global.exception.BusinessException;
 import com.cramit.global.exception.ErrorCode;
@@ -22,6 +21,7 @@ import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
 import org.springframework.context.annotation.Import;
 import org.springframework.test.context.ActiveProfiles;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
 
@@ -34,7 +34,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 class TodoServiceTest {
     private static final Long MEMBER_ID = 1L;
     private static final Long OTHER_MEMBER_ID = 2L;
-    private static final LocalDateTime WEEK_DATE = LocalDateTime.now();
+    private static final LocalDate WEEK_DATE = LocalDate.now();
 
     @Autowired
     private TodoService todoService;
@@ -131,7 +131,7 @@ class TodoServiceTest {
         todoService.createTodo(new TodoCreateRequest(null, "미완료", null, null), MEMBER_ID);
 
         // when
-        List<TodoListResponse> response = todoService.getTodos(MEMBER_ID, null, TodoFilterStatus.COMPLETED);
+        List<TodoListResponse> response = todoService.getTodos(MEMBER_ID, null, "COMPLETED");
 
         // then
         assertThat(response).hasSize(1);
@@ -268,7 +268,7 @@ class TodoServiceTest {
 
         assertThatThrownBy(() -> todoService.createTodo(request, MEMBER_ID))
                 .isInstanceOfSatisfying(BusinessException.class, ex ->
-                        assertThat(ex.getErrorCode()).isEqualTo(ErrorCode.TODO_ACCESS_DENIED));
+                        assertThat(ex.getErrorCode()).isEqualTo(ErrorCode.LECTURE_ACCESS_DENIED));
     }
 
     @Test
@@ -297,7 +297,56 @@ class TodoServiceTest {
 
         assertThatThrownBy(() -> todoService.updateTodo(created.todoId(), request, MEMBER_ID))
                 .isInstanceOfSatisfying(BusinessException.class, ex ->
-                        assertThat(ex.getErrorCode()).isEqualTo(ErrorCode.TODO_ACCESS_DENIED));
+                        assertThat(ex.getErrorCode()).isEqualTo(ErrorCode.LECTURE_ACCESS_DENIED));
+    }
+
+
+    @Test
+    @DisplayName("알 수 없는 status 값은 예외 없이 UPCOMING으로 처리된다.")
+    void getTodosWithInvalidStatusFallsBackToUpcoming() {
+        // given
+        todoService.createTodo(new TodoCreateRequest(null, "복습", null, null), MEMBER_ID);
+
+        // when
+        List<TodoListResponse> response = todoService.getTodos(MEMBER_ID, null, "존재하지않는값");
+
+        // then
+        assertThat(response).hasSize(1);
+    }
+
+    @Test
+    @DisplayName("status와 weekId를 함께 주면 두 조건 모두 적용된다.")
+    void getTodosFilteredByStatusAndWeek() {
+        // given
+        Long weekId = saveWeek();
+        Long otherWeekId = saveWeek();
+        TodoCreateResponse inWeek = todoService.createTodo(
+                new TodoCreateRequest(weekId, "이번주 할일", null, null), MEMBER_ID);
+        todoService.createTodo(new TodoCreateRequest(otherWeekId, "다른주 할일", null, null), MEMBER_ID);
+        todoService.toggleTodo(inWeek.todoId(), MEMBER_ID);
+
+        // when
+        List<TodoListResponse> response = todoService.getTodos(MEMBER_ID, weekId, "COMPLETED");
+
+        // then
+        assertThat(response).hasSize(1);
+        assertThat(response.get(0).content()).isEqualTo("이번주 할일");
+    }
+
+    @Test
+    @DisplayName("마감일이 지난 todo만 필터링해서 조회한다.")
+    void getTodosFilteredByOverdue() {
+        // given
+        todoService.createTodo(
+                new TodoCreateRequest(null, "기한 지남", LocalDateTime.now().minusDays(1), null), MEMBER_ID);
+        todoService.createTodo(
+                new TodoCreateRequest(null, "기한 안지남", LocalDateTime.now().plusDays(1), null), MEMBER_ID);
+
+        // when
+        List<TodoListResponse> response = todoService.getTodos(MEMBER_ID, null, "OVERDUE");
+
+        // then
+        assertThat(response).hasSize(1);
+        assertThat(response.get(0).content()).isEqualTo("기한 지남");
     }
 }
-
