@@ -1,5 +1,13 @@
 package com.cramit.domain.week;
 
+import com.cramit.domain.week.dto.WeekCreateRequest;
+import com.cramit.domain.week.dto.WeekCreateResponse;
+import com.cramit.domain.week.dto.WeekFirstSummaryResponse;
+import com.cramit.domain.week.dto.WeekListResponse;
+import com.cramit.domain.week.dto.WeekStatusUpdateRequest;
+import com.cramit.domain.week.dto.WeekStatusUpdateResponse;
+import com.cramit.domain.week.dto.WeekUpdateRequest;
+import com.cramit.domain.week.dto.WeekUpdateResponse;
 import com.cramit.global.common.ApiResponse;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -59,6 +67,7 @@ public class WeekController {
             @AuthenticationPrincipal Long memberId,
             @PathVariable Long weekId
     ) {
+        weekService.deleteWeek(weekId, memberId);
 
         return ResponseEntity.ok(ApiResponse.empty());
     }
@@ -74,9 +83,9 @@ public class WeekController {
 
     @GetMapping("/api/weeks/{weekId}/first-summary")
     public ResponseEntity<ApiResponse<WeekFirstSummaryResponse>> getWeekFirstSummary(
-            @AuthenticationPrincipal Long memberId,
-            @PathVariable Long weekId
+            @PathVariable Long weekId,
+            @AuthenticationPrincipal Long memberId
     ){
-        return ResponseEntity.ok(ApiResponse.of(weekService.getFirstSummary(memberId, weekId)));
+        return ResponseEntity.ok(ApiResponse.of(weekService.getFirstSummary(weekId, memberId)));
     }
 }

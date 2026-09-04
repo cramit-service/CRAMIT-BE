@@ -2,29 +2,45 @@ package com.cramit.domain.week;
 
 import com.cramit.domain.lecture.Lecture;
 import com.cramit.domain.lecture.LectureRepository;
+import com.cramit.domain.lecture.LectureService;
+import com.cramit.domain.week.dto.WeekCreateRequest;
+import com.cramit.domain.week.dto.WeekCreateResponse;
+import com.cramit.domain.week.dto.WeekListResponse;
+import com.cramit.domain.week.dto.WeekStatusUpdateRequest;
+import com.cramit.domain.week.dto.WeekStatusUpdateResponse;
+import com.cramit.domain.week.dto.WeekUpdateRequest;
+import com.cramit.domain.week.dto.WeekUpdateResponse;
+import com.cramit.domain.week.entity.Week;
+import com.cramit.domain.week.enums.SttStatus;
+import com.cramit.domain.week.enums.WeekStatus;
+import com.cramit.domain.week.repository.LectureAudioRepository;
+import com.cramit.domain.week.repository.LecturePptRepository;
+import com.cramit.domain.week.repository.WeekRepository;
 import com.cramit.global.config.JpaAuditingConfig;
 import com.cramit.global.exception.BusinessException;
 import com.cramit.global.exception.ErrorCode;
+import jakarta.persistence.EntityManager;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
+import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.context.annotation.Import;
 import org.springframework.test.context.ActiveProfiles;
+import org.springframework.transaction.annotation.Transactional;
 
-import java.time.LocalDateTime;
+import java.time.LocalDate;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
-@DataJpaTest
+@SpringBootTest
 @Import({WeekService.class, JpaAuditingConfig.class})
 @ActiveProfiles("test")
 class WeekServiceTest {
 
     private static final Long MEMBER_ID = 1L;
     private static final Long OTHER_MEMBER_ID = 2L;
-    private static final LocalDateTime WEEK_DATE = LocalDateTime.of(2026, 7, 14, 9, 0);
+    private static final LocalDate WEEK_DATE = LocalDate.of(2026, 7, 14);
 
     @Autowired
     private WeekService weekService;
@@ -40,6 +56,12 @@ class WeekServiceTest {
 
     @Autowired
     private LectureAudioRepository lectureAudioRepository;
+
+    @Autowired
+    private LectureService lectureService;
+
+    @Autowired
+    private EntityManager em; // jakarta.persistence.EntityManager
 
     @Test
     @DisplayName("주차를 생성하면 PPT/음성과 함께 저장되고 목록에서 조회된다.")
@@ -85,9 +107,7 @@ class WeekServiceTest {
         WeekUpdateRequest request = new WeekUpdateRequest(
                 "1주차(수정)",
                 WEEK_DATE.plusDays(1),
-                "박지훈",
-                new WeekCreateRequest.PptInfo("slide.pdf", "https://file/slide.pdf", 2048L),
-                new WeekCreateRequest.AudioInfo("audio.mp3", "https://file/audio.mp3", 1800L)
+                "박지훈"
         );
 
         WeekUpdateResponse response = weekService.updateWeek(weekId, request, MEMBER_ID);
@@ -96,8 +116,6 @@ class WeekServiceTest {
         assertThat(response.weekId()).isEqualTo(weekId);
         assertThat(updated.getTitle()).isEqualTo("1주차(수정)");
         assertThat(updated.getProfessorName()).isEqualTo("박지훈");
-        assertThat(response.lecturePptId()).isNotNull();
-        assertThat(response.lectureAudioId()).isNotNull();
     }
 
     @Test
@@ -151,7 +169,7 @@ class WeekServiceTest {
     @Test
     @DisplayName("존재하지 않는 주차를 수정하면 예외가 발생한다.")
     void updateWeekNotFound() {
-        WeekUpdateRequest request = new WeekUpdateRequest("1주차(수정)", WEEK_DATE, null, null, null);
+        WeekUpdateRequest request = new WeekUpdateRequest("1주차(수정)", WEEK_DATE, null);
 
         assertThatThrownBy(() -> weekService.updateWeek(999L, request, MEMBER_ID))
                 .isInstanceOfSatisfying(BusinessException.class, ex ->
@@ -187,7 +205,7 @@ class WeekServiceTest {
                         .weekDate(WEEK_DATE)
                         .build()
         ).getWeekId();
-        WeekUpdateRequest request = new WeekUpdateRequest("1주차(수정)", WEEK_DATE, null, null, null);
+        WeekUpdateRequest request = new WeekUpdateRequest("1주차(수정)", WEEK_DATE, null);
 
         assertThatThrownBy(() -> weekService.updateWeek(weekId, request, MEMBER_ID))
                 .isInstanceOfSatisfying(BusinessException.class, ex ->
@@ -221,7 +239,35 @@ class WeekServiceTest {
         ).getLectureId();
     }
 
-    private WeekCreateRequest createRequest(String title, LocalDateTime weekDate) {
+    private WeekCreateRequest createRequest(String title, LocalDate weekDate) {
         return new WeekCreateRequest(title, weekDate, null, null);
+    }
+
+    @Test
+    @Transactional
+    @DisplayName("강의를 삭제하면 연관된 주차와 주차 하위 자료들도 함께 연쇄 삭제된다.")
+    void deleteLectureCascadesToWeeksAndMaterials() {
+        Long lectureId = saveLecture(MEMBER_ID);
+
+        WeekCreateRequest request = new WeekCreateRequest(
+                "1주차",
+                LocalDate.now(),
+                new WeekCreateRequest.PptInfo("slide.pdf", "https://file/slide.pdf", 1024L),
+                new WeekCreateRequest.AudioInfo("audio.mp3", "https://file/audio.mp3", 3600L)
+        );
+        WeekCreateResponse createdWeek = weekService.createWeek(lectureId, request, MEMBER_ID);
+
+        lectureService.deleteLecture(lectureId, MEMBER_ID);
+
+        em.flush();
+        em.clear();
+
+        assertThatThrownBy(() -> lectureService.getLectureDetail(lectureId, MEMBER_ID))
+                .isInstanceOf(BusinessException.class)
+                .hasFieldOrPropertyWithValue("errorCode", ErrorCode.ENTITY_NOT_FOUND);
+
+        assertThat(weekRepository.findById(createdWeek.weekId())).isEmpty();
+        assertThat(lecturePptRepository.findById(createdWeek.lecturePptId())).isEmpty();
+        assertThat(lectureAudioRepository.findById(createdWeek.lectureAudioId())).isEmpty();
     }
 }

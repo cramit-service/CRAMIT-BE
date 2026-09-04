@@ -2,6 +2,21 @@ package com.cramit.domain.week;
 
 import com.cramit.domain.lecture.Lecture;
 import com.cramit.domain.lecture.LectureRepository;
+import com.cramit.domain.week.dto.WeekCreateRequest;
+import com.cramit.domain.week.dto.WeekCreateResponse;
+import com.cramit.domain.week.dto.WeekFirstSummaryResponse;
+import com.cramit.domain.week.dto.WeekListResponse;
+import com.cramit.domain.week.dto.WeekStatusUpdateRequest;
+import com.cramit.domain.week.dto.WeekStatusUpdateResponse;
+import com.cramit.domain.week.dto.WeekUpdateRequest;
+import com.cramit.domain.week.dto.WeekUpdateResponse;
+import com.cramit.domain.week.entity.LectureAudio;
+import com.cramit.domain.week.entity.LecturePpt;
+import com.cramit.domain.week.entity.Week;
+import com.cramit.domain.week.enums.SttStatus;
+import com.cramit.domain.week.repository.LectureAudioRepository;
+import com.cramit.domain.week.repository.LecturePptRepository;
+import com.cramit.domain.week.repository.WeekRepository;
 import com.cramit.global.exception.BusinessException;
 import com.cramit.global.exception.ErrorCode;
 import lombok.RequiredArgsConstructor;
@@ -16,8 +31,8 @@ public class WeekService {
 
     private final WeekRepository weekRepository;
     private final LectureRepository lectureRepository;
-    private final LectureAudioRepository  lectureAudioRepository;
-    private final LecturePptRepository  lecturePptRepository;
+    private final LectureAudioRepository lectureAudioRepository;
+    private final LecturePptRepository lecturePptRepository;
 
     @Transactional
     public WeekCreateResponse createWeek(Long lectureId, WeekCreateRequest request, Long memberId) {
@@ -61,15 +76,10 @@ public class WeekService {
             sttStatus = audio.getSttStatus();
         } //TODO: STT 도메인 완성되면 연결
 
-        return new WeekCreateResponse(
-                week.getWeekId(),
-                lecturePptId,
-                lectureAudioId,
-                sttStatus,
-                week.getCreatedAt()
-        );
+        return WeekCreateResponse.of(week, lecturePptId, lectureAudioId, sttStatus);
     }
 
+    // 한 강의당 주차 개수가 제한적(보통 학기 기준 15주 안팎)이라 페이지네이션 미적용
     @Transactional(readOnly = true)
     public List<WeekListResponse> getWeeks(Long lectureId, Long memberId) {
         Lecture lecture = lectureRepository.findById(lectureId)
@@ -82,13 +92,7 @@ public class WeekService {
         List<Week> weeks = weekRepository.findByLectureIdOrderByWeekDateDesc(lectureId);
 
         return weeks.stream()
-                .map(week -> new WeekListResponse(
-                        week.getWeekId(),
-                        week.getTitle(),
-                        week.getWeekDate(),
-                        week.getProfessorName(),
-                        week.getStatus()
-                ))
+                .map(WeekListResponse::from)
                 .toList();
     }
 
@@ -106,50 +110,9 @@ public class WeekService {
 
         week.update(request.title(), request.weekDate(), request.professorName());
 
-        LecturePpt ppt = lecturePptRepository.findByWeekId(weekId).orElse(null);
-        if (request.ppt() != null) {
-            if (ppt != null) {
-                ppt.update(
-                        request.ppt().fileName(),
-                        request.ppt().fileUrl(),
-                        request.ppt().fileSize(),
-                        ppt.getPageCount()
-                );
-            } else{
-                ppt = LecturePpt.builder()
-                        .weekId(weekId)
-                        .fileName(request.ppt().fileName())
-                        .fileUrl(request.ppt().fileUrl())
-                        .fileSize(request.ppt().fileSize())
-                        .build();
-                lecturePptRepository.save(ppt);
-            }
-        }
-
-        LectureAudio audio = lectureAudioRepository.findByWeekId(weekId).orElse(null);
-        if (request.audio() != null) {
-            if (audio != null) {
-                audio.update(
-                        request.audio().fileName(),
-                        request.audio().fileUrl(),
-                        request.audio().durationSec()
-                );
-            } else {
-                audio = LectureAudio.builder()
-                        .weekId(weekId)
-                        .fileName(request.audio().fileName())
-                        .fileUrl(request.audio().fileUrl())
-                        .durationSec(request.audio().durationSec())
-                        .build();
-                lectureAudioRepository.save(audio);
-            }
-        } // TODO: STT 도메인 완성되면 연결
-
         return  new WeekUpdateResponse(
                 week.getWeekId(),
-                ppt != null ? ppt.getLecturePptId() : null,
-                audio != null ? audio.getLectureAudioId() : null,
-                audio != null ? audio.getSttStatus() : null
+                week.getWeekDate()
         );
     }
 
@@ -170,7 +133,7 @@ public class WeekService {
         lectureAudioRepository.findByWeekId(weekId)
                 .ifPresent(lectureAudioRepository::delete);
 
-        weekRepository.delete(week);
+        weekRepository.delete(week); // TODO: script, summary, todo, chatBotSession 도메인 완성되면 여기도 연쇄 삭제 추가
     }
 
     @Transactional

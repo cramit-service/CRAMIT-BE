@@ -1,4 +1,4 @@
-package com.cramit.domain.week;
+package com.cramit.domain.week.dto;
 
 public record WeekFirstSummaryResponse(
         Long weekId,
