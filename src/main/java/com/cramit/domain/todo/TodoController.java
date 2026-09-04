@@ -6,7 +6,6 @@ import com.cramit.domain.todo.dto.TodoListResponse;
 import com.cramit.domain.todo.dto.TodoToggleResponse;
 import com.cramit.domain.todo.dto.TodoUpdateRequest;
 import com.cramit.domain.todo.dto.TodoUpdateResponse;
-import com.cramit.domain.todo.enums.TodoFilterStatus;
 import com.cramit.global.common.ApiResponse;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -46,7 +45,7 @@ public class TodoController {
     public ResponseEntity<ApiResponse<List<TodoListResponse>>> getTodos(
             @AuthenticationPrincipal Long memberId,
             @RequestParam(required = false) Long weekId,
-            @RequestParam(required = false) TodoFilterStatus status
+            @RequestParam(required = false) String status
     ){
         List<TodoListResponse> response = todoService.getTodos(memberId, weekId, status);
 
