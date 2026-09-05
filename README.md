@@ -168,6 +168,14 @@
 
   <br/>
 
+### 5️⃣ API Response Status Code Convention
+
+| 상황 | HTTP Status | 설명 |
+|---|---|---|
+| 생성 (POST) | 201 Created | 새 리소스 생성 성공 |
+| 조회 (GET) | 200 OK | 조회 성공 |
+| 수정 (PATCH) | 200 OK | 수정 성공, 수정된 데이터 반환 |
+| 삭제 (DELETE) | 204 No Content | 삭제 성공, 반환 데이터 없음 |
 <div>
 
 ## 📂 프로젝트 구조

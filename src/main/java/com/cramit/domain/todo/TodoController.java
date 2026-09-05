@@ -64,13 +64,13 @@ public class TodoController {
     }
 
     @DeleteMapping("/{todoId}")
-    public ResponseEntity<ApiResponse<Void>> deleteTodo(
+    public ResponseEntity<Void> deleteTodo(
             @AuthenticationPrincipal Long memberId,
             @PathVariable Long todoId
     ){
         todoService.deleteTodo(todoId, memberId);
 
-        return ResponseEntity.ok(ApiResponse.empty());
+        return ResponseEntity.noContent().build();
     }
 
     @PatchMapping("/{todoId}/toggle")
