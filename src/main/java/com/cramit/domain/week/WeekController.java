@@ -63,13 +63,13 @@ public class WeekController {
     }
 
     @DeleteMapping("/api/weeks/{weekId}")
-    public ResponseEntity<ApiResponse<Void>> deleteWeek(
+    public ResponseEntity<Void> deleteWeek(
             @AuthenticationPrincipal Long memberId,
             @PathVariable Long weekId
     ) {
         weekService.deleteWeek(weekId, memberId);
 
-        return ResponseEntity.ok(ApiResponse.empty());
+        return ResponseEntity.noContent().build();
     }
 
     @PatchMapping("/api/weeks/{weekId}/status")

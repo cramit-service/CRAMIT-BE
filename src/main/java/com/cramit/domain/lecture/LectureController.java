@@ -75,12 +75,12 @@ public class LectureController {
     }
 
     @DeleteMapping("/{lectureId}")
-    public ResponseEntity<ApiResponse<Void>> deleteLecture(
+    public ResponseEntity<Void> deleteLecture(
             @AuthenticationPrincipal Long currentMemberId,
             @PathVariable Long lectureId) {
 
         lectureService.deleteLecture(lectureId,  currentMemberId);
 
-        return ResponseEntity.ok(ApiResponse.empty());
+        return ResponseEntity.noContent().build();
     }
 }
