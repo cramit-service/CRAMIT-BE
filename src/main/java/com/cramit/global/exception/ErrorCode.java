@@ -42,6 +42,7 @@ public enum ErrorCode {
 	AI_RESPONSE_PARSE_ERROR(HttpStatus.BAD_GATEWAY, "요약 생성에 실패했습니다. 다시 시도해주세요."),
 	PAGE_MAPPING_NOT_FOUND(HttpStatus.NOT_FOUND, "해당 페이지의 음성 구간을 찾을 수 없습니다."),
 	AUDIO_FILE_EXPIRED(HttpStatus.GONE, "음성 파일이 만료되어 재생할 수 없습니다."),
+	FIRST_SUMMARY_NOT_READY(HttpStatus.UNPROCESSABLE_ENTITY, "1차요약본이 아직 생성되지 않았습니다."),
 
 	// 학습 포인트 / 메모 / 학습 내용 적용 (Phase 5, 6, 7)
 	HIGHLIGHT_INVALID_POSITION(HttpStatus.BAD_REQUEST, "학습포인트 위치를 저장하지 못했습니다."),
@@ -54,7 +55,10 @@ public enum ErrorCode {
 	AI_TIMEOUT(HttpStatus.GATEWAY_TIMEOUT, "답변 생성이 지연되고 있습니다."),
 
 	// AI 학습 TODO (Phase 9)
-	INVALID_DDAY(HttpStatus.UNPROCESSABLE_ENTITY, "시험 날짜가 이미 지났습니다.");
+	INVALID_DDAY(HttpStatus.UNPROCESSABLE_ENTITY, "시험 날짜가 이미 지났습니다."),
+
+	// TODO 관리
+	TODO_ACCESS_DENIED(HttpStatus.FORBIDDEN, "접근 권한이 없는 할 일입니다.");
 
 	private final HttpStatus status;
 	private final String message;
