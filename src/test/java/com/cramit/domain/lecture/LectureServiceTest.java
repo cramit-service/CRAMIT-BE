@@ -1,5 +1,15 @@
 package com.cramit.domain.lecture;
 
+import com.cramit.domain.lecture.dto.LectureCreateRequest;
+import com.cramit.domain.lecture.dto.LectureCreateResponse;
+import com.cramit.domain.lecture.dto.LectureDetailResponse;
+import com.cramit.domain.lecture.dto.LectureUpdateRequest;
+import com.cramit.domain.lecture.dto.LectureUpdateResponse;
+import com.cramit.domain.lecture.dto.MyLectureItem;
+import com.cramit.domain.lecture.dto.SharedLectureItem;
+import com.cramit.domain.member.Member;
+import com.cramit.domain.member.MemberRepository;
+import com.cramit.domain.member.SocialProvider;
 import com.cramit.global.config.JpaAuditingConfig;
 import com.cramit.global.exception.BusinessException;
 import com.cramit.global.exception.ErrorCode;
@@ -9,6 +19,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
 import org.springframework.context.annotation.Import;
 import org.springframework.test.context.ActiveProfiles;
+
+import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -27,38 +39,58 @@ class LectureServiceTest {
     @Autowired
     private LectureRepository lectureRepository;
 
+    @Autowired
+    private MemberRepository memberRepository;
+
     @Test
     @DisplayName("강의를 생성하면 내 강의 목록에서 조회된다.")
-    void createThenGetLectures() {
+    void createThenGetMyLectures() {
         // given
         LectureCreateRequest request = new LectureCreateRequest("알고리즘", "박지훈");
 
         // when
         LectureCreateResponse created = lectureService.createLecture(request, MEMBER_ID);
-        LectureListResponse response = lectureService.getLectures(MEMBER_ID);
+        List<MyLectureItem> response = lectureService.getMyLectures(MEMBER_ID);
 
         // then
         assertThat(created.lectureId()).isNotNull();
-        assertThat(response.myLectures()).hasSize(1);
-        assertThat(response.myLectures().get(0).title()).isEqualTo("알고리즘");
-        assertThat(response.sharedLectures()).isEmpty();
+        assertThat(response).hasSize(1);
+        assertThat(response.get(0).title()).isEqualTo("알고리즘");
     }
 
     @Test
-    @DisplayName("강의 상세 조회 시 생성자면 isOwner가 true이다.")
-    void getLectureDetail() {
+    @DisplayName("공유 강의는 아직 없으므로 빈 목록이 조회된다.")
+    void getSharedLecturesReturnsEmpty() {
         // given
-        Long lectureId = lectureService.createLecture(
-                new LectureCreateRequest("알고리즘", "박지훈"), MEMBER_ID).lectureId();
+        lectureService.createLecture(new LectureCreateRequest("알고리즘", "박지훈"), MEMBER_ID);
 
         // when
-        LectureDetailResponse response = lectureService.getLectureDetail(lectureId, MEMBER_ID);
+        List<SharedLectureItem> response = lectureService.getSharedLectures(MEMBER_ID);
+
+        // then
+        assertThat(response).isEmpty();
+    }
+
+    @Test
+    @DisplayName("강의 상세 조회 시 생성자면 isOwner가 true이고 소유자 닉네임이 조회된다.")
+    void getLectureDetail() {
+        // given
+        Long memberId = memberRepository.save(
+                Member.ofSocialSignup("김번개", SocialProvider.GOOGLE, "google-1234", null)
+        ).getId();
+
+        Long lectureId = lectureService.createLecture(
+                new LectureCreateRequest("알고리즘", "박지훈"), memberId).lectureId();
+
+        // when
+        LectureDetailResponse response = lectureService.getLectureDetail(lectureId, memberId);
 
         // then
         assertThat(response.lectureId()).isEqualTo(lectureId);
         assertThat(response.title()).isEqualTo("알고리즘");
         assertThat(response.professorName()).isEqualTo("박지훈");
         assertThat(response.isOwner()).isTrue();
+        assertThat(response.ownerNickname()).isEqualTo("김번개");
     }
 
     @Test
@@ -144,6 +176,24 @@ class LectureServiceTest {
 
         // when & then
         assertThatThrownBy(() -> lectureService.deleteLecture(lectureId, MEMBER_ID))
+                .isInstanceOfSatisfying(BusinessException.class, ex ->
+                        assertThat(ex.getErrorCode()).isEqualTo(ErrorCode.LECTURE_ACCESS_DENIED));
+    }
+
+    @Test
+    @DisplayName("생성자가 아니면 강의 상세 조회를 할 수 없다.")
+    void getLectureDetailForbidden() {
+        // given
+        Long lectureId = lectureRepository.save(
+                Lecture.builder()
+                        .memberId(OTHER_MEMBER_ID)
+                        .title("알고리즘")
+                        .professorName("박지훈")
+                        .build()
+        ).getLectureId();
+
+        // when & then
+        assertThatThrownBy(() -> lectureService.getLectureDetail(lectureId, MEMBER_ID))
                 .isInstanceOfSatisfying(BusinessException.class, ex ->
                         assertThat(ex.getErrorCode()).isEqualTo(ErrorCode.LECTURE_ACCESS_DENIED));
     }
