@@ -59,4 +59,28 @@ public class MemberLectureService {
                 memberLecture.getCreatedAt()
         );
     }
+
+    @Transactional(readOnly = true)
+    public List<MemberLectureListResponse> getMembers(Long lectureId, Long currentMemberId) {
+        Lecture lecture = lectureRepository.findById(lectureId)
+                .orElseThrow(()-> new BusinessException(ErrorCode.ENTITY_NOT_FOUND));
+
+        boolean canAccess = lecture.isOwnedBy(currentMemberId)
+                || memberLectureRepository.existsByLectureIdAndMemberId(lectureId, currentMemberId);
+
+        if (!canAccess) {
+            throw new BusinessException(ErrorCode.LECTURE_ACCESS_DENIED);
+        }
+
+        List<MemberLecture> members = memberLectureRepository.findByLectureId(lectureId);
+
+        return members.stream()
+                .map(ml -> {
+                    Member member = memberRepository.findById(ml.getMemberId())
+                            .orElseThrow(()-> new BusinessException(ErrorCode.ENTITY_NOT_FOUND));
+                    return MemberLectureListResponse .of(ml, member.getNickname());
+
+                })
+                .toList();
+    }
 }
