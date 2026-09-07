@@ -83,4 +83,26 @@ public class MemberLectureService {
                 })
                 .toList();
     }
+
+    @Transactional
+    public void removeMember(Long memberLectureId, Long currentMemberId) {
+        MemberLecture memberLecture = memberLectureRepository.findById(memberLectureId)
+                .orElseThrow(() -> new  BusinessException(ErrorCode.ENTITY_NOT_FOUND));
+
+        Lecture lecture = lectureRepository.findById(memberLecture.getLectureId())
+                .orElseThrow(()-> new BusinessException(ErrorCode.ENTITY_NOT_FOUND));
+
+        boolean isSelf =  memberLecture.isSharedWith(currentMemberId);
+        boolean isLectureOwner = lecture.isOwnedBy(currentMemberId);
+
+        if (!isSelf && !isLectureOwner) {
+            throw new BusinessException(ErrorCode.LECTURE_ACCESS_DENIED);
+        }
+
+        if (memberLecture.getRole() == Role.OWNER) {
+            throw new BusinessException(ErrorCode.OWNER_CANNOT_LEAVE);
+        }
+
+        memberLectureRepository.delete(memberLecture);
+    }
 }
