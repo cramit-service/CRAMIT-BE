@@ -38,4 +38,8 @@ public class MemberLecture extends BaseEntity {
         this.role = role;
     }
 
+    public boolean isSharedWith(Long memberId) {
+        return this.memberId.equals(memberId);
+    }
+
 }

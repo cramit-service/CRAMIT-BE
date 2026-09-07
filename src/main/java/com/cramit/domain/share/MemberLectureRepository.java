@@ -8,7 +8,7 @@ import java.util.Optional;
 
 public interface MemberLectureRepository extends JpaRepository<MemberLecture, Long> {
 
-    List<MemberLecture> findByLectureId(Lecture lectureId);
+    List<MemberLecture> findByLectureId(Long lectureId);
 
     List<MemberLecture> findByMemberId(Long memberId);
 
