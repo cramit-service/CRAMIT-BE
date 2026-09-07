@@ -23,6 +23,8 @@ public class MemberLectureService {
     private final LectureRepository lectureRepository;
     private final MemberRepository memberRepository;
 
+    private static final int MAX_SHARED_MEMBER_COUNT = 3;
+
     @Transactional
     public MemberLectureInviteResponse inviteMember(
             Long lectureId, MemberLectureInviteRequest request, Long currentMemberId
@@ -43,6 +45,11 @@ public class MemberLectureService {
 
         if (request.memberId().equals(currentMemberId)) {
             throw new BusinessException(ErrorCode.SELF_INVITE_NOT_ALLOWED);
+        }
+
+        int sharedMemberCount = memberLectureRepository.findByLectureId(lectureId).size();
+        if (sharedMemberCount >= MAX_SHARED_MEMBER_COUNT) {
+            throw new BusinessException(ErrorCode.LECTURE_MEMBER_LIMIT_EXCEEDED);
         }
 
         MemberLecture memberLecture = MemberLecture.builder()
