@@ -9,6 +9,8 @@ import com.cramit.domain.lecture.dto.MyLectureItem;
 import com.cramit.domain.lecture.dto.SharedLectureItem;
 import com.cramit.domain.member.Member;
 import com.cramit.domain.member.MemberRepository;
+import com.cramit.domain.share.MemberLecture;
+import com.cramit.domain.share.MemberLectureRepository;
 import com.cramit.domain.week.repository.LectureAudioRepository;
 import com.cramit.domain.week.repository.LecturePptRepository;
 import com.cramit.domain.week.entity.Week;
@@ -27,12 +29,10 @@ import java.util.List;
 public class LectureService {
     private final LectureRepository lectureRepository;
     private final MemberRepository memberRepository;
-
     private final LecturePptRepository lecturePptRepository;
-
     private final LectureAudioRepository  lectureAudioRepository;
-
     private final WeekRepository weekRepository;
+    private final MemberLectureRepository memberLectureRepository;
 
     @Transactional
     public LectureCreateResponse createLecture(LectureCreateRequest request, Long memberId) {
@@ -51,14 +51,28 @@ public class LectureService {
     public List<MyLectureItem> getMyLectures(Long memberId) {
         List<Lecture> myLectures = lectureRepository.findByMemberId(memberId);
         return myLectures.stream()
-                .map(MyLectureItem::from)
+                .map(lecture -> {
+                    int weekCount = weekRepository.findByLectureIdOrderByWeekDateDesc(lecture.getLectureId()).size();
+                    return MyLectureItem.from(lecture, weekCount);
+                })
                 .toList();
     }
 
     @Transactional(readOnly = true)
-    // TODO: MemberLecture 도메인 완성되면 실제 공유 강의 조회 로직 구현
     public List<SharedLectureItem> getSharedLectures(Long memberId) {
-        return Collections.emptyList();
+        List<MemberLecture> sharedRelations = memberLectureRepository.findByMemberId(memberId);
+
+        return sharedRelations.stream()
+                .map(ml -> {
+                    Lecture lecture = lectureRepository.findById(ml.getLectureId())
+                            .orElseThrow(() -> new BusinessException(ErrorCode.ENTITY_NOT_FOUND));
+                    Member owner = memberRepository.findById(lecture.getMemberId())
+                            .orElseThrow(() -> new BusinessException(ErrorCode.ENTITY_NOT_FOUND));
+                    int weekCount = weekRepository.findByLectureIdOrderByWeekDateDesc(lecture.getLectureId()).size();
+
+                    return SharedLectureItem.of(lecture, weekCount, owner.getNickname());
+                })
+                .toList();
     }
 
     @Transactional(readOnly = true)
@@ -66,19 +80,23 @@ public class LectureService {
         Lecture lecture = lectureRepository.findById(lectureId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.ENTITY_NOT_FOUND));
 
-        // TODO: MemberLecture 도메인 완성되면 공유받은 회원도 접근 가능하도록 조건 추가
-        if (!lecture.isOwnedBy(memberId)) {
+        boolean canAccess = lecture.isOwnedBy(memberId)
+                || memberLectureRepository.existsByLectureIdAndMemberId(lectureId, memberId);
+
+        if (!canAccess) {
             throw new BusinessException(ErrorCode.LECTURE_ACCESS_DENIED);
         }
 
         Member owner = memberRepository.findById(lecture.getMemberId())
                 .orElseThrow(() -> new BusinessException(ErrorCode.ENTITY_NOT_FOUND));
 
+        int memberCount = memberLectureRepository.findByLectureId(lectureId).size() + 1; // 공유받은 멤버 수 + 생성자 본인
+
         return LectureDetailResponse.from(
                 lecture,
                 memberId,
                 owner.getNickname(),
-                1 // TODO: MemberLecture 완성되면 참여 인원 수 조회
+                memberCount
         );
     }
 
