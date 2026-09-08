@@ -29,7 +29,7 @@ public class MemberLectureService {
     public MemberLectureInviteResponse inviteMember(
             Long lectureId, MemberLectureInviteRequest request, Long currentMemberId
     ) {
-        Lecture lecture = lectureRepository.findById(lectureId)
+        Lecture lecture = lectureRepository.findByIdForUpdate(lectureId)
                 .orElseThrow(()-> new BusinessException(ErrorCode.ENTITY_NOT_FOUND));
 
         if (!lecture.isOwnedBy(currentMemberId)) {
