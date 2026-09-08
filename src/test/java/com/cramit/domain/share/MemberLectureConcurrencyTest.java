@@ -1,10 +1,14 @@
 package com.cramit.domain.share;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
 
+import com.cramit.global.exception.ErrorCode;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -71,23 +75,46 @@ class MemberLectureConcurrencyTest {
 
         int threadCount = targets.size();
         ExecutorService executorService = Executors.newFixedThreadPool(threadCount);
-        CountDownLatch latch = new CountDownLatch(threadCount);
+        CountDownLatch readyLatch = new CountDownLatch(threadCount);
+        CountDownLatch startLatch = new CountDownLatch(1);
+        CountDownLatch doneLatch = new CountDownLatch(threadCount);
+
+        List<Future<Void>> futures = new ArrayList<>();
 
         // when
         for (Long targetId : targets) {
-            executorService.submit(() -> {
+            Future<Void> future = executorService.submit(() -> {
+                readyLatch.countDown();      // "나 준비됐어" 알림
                 try {
+                    startLatch.await();      // "출발" 신호가 올 때까지 대기
                     memberLectureService.inviteMember(
                             lectureId, new MemberLectureInviteRequest(targetId), ownerId);
                 } catch (BusinessException e) {
-                    // 한도 초과로 실패하는 건 정상
+                    if (e.getErrorCode() != ErrorCode.LECTURE_MEMBER_LIMIT_EXCEEDED) {
+                        throw e;  // 예상 못한 예외는 그대로 다시 던짐
+                    }
+                    // 한도 초과는 정상적으로 예상되는 결과라 무시
                 } finally {
-                    latch.countDown();
+                    doneLatch.countDown();
                 }
+                return null;
             });
+            futures.add(future);
         }
-        latch.await();
+
+        readyLatch.await();      // 모든 스레드가 준비될 때까지 테스트 스레드가 대기
+        startLatch.countDown();  // 다 같이 "출발!"
+        doneLatch.await();       // 모든 작업이 끝날 때까지 대기
         executorService.shutdown();
+
+        // 각 작업에서 발생한 예외(LECTURE_MEMBER_LIMIT_EXCEEDED 외의 것)를 테스트 스레드로 전파
+        for (Future<Void> future : futures) {
+            try {
+                future.get();
+            } catch (ExecutionException e) {
+                throw new RuntimeException(e.getCause());
+            }
+        }
 
         // then
         List<MemberLecture> result = memberLectureRepository.findByLectureId(lectureId);
