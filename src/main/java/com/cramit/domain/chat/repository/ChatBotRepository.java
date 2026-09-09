@@ -1,0 +1,12 @@
+package com.cramit.domain.chat.repository;
+
+import com.cramit.domain.chat.entity.ChatBot;
+import org.springframework.data.jpa.repository.JpaRepository;
+
+import java.util.List;
+
+public interface ChatBotRepository extends JpaRepository<ChatBot, Long> {
+
+    List<ChatBot> findByChatBotSessionIdOrderByChatMessageIdAsc(Long chatBotSessionId);
+
+}
