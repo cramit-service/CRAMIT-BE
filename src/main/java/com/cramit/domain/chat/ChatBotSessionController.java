@@ -9,6 +9,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -39,5 +40,14 @@ public class ChatBotSessionController {
     ) {
         List<ChatBotSessionListResponse> response = chatBotSessionService.getSessions(weekId, memberId);
         return ResponseEntity.ok(ApiResponse.of(response));
+    }
+
+    @DeleteMapping("/api/chat-bot-sessions/{sessionId}")
+    public ResponseEntity<ApiResponse<Void>> deleteSession(
+            @AuthenticationPrincipal Long memberId,
+            @PathVariable Long sessionId
+    ) {
+        chatBotSessionService.deleteSession(sessionId, memberId);
+        return ResponseEntity.noContent().build();
     }
 }

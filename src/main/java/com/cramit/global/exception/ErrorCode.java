@@ -52,6 +52,7 @@ public enum ErrorCode {
 	APPLY_NO_DATA(HttpStatus.BAD_REQUEST, "적용할 학습 데이터가 없습니다."),
 
 	// AI 챗봇 (Phase 8)
+	CHATBOT_ACCESS_DENIED(HttpStatus.FORBIDDEN, "접근 권한이 없는 챗봇 세션입니다."),
 	EMPTY_QUESTION(HttpStatus.BAD_REQUEST, "질문을 입력해주세요."),
 	NO_CONTEXT(HttpStatus.NOT_FOUND, "학습 자료가 없어 답변할 수 없습니다."),
 	AI_RATE_LIMITED(HttpStatus.TOO_MANY_REQUESTS, "요청이 많아 잠시 후 다시 시도해주세요."),

@@ -9,4 +9,6 @@ public interface ChatBotRepository extends JpaRepository<ChatBot, Long> {
 
     List<ChatBot> findByChatBotSessionIdOrderByChatMessageIdAsc(Long chatBotSessionId);
 
+    void deleteAllByChatBotSessionIdIn(List<Long> chatBotSessionIds);
+
 }
