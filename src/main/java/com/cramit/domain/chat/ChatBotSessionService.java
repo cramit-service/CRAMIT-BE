@@ -4,6 +4,7 @@ import com.cramit.domain.chat.dto.ChatBotSessionCreateRequest;
 import com.cramit.domain.chat.dto.ChatBotSessionCreateResponse;
 import com.cramit.domain.chat.dto.ChatBotSessionListResponse;
 import com.cramit.domain.chat.entity.ChatBotSession;
+import com.cramit.domain.chat.repository.ChatBotRepository;
 import com.cramit.domain.chat.repository.ChatBotSessionRepository;
 import com.cramit.domain.week.entity.Week;
 import com.cramit.domain.week.repository.WeekRepository;
@@ -21,6 +22,7 @@ public class ChatBotSessionService {
 
     private final ChatBotSessionRepository chatBotSessionRepository;
     private final WeekRepository weekRepository;
+    private final ChatBotRepository chatBotRepository;
 
     @Transactional
     public ChatBotSessionCreateResponse createSession(
@@ -51,5 +53,19 @@ public class ChatBotSessionService {
                         session.getTitle()
                 ))
                 .toList();
+    }
+
+    @Transactional
+    public void deleteSession(Long sessionId, Long memberId) {
+        ChatBotSession session = chatBotSessionRepository.findById(sessionId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.ENTITY_NOT_FOUND));
+
+        if (!session.isOwnedBy(memberId)) {
+            throw new BusinessException(ErrorCode.CHATBOT_ACCESS_DENIED);
+        }
+
+        chatBotRepository.deleteAllByChatBotSessionIdIn(List.of(sessionId));
+
+        chatBotSessionRepository.delete(session);
     }
 }
