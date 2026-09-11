@@ -2,7 +2,7 @@ name: cramit
 
 services:
   postgres:
-    image: postgres:16
+    image: pgvector/pgvector:pg16
     container_name: cramit-postgres
     restart: unless-stopped
     environment:
