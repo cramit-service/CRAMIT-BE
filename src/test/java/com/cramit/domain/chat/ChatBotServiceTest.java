@@ -48,7 +48,7 @@ class ChatBotServiceTest {
     @DisplayName("메시지를 전송하면 사용자 메시지와 AI 응답이 함께 저장된다.")
     void sendMessage() {
         // given
-        Long weekId = saveWeek();
+        Long weekId = saveWeek(MEMBER_ID);
         Long sessionId = chatBotSessionService.createSession(
                 new ChatBotSessionCreateRequest(weekId, "DP 질문"), MEMBER_ID).chatBotSessionId();
 
@@ -67,7 +67,7 @@ class ChatBotServiceTest {
     @DisplayName("본인 소유가 아닌 세션에는 메시지를 전송할 수 없다.")
     void sendMessageForbidden() {
         // given
-        Long weekId = saveWeek();
+        Long weekId = saveWeek(OTHER_MEMBER_ID);
         Long sessionId = chatBotSessionService.createSession(
                 new ChatBotSessionCreateRequest(weekId, "DP 질문"), OTHER_MEMBER_ID).chatBotSessionId();
 
@@ -82,7 +82,7 @@ class ChatBotServiceTest {
     @DisplayName("메시지 목록을 시간순으로 조회한다.")
     void getMessages() {
         // given
-        Long weekId = saveWeek();
+        Long weekId = saveWeek(MEMBER_ID);
         Long sessionId = chatBotSessionService.createSession(
                 new ChatBotSessionCreateRequest(weekId, "DP 질문"), MEMBER_ID).chatBotSessionId();
         chatBotService.sendMessage(sessionId, new ChatMessageRequest("질문1"), MEMBER_ID);
@@ -95,10 +95,10 @@ class ChatBotServiceTest {
         assertThat(response).hasSize(4); // 질문2 + 답변2
     }
 
-    private Long saveWeek() {
+    private Long saveWeek(Long ownerId) {
         Long lectureId = lectureRepository.save(
                 Lecture.builder()
-                        .memberId(MEMBER_ID)
+                        .memberId(ownerId)
                         .title("알고리즘")
                         .professorName("박지훈")
                         .build()
