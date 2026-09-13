@@ -28,7 +28,10 @@ public enum ErrorCode {
 	SHARE_INVALID_PERMISSION(HttpStatus.BAD_REQUEST, "잘못된 공유 권한 값입니다."),
 	SHARE_LINK_EXPIRED(HttpStatus.GONE, "공유 링크가 만료되었거나 존재하지 않습니다."),
 	SHARE_PERMISSION_DENIED(HttpStatus.FORBIDDEN, "편집 권한이 없습니다."),
-
+	ALREADY_MEMBER(HttpStatus.CONFLICT, "이미 참여 중인 회원입니다."),
+	SELF_INVITE_NOT_ALLOWED(HttpStatus.CONFLICT, "본인을 초대할 수 없습니다."),
+	OWNER_CANNOT_LEAVE(HttpStatus.CONFLICT, "생성자는 탈퇴할 수 없습니다."),
+	LECTURE_MEMBER_LIMIT_EXCEEDED(HttpStatus.CONFLICT, "강의는 최대 3명까지 공유할 수 있습니다."),
 	// 자료 업로드 - PDF/음성 (Phase 2)
 	FILE_INVALID_TYPE(HttpStatus.UNSUPPORTED_MEDIA_TYPE, "지원하지 않는 파일 형식입니다."),
 	FILE_TOO_LARGE(HttpStatus.PAYLOAD_TOO_LARGE, "파일 용량이 너무 큽니다."),
@@ -49,6 +52,7 @@ public enum ErrorCode {
 	APPLY_NO_DATA(HttpStatus.BAD_REQUEST, "적용할 학습 데이터가 없습니다."),
 
 	// AI 챗봇 (Phase 8)
+	CHATBOT_ACCESS_DENIED(HttpStatus.FORBIDDEN, "접근 권한이 없는 챗봇 세션입니다."),
 	EMPTY_QUESTION(HttpStatus.BAD_REQUEST, "질문을 입력해주세요."),
 	NO_CONTEXT(HttpStatus.NOT_FOUND, "학습 자료가 없어 답변할 수 없습니다."),
 	AI_RATE_LIMITED(HttpStatus.TOO_MANY_REQUESTS, "요청이 많아 잠시 후 다시 시도해주세요."),

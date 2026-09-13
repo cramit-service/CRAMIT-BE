@@ -10,6 +10,9 @@ import com.cramit.domain.lecture.dto.SharedLectureItem;
 import com.cramit.domain.member.Member;
 import com.cramit.domain.member.MemberRepository;
 import com.cramit.domain.member.SocialProvider;
+import com.cramit.domain.share.MemberLecture;
+import com.cramit.domain.share.MemberLectureRepository;
+import com.cramit.domain.share.Role;
 import com.cramit.global.config.JpaAuditingConfig;
 import com.cramit.global.exception.BusinessException;
 import com.cramit.global.exception.ErrorCode;
@@ -41,6 +44,9 @@ class LectureServiceTest {
 
     @Autowired
     private MemberRepository memberRepository;
+
+    @Autowired
+    private MemberLectureRepository memberLectureRepository;
 
     @Test
     @DisplayName("강의를 생성하면 내 강의 목록에서 조회된다.")
@@ -196,6 +202,96 @@ class LectureServiceTest {
         assertThatThrownBy(() -> lectureService.getLectureDetail(lectureId, MEMBER_ID))
                 .isInstanceOfSatisfying(BusinessException.class, ex ->
                         assertThat(ex.getErrorCode()).isEqualTo(ErrorCode.LECTURE_ACCESS_DENIED));
+    }
+
+    @Test
+    @DisplayName("공유받은 강의는 공유 강의 목록에서 조회된다.")
+    void getSharedLecturesReturnsSharedLecture() {
+        // given
+        Long ownerId = memberRepository.save(
+                Member.ofSocialSignup("김한양", SocialProvider.GOOGLE, "google-owner", null)
+        ).getId();
+
+        Long lectureId = lectureRepository.save(
+                Lecture.builder()
+                        .memberId(ownerId)
+                        .title("알고리즘")
+                        .professorName("박지훈")
+                        .build()
+        ).getLectureId();
+
+        memberLectureRepository.save(
+                MemberLecture.builder()
+                        .memberId(MEMBER_ID)
+                        .lectureId(lectureId)
+                        .role(Role.MEMBER)
+                        .build()
+        );
+
+        // when
+        List<SharedLectureItem> response = lectureService.getSharedLectures(MEMBER_ID);
+
+        // then
+        assertThat(response).hasSize(1);
+        assertThat(response.get(0).lectureId()).isEqualTo(lectureId);
+    }
+
+    @Test
+    @DisplayName("공유받은 멤버는 강의 상세 조회가 가능하다.")
+    void getLectureDetailAllowedForSharedMember() {
+        // given
+        Long ownerId = memberRepository.save(
+                Member.ofSocialSignup("김한양", SocialProvider.GOOGLE, "google-owner2", null)
+        ).getId();
+
+        Long lectureId = lectureRepository.save(
+                Lecture.builder()
+                        .memberId(ownerId)
+                        .title("알고리즘")
+                        .professorName("박지훈")
+                        .build()
+        ).getLectureId();
+
+        memberLectureRepository.save(
+                MemberLecture.builder()
+                        .memberId(MEMBER_ID)
+                        .lectureId(lectureId)
+                        .role(Role.MEMBER)
+                        .build()
+        );
+
+        // when
+        LectureDetailResponse response = lectureService.getLectureDetail(lectureId, MEMBER_ID);
+
+        // then
+        assertThat(response.lectureId()).isEqualTo(lectureId);
+        assertThat(response.isOwner()).isFalse();
+    }
+
+    @Test
+    @DisplayName("강의 상세 조회 시 참여 인원 수에 생성자와 공유받은 멤버가 모두 포함된다.")
+    void getLectureDetailIncludesMemberCount() {
+        // given
+        Long memberId = memberRepository.save(
+                Member.ofSocialSignup("김번개", SocialProvider.GOOGLE, "google-1234", null)
+        ).getId();
+
+        Long lectureId = lectureService.createLecture(
+                new LectureCreateRequest("알고리즘", "박지훈"), memberId).lectureId();
+
+        memberLectureRepository.save(
+                MemberLecture.builder()
+                        .memberId(OTHER_MEMBER_ID)
+                        .lectureId(lectureId)
+                        .role(Role.MEMBER)
+                        .build()
+        );
+
+        // when
+        LectureDetailResponse response = lectureService.getLectureDetail(lectureId, memberId);
+
+        // then
+        assertThat(response.memberCount()).isEqualTo(2);
     }
 }
 
