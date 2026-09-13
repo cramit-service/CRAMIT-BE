@@ -11,12 +11,12 @@ public record MyLectureItem(
         Integer weekCount,
         NearestExam nearestExam
 ) {
-    public static MyLectureItem from(Lecture lecture) {
+    public static MyLectureItem from(Lecture lecture, Integer weekCount) {
         return MyLectureItem.builder()
                 .lectureId(lecture.getLectureId())
                 .title(lecture.getTitle())
                 .professorName(lecture.getProfessorName())
-                .weekCount(0) // TODO: Week 완성되면 실제 개수로 교체
+                .weekCount(weekCount)
                 .nearestExam(null) // TODO: Exam 완성되면 계산 로직 추가
                 .build();
     }
