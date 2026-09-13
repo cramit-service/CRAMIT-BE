@@ -6,6 +6,9 @@ import com.cramit.domain.chat.dto.ChatBotSessionListResponse;
 import com.cramit.domain.chat.entity.ChatBotSession;
 import com.cramit.domain.chat.repository.ChatBotRepository;
 import com.cramit.domain.chat.repository.ChatBotSessionRepository;
+import com.cramit.domain.lecture.Lecture;
+import com.cramit.domain.lecture.LectureRepository;
+import com.cramit.domain.share.MemberLectureRepository;
 import com.cramit.domain.week.entity.Week;
 import com.cramit.domain.week.repository.WeekRepository;
 import com.cramit.global.exception.BusinessException;
@@ -23,6 +26,8 @@ public class ChatBotSessionService {
     private final ChatBotSessionRepository chatBotSessionRepository;
     private final WeekRepository weekRepository;
     private final ChatBotRepository chatBotRepository;
+    private final LectureRepository lectureRepository;
+    private final MemberLectureRepository memberLectureRepository;
 
     @Transactional
     public ChatBotSessionCreateResponse createSession(
@@ -30,6 +35,16 @@ public class ChatBotSessionService {
     ){
         Week week = weekRepository.findById(request.weekId())
                 .orElseThrow(() -> new BusinessException(ErrorCode.ENTITY_NOT_FOUND));
+
+        Lecture lecture = lectureRepository.findById(week.getLectureId())
+                .orElseThrow(() -> new BusinessException(ErrorCode.ENTITY_NOT_FOUND));
+
+        boolean canAccess = lecture.isOwnedBy(memberId)
+                || memberLectureRepository.existsByLectureIdAndMemberId(lecture.getLectureId(), memberId);
+
+        if (!canAccess) {
+            throw new BusinessException(ErrorCode.LECTURE_ACCESS_DENIED);
+        }
 
         ChatBotSession session = ChatBotSession.builder()
                 .memberId(memberId)
