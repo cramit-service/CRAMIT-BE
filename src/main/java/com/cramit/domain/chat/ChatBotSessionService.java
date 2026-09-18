@@ -43,7 +43,6 @@ public class ChatBotSessionService {
 
         ChatBotSession session = ChatBotSession.builder()
                 .memberId(memberId)
-                .lectureId(week.getLectureId())
                 .weekId(week.getWeekId())
                 .title(request.title())
                 .build();

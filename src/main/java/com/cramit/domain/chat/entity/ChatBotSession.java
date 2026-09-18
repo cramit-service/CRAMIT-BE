@@ -23,17 +23,13 @@ public class ChatBotSession extends BaseEntity{
     private Long memberId;
 
     @Column(nullable = false)
-    private Long lectureId;
-
-    @Column(nullable = false)
     private Long weekId;
 
     private String title;
 
     @Builder
-    public ChatBotSession(Long memberId, Long lectureId, Long weekId, String title) {
+    public ChatBotSession(Long memberId, Long weekId, String title) {
         this.memberId = memberId;
-        this.lectureId = lectureId;
         this.weekId = weekId;
         this.title = title;
     }
