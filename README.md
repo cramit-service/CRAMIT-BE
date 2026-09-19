@@ -191,35 +191,41 @@
 ├─ 📄 .coderabbit.yaml           # CodeRabbit 리뷰 언어/설정
 ├─ 📄 .gitattributes             # 줄바꿈(EOL) 통일 설정
 ├─ 📄 .gitignore
+├─ 📄 docker-compose.yml         # 로컬 PostgreSQL(pgvector) 컨테이너
 ├─ 📁 gradle/wrapper
 ├─ 📁 src
 │  ├─ 📁 main
 │  │  ├─ 📁 java/com/cramit
 │  │  │  ├─ 📄 CramitApplication.java
 │  │  │  ├─ 📁 global
-│  │  │  │  ├─ 📁 config           # Security, Swagger, Async 등 설정
+│  │  │  │  ├─ 📁 config           # Security, Async, Querydsl, Resilience 등 설정
 │  │  │  │  ├─ 📁 exception        # 전역 예외처리, 에러코드 enum
 │  │  │  │  ├─ 📁 security         # JWT, OAuth2 관련
-│  │  │  │  └─ 📁 common           # 공통 응답 포맷, 유틸
+│  │  │  │  ├─ 📁 common           # 공통 응답 포맷, 유틸
+│  │  │  │  ├─ 📁 async            # 비동기 처리 공통 설정
+│  │  │  │  ├─ 📁 external         # 외부 API 연동 공통 모듈
+│  │  │  │  └─ 📁 logging          # 요청 추적(traceId) 로깅
 │  │  │  └─ 📁 domain
 │  │  │     ├─ 📁 member           # 회원가입 / 로그인 / 프로필
 │  │  │     ├─ 📁 lecture          # 강의 CRUD
-│  │  │     ├─ 📁 week             # PDF 업로드 / 녹음 / STT / 페이지 매핑
+│  │  │     ├─ 📁 week             # 주차 관리 / PDF·음성 자료 / STT
+│  │  │     ├─ 📁 todo             # TODO (수동 생성 + AI 생성)
+│  │  │     ├─ 📁 chat             # AI 챗봇
 │  │  │     ├─ 📁 summary          # AI 요약본 생성·조회
 │  │  │     ├─ 📁 learning         # 학습 포인트 / 학습 메모
 │  │  │     ├─ 📁 share            # 강의 공유 / 공유 게시판
-│  │  │     ├─ 📁 chat             # AI 챗봇
-│  │  │     ├─ 📁 todo             # TODO (AI 생성 + 수동)
 │  │  │     ├─ 📁 exam             # 시험 일정
 │  │  │     └─ 📁 ai               # Gemini 프롬프트 공통 모듈
 │  │  └─ 📁 resources
 │  │     ├─ 📄 application.yml
-│  │     ├─ 📄 application-local.yml   # (gitignore, 개인 환경변수)
-│  │     └─ 📁 db/migration            # Flyway 마이그레이션 스크립트
+│  │     ├─ 📄 application-local.yml       # (gitignore, 개인 환경변수)
+│  │     ├─ 📄 application-local.yml.example
+│  │     ├─ 📄 application-dev.yml
+│  │     ├─ 📄 application-prod.yml
+│  │     └─ 📁 db/migration                # Flyway 마이그레이션 스크립트 (V1~V7)
 │  └─ 📁 test
 ├─ 📄 build.gradle
-├─ 📄 settings.gradle
-└─ 📄 Dockerfile
+└─ 📄 settings.gradle
 ```
 
 </div>
