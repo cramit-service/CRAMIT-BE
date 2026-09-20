@@ -5,6 +5,7 @@ import java.util.List;
 import com.cramit.domain.chat.dto.ChatBotSessionCreateRequest;
 import com.cramit.domain.chat.dto.ChatMessageRequest;
 import com.cramit.domain.chat.dto.ChatMessageResponse;
+import com.cramit.domain.chat.enums.SenderType;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -93,6 +94,20 @@ class ChatBotServiceTest {
 
         // then
         assertThat(response).hasSize(4); // 질문2 + 답변2
+    }
+
+    @Test
+    @DisplayName("본인 소유가 아닌 세션의 메시지는 조회할 수 없다.")
+    void getMessagesForbidden() {
+        // given
+        Long weekId = saveWeek(OTHER_MEMBER_ID);
+        Long sessionId = chatBotSessionService.createSession(
+                new ChatBotSessionCreateRequest(weekId, "DP 질문"), OTHER_MEMBER_ID).chatBotSessionId();
+
+        // when & then
+        assertThatThrownBy(() -> chatBotService.getMessages(sessionId, MEMBER_ID))
+                .isInstanceOfSatisfying(BusinessException.class, ex ->
+                        assertThat(ex.getErrorCode()).isEqualTo(ErrorCode.CHATBOT_ACCESS_DENIED));
     }
 
     private Long saveWeek(Long ownerId) {
