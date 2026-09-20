@@ -17,7 +17,7 @@ import lombok.NoArgsConstructor;
 @Entity
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
-public class ChatBot extends BaseEntity {
+public class ChatMessage extends BaseEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -42,7 +42,7 @@ public class ChatBot extends BaseEntity {
     private Integer referencedPage;
 
     @Builder
-    public ChatBot(Long memberId, Long weekId, Long chatBotSessionId, SenderType senderType,
+    public ChatMessage(Long memberId, Long weekId, Long chatBotSessionId, SenderType senderType,
                    String message, Integer referencedPage) {
 
         this.memberId = memberId;
