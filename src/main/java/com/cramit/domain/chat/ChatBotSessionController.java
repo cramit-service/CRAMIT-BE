@@ -43,7 +43,7 @@ public class ChatBotSessionController {
     }
 
     @DeleteMapping("/api/chat-bot-sessions/{sessionId}")
-    public ResponseEntity<ApiResponse<Void>> deleteSession(
+    public ResponseEntity<Void> deleteSession(
             @AuthenticationPrincipal Long memberId,
             @PathVariable Long sessionId
     ) {
