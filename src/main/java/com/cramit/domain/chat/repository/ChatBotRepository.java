@@ -8,7 +8,4 @@ import java.util.List;
 public interface ChatBotRepository extends JpaRepository<ChatMessage, Long> {
 
     List<ChatMessage> findByChatBotSessionIdOrderByChatMessageIdAsc(Long chatBotSessionId);
-
-    void deleteAllByChatBotSessionIdIn(List<Long> chatBotSessionIds);
-
 }
