@@ -2,8 +2,9 @@ package com.cramit.domain.chat;
 
 import com.cramit.domain.chat.dto.ChatMessageRequest;
 import com.cramit.domain.chat.dto.ChatMessageResponse;
-import com.cramit.domain.chat.entity.ChatBot;
+import com.cramit.domain.chat.entity.ChatMessage;
 import com.cramit.domain.chat.entity.ChatBotSession;
+import com.cramit.domain.chat.enums.SenderType;
 import com.cramit.domain.chat.repository.ChatBotRepository;
 import com.cramit.domain.chat.repository.ChatBotSessionRepository;
 import com.cramit.global.exception.BusinessException;
@@ -30,7 +31,7 @@ public class ChatBotService {
             throw new BusinessException(ErrorCode.CHATBOT_ACCESS_DENIED);
         }
 
-        List<ChatBot> messages = chatBotRepository.findByChatBotSessionIdOrderByChatMessageIdAsc(sessionId);
+        List<ChatMessage> messages = chatBotRepository.findByChatBotSessionIdOrderByChatMessageIdAsc(sessionId);
 
         return messages.stream()
                 .map(ChatMessageResponse::from)
@@ -46,8 +47,7 @@ public class ChatBotService {
             throw new BusinessException(ErrorCode.CHATBOT_ACCESS_DENIED);
         }
 
-        // 사용자 메시지 저장
-        ChatBot userMessage = ChatBot.builder()
+        ChatMessage userMessage = ChatMessage.builder()
                 .memberId(memberId)
                 .weekId(session.getWeekId())
                 .chatBotSessionId(sessionId)
@@ -60,7 +60,7 @@ public class ChatBotService {
         String answer = "AI 응답 준비 중입니다."; // 임시 더미 응답
 
         // AI 메시지 저장
-        ChatBot aiMessage = ChatBot.builder()
+        ChatMessage aiMessage = ChatMessage.builder()
                 .memberId(memberId)
                 .weekId(session.getWeekId())
                 .chatBotSessionId(sessionId)

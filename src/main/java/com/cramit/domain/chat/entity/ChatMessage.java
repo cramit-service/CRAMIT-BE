@@ -1,6 +1,6 @@
 package com.cramit.domain.chat.entity;
 
-import com.cramit.domain.chat.SenderType;
+import com.cramit.domain.chat.enums.SenderType;
 import com.cramit.global.common.BaseEntity;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;

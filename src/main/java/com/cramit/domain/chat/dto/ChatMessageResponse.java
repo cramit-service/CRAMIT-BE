@@ -1,7 +1,7 @@
 package com.cramit.domain.chat.dto;
 
-import com.cramit.domain.chat.SenderType;
-import com.cramit.domain.chat.entity.ChatBot;
+import com.cramit.domain.chat.enums.SenderType;
+import com.cramit.domain.chat.entity.ChatMessage;
 import lombok.Builder;
 
 import java.time.LocalDateTime;
@@ -14,13 +14,13 @@ public record ChatMessageResponse(
         Integer referencedPage,
         LocalDateTime createdAt
 ) {
-    public static ChatMessageResponse from(ChatBot chatBot) {
+    public static ChatMessageResponse from(ChatMessage chatMessage) {
         return ChatMessageResponse.builder()
-                .chatMessageId(chatBot.getChatMessageId())
-                .senderType(chatBot.getSenderType())
-                .message(chatBot.getMessage())
-                .referencedPage(chatBot.getReferencedPage())
-                .createdAt(chatBot.getCreatedAt())
+                .chatMessageId(chatMessage.getChatMessageId())
+                .senderType(chatMessage.getSenderType())
+                .message(chatMessage.getMessage())
+                .referencedPage(chatMessage.getReferencedPage())
+                .createdAt(chatMessage.getCreatedAt())
                 .build();
     }
 }

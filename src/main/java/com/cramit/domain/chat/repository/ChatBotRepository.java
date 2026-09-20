@@ -1,13 +1,13 @@
 package com.cramit.domain.chat.repository;
 
-import com.cramit.domain.chat.entity.ChatBot;
+import com.cramit.domain.chat.entity.ChatMessage;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 import java.util.List;
 
-public interface ChatBotRepository extends JpaRepository<ChatBot, Long> {
+public interface ChatBotRepository extends JpaRepository<ChatMessage, Long> {
 
-    List<ChatBot> findByChatBotSessionIdOrderByChatMessageIdAsc(Long chatBotSessionId);
+    List<ChatMessage> findByChatBotSessionIdOrderByChatMessageIdAsc(Long chatBotSessionId);
 
     void deleteAllByChatBotSessionIdIn(List<Long> chatBotSessionIds);
 
