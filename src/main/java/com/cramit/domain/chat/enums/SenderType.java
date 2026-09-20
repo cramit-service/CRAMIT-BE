@@ -1,4 +1,4 @@
-package com.cramit.domain.chat;
+package com.cramit.domain.chat.enums;
 
 public enum SenderType {
     USER, AI
