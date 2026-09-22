@@ -64,3 +64,9 @@ aws:
 logging:
   level:
     com.cramit: INFO
+
+springdoc:
+  api-docs:
+    enabled: false
+  swagger-ui:
+    enabled: false
