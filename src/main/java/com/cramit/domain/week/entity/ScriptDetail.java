@@ -3,12 +3,9 @@ package com.cramit.domain.week.entity;
 import com.cramit.global.common.BaseEntity;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
-import jakarta.persistence.FetchType;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
-import jakarta.persistence.JoinColumn;
-import jakarta.persistence.ManyToOne;
 import lombok.AccessLevel;
 import lombok.Builder;
 import lombok.Getter;
@@ -23,9 +20,8 @@ public class ScriptDetail extends BaseEntity {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long scriptDetailId;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "script_id", nullable = false)
-    private Script script;
+    @Column(nullable = false)
+    private Long scriptId;
 
     @Column(nullable = false)
     private Integer timeSec;
@@ -37,13 +33,10 @@ public class ScriptDetail extends BaseEntity {
     private Integer sequence;
 
     @Builder
-    public ScriptDetail(Integer timeSec, String content, Integer sequence) {
+    public ScriptDetail(Long scriptId, Integer timeSec, String content, Integer sequence) {
+        this.scriptId = scriptId;
         this.timeSec = timeSec;
         this.content = content;
         this.sequence = sequence;
-    }
-
-    void assignScript(Script script) {
-        this.script = script;
     }
 }

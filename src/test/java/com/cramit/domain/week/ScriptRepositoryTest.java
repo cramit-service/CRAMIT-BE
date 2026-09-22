@@ -2,6 +2,7 @@ package com.cramit.domain.week;
 
 import com.cramit.domain.week.entity.Script;
 import com.cramit.domain.week.entity.ScriptDetail;
+import com.cramit.domain.week.repository.ScriptDetailRepository;
 import com.cramit.domain.week.repository.ScriptRepository;
 import com.cramit.global.config.JpaAuditingConfig;
 import jakarta.persistence.EntityManager;
@@ -29,6 +30,9 @@ class ScriptRepositoryTest {
     private ScriptRepository scriptRepository;
 
     @Autowired
+    private ScriptDetailRepository scriptDetailRepository;
+
+    @Autowired
     private EntityManager em;
 
     @Test
@@ -38,7 +42,7 @@ class ScriptRepositoryTest {
         saveScript(3, 300, 487, 1);
         saveScript(4, 637, 800, 3);
 
-        List<Script> found = scriptRepository.findByWeekIdAndPageNumberWithDetails(WEEK_ID, 3);
+        List<Script> found = scriptRepository.findByWeekIdAndPageNumberOrderBySequenceAsc(WEEK_ID, 3);
 
         assertThat(found).hasSize(2);
         assertThat(found).extracting(Script::getSequence).containsExactly(1, 2);
@@ -46,34 +50,18 @@ class ScriptRepositoryTest {
     }
 
     @Test
-    @DisplayName("구간을 저장하면 전사 줄도 함께 저장되고 sequence 순으로 딸려 나온다.")
-    void detailsAreCascadedAndOrdered() {
-        Script script = newScript(3, 487, 637, 1);
-        script.addDetail(newDetail(489, "둘째 줄", 2));
-        script.addDetail(newDetail(487, "첫째 줄", 1));
-        scriptRepository.save(script);
+    @DisplayName("전사 줄은 구간별로 sequence 순으로 조회된다.")
+    void detailsAreOrdered() {
+        Script script = saveScript(3, 487, 637, 1);
+        scriptDetailRepository.save(newDetail(script.getScriptId(), 489, "둘째 줄", 2));
+        scriptDetailRepository.save(newDetail(script.getScriptId(), 487, "첫째 줄", 1));
         flushAndClear();
 
-        List<Script> found = scriptRepository.findByWeekIdAndPageNumberWithDetails(WEEK_ID, 3);
+        List<ScriptDetail> found = scriptDetailRepository
+                .findByScriptIdInOrderBySequenceAsc(List.of(script.getScriptId()));
 
-        assertThat(found).hasSize(1);
-        assertThat(found.get(0).getDetails()).extracting(ScriptDetail::getContent)
+        assertThat(found).extracting(ScriptDetail::getContent)
                 .containsExactly("첫째 줄", "둘째 줄");
-    }
-
-    @Test
-    @DisplayName("구간을 지우면 전사 줄도 같이 지워진다.")
-    void deletingScriptRemovesDetails() {
-        Script script = newScript(3, 487, 637, 1);
-        script.addDetail(newDetail(487, "첫째 줄", 1));
-        scriptRepository.save(script);
-        flushAndClear();
-
-        scriptRepository.deleteAll();
-        flushAndClear();
-
-        assertThat(em.createQuery("select count(d) from ScriptDetail d", Long.class)
-                .getSingleResult()).isZero();
     }
 
     @Test
@@ -100,8 +88,9 @@ class ScriptRepositoryTest {
                 .build();
     }
 
-    private ScriptDetail newDetail(int timeSec, String content, int sequence) {
+    private ScriptDetail newDetail(Long scriptId, int timeSec, String content, int sequence) {
         return ScriptDetail.builder()
+                .scriptId(scriptId)
                 .timeSec(timeSec)
                 .content(content)
                 .sequence(sequence)
