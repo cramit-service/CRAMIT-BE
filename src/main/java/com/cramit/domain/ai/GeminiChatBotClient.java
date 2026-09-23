@@ -14,7 +14,7 @@ import org.springframework.web.client.RestClient;
 @RequiredArgsConstructor
 public class GeminiChatBotClient {
 
-    private static final String MODEL = "gemini-2.5-flash";
+    public static final String MODEL = "gemini-3.6-flash";
 
     private final RestClient geminiRestClient;
 
