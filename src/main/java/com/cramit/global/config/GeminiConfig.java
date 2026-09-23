@@ -1,5 +1,6 @@
-package com.cramit.domain.ai;
+package com.cramit.global.config;
 
+import com.cramit.domain.ai.GeminiProperties;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
