@@ -54,6 +54,7 @@ public enum ErrorCode {
 	AI_RATE_LIMITED(HttpStatus.TOO_MANY_REQUESTS, "요청이 많아 잠시 후 다시 시도해주세요."),
 	AI_TIMEOUT(HttpStatus.GATEWAY_TIMEOUT, "답변 생성이 지연되고 있습니다."),
 	CHATBOT_RESPONSE_ERROR(HttpStatus.BAD_GATEWAY, "답변 생성에 실패했습니다. 다시 시도해주세요."),
+	EMPTY_QUESTION(HttpStatus.BAD_REQUEST, "질문을 입력해주세요."),
 
 	// AI 학습 TODO (Phase 9)
 	INVALID_DDAY(HttpStatus.UNPROCESSABLE_ENTITY, "시험 날짜가 이미 지났습니다."),
