@@ -29,6 +29,10 @@ public class GeminiChatBotClient {
                 .retrieve()
                 .body(GeminiResponse.class);
 
+        if (response == null) {
+            throw new BusinessException(ErrorCode.CHATBOT_RESPONSE_ERROR);
+        }
+
         return response.extractAnswer();
     }
 
