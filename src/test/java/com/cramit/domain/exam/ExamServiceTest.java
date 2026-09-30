@@ -1,0 +1,204 @@
+package com.cramit.domain.exam;
+
+import com.cramit.domain.exam.dto.ExamCreateRequest;
+import com.cramit.domain.exam.dto.ExamResponse;
+import com.cramit.domain.exam.dto.ExamUpdateRequest;
+import com.cramit.domain.exam.repository.ExamRepository;
+import com.cramit.domain.lecture.Lecture;
+import com.cramit.domain.lecture.LectureRepository;
+import com.cramit.domain.week.entity.Week;
+import com.cramit.domain.week.enums.WeekStatus;
+import com.cramit.domain.week.repository.WeekRepository;
+import com.cramit.global.config.JpaAuditingConfig;
+import com.cramit.global.exception.BusinessException;
+import com.cramit.global.exception.ErrorCode;
+import jakarta.validation.Validation;
+import jakarta.validation.Validator;
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.context.annotation.Import;
+import org.springframework.test.context.ActiveProfiles;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.time.LocalDate;
+import java.util.List;
+
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
+
+@SpringBootTest
+@Import(JpaAuditingConfig.class)
+@ActiveProfiles("test")
+@Transactional
+class ExamServiceTest {
+
+    private static final Long MEMBER_ID = 1L;
+    private static final Long OTHER_MEMBER_ID = 2L;
+    private static final LocalDate TODAY = LocalDate.now();
+
+    @Autowired
+    private ExamService examService;
+
+    @Autowired
+    private ExamRepository examRepository;
+
+    @Autowired
+    private LectureRepository lectureRepository;
+
+    @Autowired
+    private WeekRepository weekRepository;
+
+    @Test
+    @DisplayName("시험을 등록하면 강의명과 함께 강의별 목록에서 시험일 순으로 조회된다.")
+    void createThenGetLectureExams() {
+        Long lectureId = saveLecture(MEMBER_ID, "운영체제");
+        examService.createExam(lectureId, createRequest("기말고사", TODAY.plusDays(30)), MEMBER_ID);
+        examService.createExam(lectureId, createRequest("중간고사", TODAY.plusDays(10)), MEMBER_ID);
+
+        List<ExamResponse> exams = examService.getLectureExams(lectureId, MEMBER_ID);
+
+        assertThat(exams).extracting(ExamResponse::title).containsExactly("중간고사", "기말고사");
+        assertThat(exams).extracting(ExamResponse::lectureName).containsOnly("운영체제");
+    }
+
+    @Test
+    @DisplayName("진행률은 강의의 주차 중 학습 완료 비율이다.")
+    void progressIsCompletedWeekRatio() {
+        Long lectureId = saveLecture(MEMBER_ID, "운영체제");
+        saveWeek(lectureId, WeekStatus.COMPLETED);
+        saveWeek(lectureId, WeekStatus.IN_PROCESS);
+        saveWeek(lectureId, WeekStatus.BEFORE);
+        saveWeek(lectureId, WeekStatus.COMPLETED);
+
+        ExamResponse created = examService.createExam(lectureId, createRequest("중간고사", TODAY), MEMBER_ID);
+
+        assertThat(created.progress()).isEqualTo(50);
+    }
+
+    @Test
+    @DisplayName("주차가 없는 강의의 진행률은 0이다.")
+    void progressWithoutWeeksIsZero() {
+        Long lectureId = saveLecture(MEMBER_ID, "운영체제");
+
+        ExamResponse created = examService.createExam(lectureId, createRequest("중간고사", TODAY), MEMBER_ID);
+
+        assertThat(created.progress()).isZero();
+    }
+
+    @Test
+    @DisplayName("다가오는 시험은 오늘부터, 전체 조회는 지난 시험까지 내 강의의 시험만 준다.")
+    void upcomingAndAllExams() {
+        Long mine = saveLecture(MEMBER_ID, "운영체제");
+        Long others = saveLecture(OTHER_MEMBER_ID, "자료구조");
+        examService.createExam(mine, createRequest("지난 시험", TODAY.minusDays(1)), MEMBER_ID);
+        examService.createExam(mine, createRequest("오늘 시험", TODAY), MEMBER_ID);
+        examService.createExam(others, createRequest("남의 시험", TODAY.plusDays(1)), OTHER_MEMBER_ID);
+
+        assertThat(examService.getUpcomingExams(MEMBER_ID))
+                .extracting(ExamResponse::title).containsExactly("오늘 시험");
+        assertThat(examService.getMyExams(MEMBER_ID))
+                .extracting(ExamResponse::title).containsExactly("지난 시험", "오늘 시험");
+    }
+
+    @Test
+    @DisplayName("강의가 없는 회원은 빈 목록을 받는다.")
+    void noLecturesReturnsEmpty() {
+        assertThat(examService.getMyExams(MEMBER_ID)).isEmpty();
+        assertThat(examService.getUpcomingExams(MEMBER_ID)).isEmpty();
+    }
+
+    @Test
+    @DisplayName("시험을 수정하면 다른 강의로 옮길 수 있다.")
+    void updateExamMovesLecture() {
+        Long from = saveLecture(MEMBER_ID, "운영체제");
+        Long to = saveLecture(MEMBER_ID, "자료구조");
+        Long examId = examService.createExam(from, createRequest("중간고사", TODAY), MEMBER_ID).examId();
+
+        ExamResponse updated = examService.updateExam(
+                examId, new ExamUpdateRequest(to, "기말고사", TODAY.plusDays(7), "범위: 5~8주차"), MEMBER_ID);
+
+        assertThat(updated.lectureId()).isEqualTo(to);
+        assertThat(updated.lectureName()).isEqualTo("자료구조");
+        assertThat(updated.title()).isEqualTo("기말고사");
+        assertThat(updated.memo()).isEqualTo("범위: 5~8주차");
+    }
+
+    @Test
+    @DisplayName("시험을 삭제하면 조회되지 않는다.")
+    void deleteExam() {
+        Long lectureId = saveLecture(MEMBER_ID, "운영체제");
+        Long examId = examService.createExam(lectureId, createRequest("중간고사", TODAY), MEMBER_ID).examId();
+
+        examService.deleteExam(examId, MEMBER_ID);
+
+        assertThat(examRepository.findById(examId)).isEmpty();
+    }
+
+    @Test
+    @DisplayName("생성자가 아니면 시험을 등록할 수 없다.")
+    void createExamForbidden() {
+        Long lectureId = saveLecture(OTHER_MEMBER_ID, "운영체제");
+
+        assertThatThrownBy(() -> examService.createExam(lectureId, createRequest("중간고사", TODAY), MEMBER_ID))
+                .isInstanceOfSatisfying(BusinessException.class, ex ->
+                        assertThat(ex.getErrorCode()).isEqualTo(ErrorCode.LECTURE_ACCESS_DENIED));
+    }
+
+    @Test
+    @DisplayName("남의 강의로는 시험을 옮길 수 없다.")
+    void updateExamToOthersLectureForbidden() {
+        Long mine = saveLecture(MEMBER_ID, "운영체제");
+        Long others = saveLecture(OTHER_MEMBER_ID, "자료구조");
+        Long examId = examService.createExam(mine, createRequest("중간고사", TODAY), MEMBER_ID).examId();
+
+        assertThatThrownBy(() -> examService.updateExam(
+                examId, new ExamUpdateRequest(others, "중간고사", TODAY, null), MEMBER_ID))
+                .isInstanceOfSatisfying(BusinessException.class, ex ->
+                        assertThat(ex.getErrorCode()).isEqualTo(ErrorCode.LECTURE_ACCESS_DENIED));
+    }
+
+    @Test
+    @DisplayName("생성자가 아니면 시험을 삭제할 수 없다.")
+    void deleteExamForbidden() {
+        Long lectureId = saveLecture(OTHER_MEMBER_ID, "운영체제");
+        Long examId = examService.createExam(lectureId, createRequest("중간고사", TODAY), OTHER_MEMBER_ID).examId();
+
+        assertThatThrownBy(() -> examService.deleteExam(examId, MEMBER_ID))
+                .isInstanceOfSatisfying(BusinessException.class, ex ->
+                        assertThat(ex.getErrorCode()).isEqualTo(ErrorCode.LECTURE_ACCESS_DENIED));
+    }
+
+    @Test
+    @DisplayName("시험 제목은 10자를 넘을 수 없다.")
+    void titleOver10CharsIsInvalid() {
+        Validator validator = Validation.buildDefaultValidatorFactory().getValidator();
+
+        assertThat(validator.validate(createRequest("가".repeat(10), TODAY))).isEmpty();
+        assertThat(validator.validate(createRequest("가".repeat(11), TODAY))).hasSize(1);
+    }
+
+    private Long saveLecture(Long memberId, String title) {
+        return lectureRepository.save(
+                Lecture.builder()
+                        .memberId(memberId)
+                        .title(title)
+                        .build()
+        ).getLectureId();
+    }
+
+    private void saveWeek(Long lectureId, WeekStatus status) {
+        Week week = Week.builder()
+                .lectureId(lectureId)
+                .title("주차")
+                .weekDate(TODAY)
+                .build();
+        week.updateStatus(status);
+        weekRepository.save(week);
+    }
+
+    private ExamCreateRequest createRequest(String title, LocalDate examDate) {
+        return new ExamCreateRequest(title, examDate, null);
+    }
+}

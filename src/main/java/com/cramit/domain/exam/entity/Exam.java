@@ -40,4 +40,11 @@ public class Exam extends BaseEntity {
         this.examDate = examDate;
         this.memo = memo;
     }
+
+    public void update(Long lectureId, String title, LocalDate examDate, String memo) {
+        this.lectureId = lectureId;
+        this.title = title;
+        this.examDate = examDate;
+        this.memo = memo;
+    }
 }
