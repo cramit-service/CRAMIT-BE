@@ -71,7 +71,7 @@ public class ExamService {
     @Transactional
     public ExamResponse updateExam(Long examId, ExamUpdateRequest request, Long memberId) {
         Exam exam = examRepository.findById(examId)
-                .orElseThrow(() -> new BusinessException(ErrorCode.ENTITY_NOT_FOUND));
+                .orElseThrow(() -> new BusinessException(ErrorCode.EXAM_NOT_FOUND));
         getOwnedLecture(exam.getLectureId(), memberId);
         Lecture target = getOwnedLecture(request.lectureId(), memberId);
 
@@ -83,7 +83,7 @@ public class ExamService {
     @Transactional
     public void deleteExam(Long examId, Long memberId) {
         Exam exam = examRepository.findById(examId)
-                .orElseThrow(() -> new BusinessException(ErrorCode.ENTITY_NOT_FOUND));
+                .orElseThrow(() -> new BusinessException(ErrorCode.EXAM_NOT_FOUND));
         getOwnedLecture(exam.getLectureId(), memberId);
 
         examRepository.delete(exam);
@@ -91,7 +91,7 @@ public class ExamService {
 
     private Lecture getOwnedLecture(Long lectureId, Long memberId) {
         Lecture lecture = lectureRepository.findById(lectureId)
-                .orElseThrow(() -> new BusinessException(ErrorCode.ENTITY_NOT_FOUND));
+                .orElseThrow(() -> new BusinessException(ErrorCode.LECTURE_NOT_FOUND));
 
         if (!lecture.isOwnedBy(memberId)) {
             throw new BusinessException(ErrorCode.LECTURE_ACCESS_DENIED);

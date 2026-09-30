@@ -171,6 +171,22 @@ class ExamServiceTest {
     }
 
     @Test
+    @DisplayName("수정 시 시험이 없으면 EXAM_NOT_FOUND, 옮길 강의가 없으면 LECTURE_NOT_FOUND다.")
+    void updateExamNotFoundCodes() {
+        Long lectureId = saveLecture(MEMBER_ID, "운영체제");
+        Long examId = examService.createExam(lectureId, createRequest("중간고사", TODAY), MEMBER_ID).examId();
+
+        assertThatThrownBy(() -> examService.updateExam(
+                999L, new ExamUpdateRequest(lectureId, "중간고사", TODAY, null), MEMBER_ID))
+                .isInstanceOfSatisfying(BusinessException.class, ex ->
+                        assertThat(ex.getErrorCode()).isEqualTo(ErrorCode.EXAM_NOT_FOUND));
+        assertThatThrownBy(() -> examService.updateExam(
+                examId, new ExamUpdateRequest(999L, "중간고사", TODAY, null), MEMBER_ID))
+                .isInstanceOfSatisfying(BusinessException.class, ex ->
+                        assertThat(ex.getErrorCode()).isEqualTo(ErrorCode.LECTURE_NOT_FOUND));
+    }
+
+    @Test
     @DisplayName("시험 제목은 10자를 넘을 수 없다.")
     void titleOver10CharsIsInvalid() {
         Validator validator = Validation.buildDefaultValidatorFactory().getValidator();
