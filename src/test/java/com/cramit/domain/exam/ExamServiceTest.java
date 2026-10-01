@@ -6,9 +6,6 @@ import com.cramit.domain.exam.dto.ExamUpdateRequest;
 import com.cramit.domain.exam.repository.ExamRepository;
 import com.cramit.domain.lecture.Lecture;
 import com.cramit.domain.lecture.LectureRepository;
-import com.cramit.domain.week.entity.Week;
-import com.cramit.domain.week.enums.WeekStatus;
-import com.cramit.domain.week.repository.WeekRepository;
 import com.cramit.global.config.JpaAuditingConfig;
 import com.cramit.global.exception.BusinessException;
 import com.cramit.global.exception.ErrorCode;
@@ -47,9 +44,6 @@ class ExamServiceTest {
     @Autowired
     private LectureRepository lectureRepository;
 
-    @Autowired
-    private WeekRepository weekRepository;
-
     @Test
     @DisplayName("시험을 등록하면 강의명과 함께 강의별 목록에서 시험일 순으로 조회된다.")
     void createThenGetLectureExams() {
@@ -61,30 +55,6 @@ class ExamServiceTest {
 
         assertThat(exams).extracting(ExamResponse::title).containsExactly("중간고사", "기말고사");
         assertThat(exams).extracting(ExamResponse::lectureName).containsOnly("운영체제");
-    }
-
-    @Test
-    @DisplayName("진행률은 강의의 주차 중 학습 완료 비율이다.")
-    void progressIsCompletedWeekRatio() {
-        Long lectureId = saveLecture(MEMBER_ID, "운영체제");
-        saveWeek(lectureId, WeekStatus.COMPLETED);
-        saveWeek(lectureId, WeekStatus.IN_PROCESS);
-        saveWeek(lectureId, WeekStatus.BEFORE);
-        saveWeek(lectureId, WeekStatus.COMPLETED);
-
-        ExamResponse created = examService.createExam(lectureId, createRequest("중간고사", TODAY), MEMBER_ID);
-
-        assertThat(created.progress()).isEqualTo(50);
-    }
-
-    @Test
-    @DisplayName("주차가 없는 강의의 진행률은 0이다.")
-    void progressWithoutWeeksIsZero() {
-        Long lectureId = saveLecture(MEMBER_ID, "운영체제");
-
-        ExamResponse created = examService.createExam(lectureId, createRequest("중간고사", TODAY), MEMBER_ID);
-
-        assertThat(created.progress()).isZero();
     }
 
     @Test
@@ -202,16 +172,6 @@ class ExamServiceTest {
                         .title(title)
                         .build()
         ).getLectureId();
-    }
-
-    private void saveWeek(Long lectureId, WeekStatus status) {
-        Week week = Week.builder()
-                .lectureId(lectureId)
-                .title("주차")
-                .weekDate(TODAY)
-                .build();
-        week.updateStatus(status);
-        weekRepository.save(week);
     }
 
     private ExamCreateRequest createRequest(String title, LocalDate examDate) {

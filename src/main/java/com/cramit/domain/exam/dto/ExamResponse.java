@@ -14,10 +14,9 @@ public record ExamResponse(
         String title,
         LocalDate examDate,
         String memo,
-        int progress,
         LocalDateTime createdAt
 ) {
-    public static ExamResponse of(Exam exam, String lectureName, int progress) {
+    public static ExamResponse of(Exam exam, String lectureName) {
         return ExamResponse.builder()
                 .examId(exam.getExamId())
                 .lectureId(exam.getLectureId())
@@ -25,7 +24,6 @@ public record ExamResponse(
                 .title(exam.getTitle())
                 .examDate(exam.getExamDate())
                 .memo(exam.getMemo())
-                .progress(progress)
                 .createdAt(exam.getCreatedAt())
                 .build();
     }

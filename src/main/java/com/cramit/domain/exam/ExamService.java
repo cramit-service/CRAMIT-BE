@@ -7,8 +7,6 @@ import com.cramit.domain.exam.entity.Exam;
 import com.cramit.domain.exam.repository.ExamRepository;
 import com.cramit.domain.lecture.Lecture;
 import com.cramit.domain.lecture.LectureRepository;
-import com.cramit.domain.week.repository.WeekRepository;
-import com.cramit.domain.week.repository.WeekRepository.LectureWeekCount;
 import com.cramit.global.exception.BusinessException;
 import com.cramit.global.exception.ErrorCode;
 import lombok.RequiredArgsConstructor;
@@ -16,7 +14,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
-import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -27,7 +24,6 @@ public class ExamService {
 
     private final ExamRepository examRepository;
     private final LectureRepository lectureRepository;
-    private final WeekRepository weekRepository;
 
     @Transactional
     public ExamResponse createExam(Long lectureId, ExamCreateRequest request, Long memberId) {
@@ -102,21 +98,10 @@ public class ExamService {
     private List<ExamResponse> toResponses(List<Exam> exams, List<Lecture> lectures) {
         Map<Long, String> lectureNames = lectures.stream()
                 .collect(Collectors.toMap(Lecture::getLectureId, Lecture::getTitle));
-        Map<Long, Integer> progress = progressByLecture(lectureIds(lectures));
 
         return exams.stream()
-                .map(exam -> ExamResponse.of(
-                        exam,
-                        lectureNames.get(exam.getLectureId()),
-                        progress.getOrDefault(exam.getLectureId(), 0)))
+                .map(exam -> ExamResponse.of(exam, lectureNames.get(exam.getLectureId())))
                 .toList();
-    }
-
-    // 학습 진행률 = 강의의 주차 중 학습 완료(COMPLETED) 비율
-    private Map<Long, Integer> progressByLecture(Collection<Long> lectureIds) {
-        return weekRepository.countByLectureIdIn(lectureIds).stream()
-                .collect(Collectors.toMap(LectureWeekCount::getLectureId,
-                        count -> (int) (count.getCompleted() * 100 / count.getTotal())));
     }
 
     private static List<Long> lectureIds(List<Lecture> lectures) {
