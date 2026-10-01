@@ -8,8 +8,7 @@ public record MyLectureItem(
         Long lectureId,
         String title,
         String professorName,
-        Integer weekCount,
-        NearestExam nearestExam
+        Integer weekCount
 ) {
     public static MyLectureItem from(Lecture lecture) {
         return MyLectureItem.builder()
@@ -17,7 +16,6 @@ public record MyLectureItem(
                 .title(lecture.getTitle())
                 .professorName(lecture.getProfessorName())
                 .weekCount(0) // TODO: Week 완성되면 실제 개수로 교체
-                .nearestExam(null) // TODO: Exam 완성되면 계산 로직 추가
                 .build();
     }
 }

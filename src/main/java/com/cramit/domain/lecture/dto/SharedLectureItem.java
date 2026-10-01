@@ -8,7 +8,6 @@ public record SharedLectureItem(
         String title,
         String professorName,
         Integer weekCount,
-        String ownerNickname,
-        NearestExam nearestExam
+        String ownerNickname
 ) {
 }
