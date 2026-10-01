@@ -94,7 +94,7 @@ public class ExamService {
 
         if (!lecture.isOwnedBy(memberId)) {
             throw new BusinessException(ErrorCode.LECTURE_ACCESS_DENIED);
-        } // TODO: MemberLecture 도메인 완성되면 공유받은 회원도 조회 가능하도록 조건 추가
+        }
 
         return lecture;
     }
