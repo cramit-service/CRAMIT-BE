@@ -58,8 +58,8 @@ class ExamServiceTest {
     }
 
     @Test
-    @DisplayName("다가오는 시험은 오늘부터, 전체 조회는 지난 시험까지 내 강의의 시험만 준다.")
-    void upcomingAndAllExams() {
+    @DisplayName("다가오는 시험은 오늘부터 내 강의의 시험만 준다.")
+    void upcomingExams() {
         Long mine = saveLecture(MEMBER_ID, "운영체제");
         Long others = saveLecture(OTHER_MEMBER_ID, "자료구조");
         examService.createExam(mine, createRequest("지난 시험", TODAY.minusDays(1)), MEMBER_ID);
@@ -68,14 +68,11 @@ class ExamServiceTest {
 
         assertThat(examService.getUpcomingExams(MEMBER_ID))
                 .extracting(ExamResponse::title).containsExactly("오늘 시험");
-        assertThat(examService.getMyExams(MEMBER_ID))
-                .extracting(ExamResponse::title).containsExactly("지난 시험", "오늘 시험");
     }
 
     @Test
     @DisplayName("강의가 없는 회원은 빈 목록을 받는다.")
     void noLecturesReturnsEmpty() {
-        assertThat(examService.getMyExams(MEMBER_ID)).isEmpty();
         assertThat(examService.getUpcomingExams(MEMBER_ID)).isEmpty();
     }
 

@@ -11,7 +11,5 @@ public interface ExamRepository extends JpaRepository<Exam, Long> {
 
     List<Exam> findByLectureIdOrderByExamDateAsc(Long lectureId);
 
-    List<Exam> findByLectureIdInOrderByExamDateAsc(Collection<Long> lectureIds);
-
     List<Exam> findByLectureIdInAndExamDateGreaterThanEqualOrderByExamDateAsc(Collection<Long> lectureIds, LocalDate from);
 }

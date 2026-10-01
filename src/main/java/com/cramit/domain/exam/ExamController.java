@@ -65,14 +65,6 @@ public class ExamController {
         return ResponseEntity.ok(ApiResponse.of(examService.getLectureExams(lectureId, memberId)));
     }
 
-    @Operation(summary = "시험 전체 조회", description = "내 모든 강의의 시험 일정을 지난 시험까지 포함해 시험일 오름차순으로 조회합니다.")
-    @GetMapping("/api/exams")
-    public ResponseEntity<ApiResponse<List<ExamResponse>>> getMyExams(
-            @Parameter(hidden = true) @AuthenticationPrincipal Long memberId
-    ) {
-        return ResponseEntity.ok(ApiResponse.of(examService.getMyExams(memberId)));
-    }
-
     @Operation(summary = "다가오는 시험 일정 조회", description = "오늘 이후(오늘 포함) 시험 일정을 시험일 오름차순으로 조회합니다.")
     @GetMapping("/api/exams/upcoming")
     public ResponseEntity<ApiResponse<List<ExamResponse>>> getUpcomingExams(

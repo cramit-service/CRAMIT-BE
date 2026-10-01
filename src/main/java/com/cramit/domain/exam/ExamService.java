@@ -46,14 +46,6 @@ public class ExamService {
         return toResponses(examRepository.findByLectureIdOrderByExamDateAsc(lectureId), List.of(lecture));
     }
 
-    // 캘린더는 지난 시험까지 보여줘야 해서 upcoming과 따로 둔다.
-    @Transactional(readOnly = true)
-    public List<ExamResponse> getMyExams(Long memberId) {
-        List<Lecture> lectures = lectureRepository.findByMemberId(memberId);
-
-        return toResponses(examRepository.findByLectureIdInOrderByExamDateAsc(lectureIds(lectures)), lectures);
-    }
-
     @Transactional(readOnly = true)
     public List<ExamResponse> getUpcomingExams(Long memberId) {
         List<Lecture> lectures = lectureRepository.findByMemberId(memberId);
