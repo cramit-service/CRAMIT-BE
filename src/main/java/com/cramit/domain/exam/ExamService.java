@@ -7,9 +7,8 @@ import com.cramit.domain.exam.entity.Exam;
 import com.cramit.domain.exam.repository.ExamRepository;
 import com.cramit.domain.lecture.Lecture;
 import com.cramit.domain.lecture.LectureRepository;
-import com.cramit.domain.week.entity.Week;
-import com.cramit.domain.week.enums.WeekStatus;
 import com.cramit.domain.week.repository.WeekRepository;
+import com.cramit.domain.week.repository.WeekRepository.LectureWeekCount;
 import com.cramit.global.exception.BusinessException;
 import com.cramit.global.exception.ErrorCode;
 import lombok.RequiredArgsConstructor;
@@ -115,14 +114,9 @@ public class ExamService {
 
     // 학습 진행률 = 강의의 주차 중 학습 완료(COMPLETED) 비율
     private Map<Long, Integer> progressByLecture(Collection<Long> lectureIds) {
-        return weekRepository.findByLectureIdIn(lectureIds).stream()
-                .collect(Collectors.groupingBy(Week::getLectureId,
-                        Collectors.collectingAndThen(Collectors.toList(), ExamService::completedPercent)));
-    }
-
-    private static int completedPercent(List<Week> weeks) {
-        long completed = weeks.stream().filter(w -> w.getStatus() == WeekStatus.COMPLETED).count();
-        return (int) (completed * 100 / weeks.size());
+        return weekRepository.countByLectureIdIn(lectureIds).stream()
+                .collect(Collectors.toMap(LectureWeekCount::getLectureId,
+                        count -> (int) (count.getCompleted() * 100 / count.getTotal())));
     }
 
     private static List<Long> lectureIds(List<Lecture> lectures) {
