@@ -11,13 +11,19 @@ public record GeminiResponse(List<Candidate> candidates) {
     private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
 
     public String extractAnswer() {
-        String rawJson = candidates.get(0).content().parts().get(0).text();
+        AnswerPayload payload;
         try {
-            AnswerPayload payload = OBJECT_MAPPER.readValue(rawJson, AnswerPayload.class);
-            return payload.answer();
+            String rawJson = candidates.get(0).content().parts().get(0).text();
+            payload = OBJECT_MAPPER.readValue(rawJson, AnswerPayload.class);
         } catch (Exception e) {
             throw new BusinessException(ErrorCode.CHATBOT_RESPONSE_ERROR);
         }
+
+        String answer = payload.answer();
+        if (answer == null || answer.isBlank()) {
+            throw new BusinessException(ErrorCode.CHATBOT_RESPONSE_ERROR);
+        }
+        return answer;
     }
 
     public record Candidate(Content content) {}
