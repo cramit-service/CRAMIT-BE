@@ -3,6 +3,7 @@ package com.cramit.domain.chat;
 import java.util.List;
 
 import com.cramit.domain.ai.GeminiChatBotClient;
+import com.cramit.domain.chat.repository.ChatBotRepository;
 import org.springframework.boot.test.mock.mockito.MockBean;
 import org.junit.jupiter.api.BeforeEach;
 
@@ -54,6 +55,9 @@ class ChatBotServiceTest {
 
     @Autowired
     private ChatBotSessionService chatBotSessionService;
+
+    @Autowired
+    private ChatBotRepository chatBotRepository;
 
     @Autowired
     private WeekRepository weekRepository;
@@ -154,6 +158,7 @@ class ChatBotServiceTest {
                 sessionId, new ChatMessageRequest("질문"), MEMBER_ID))
                 .isInstanceOfSatisfying(BusinessException.class, ex ->
                         assertThat(ex.getErrorCode()).isEqualTo(ErrorCode.NO_CONTEXT));
+        assertThat(chatBotRepository.count()).isZero();
     }
 
     private Long saveWeek(Long ownerId) {

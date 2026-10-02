@@ -62,7 +62,6 @@ public class ChatBotService {
                 .senderType(SenderType.USER)
                 .message(request.message())
                 .build();
-        chatBotRepository.save(userMessage);
 
         // context 조회 (1차 요약본)
         Week week = weekRepository.findById(session.getWeekId())
@@ -72,6 +71,7 @@ public class ChatBotService {
             throw new BusinessException(ErrorCode.NO_CONTEXT);
         }
 
+        chatBotRepository.save(userMessage);
         String answer = geminiChatBotClient.ask(request.message(), week.getFirstSummaryMd());
 
         ChatMessage aiMessage = ChatMessage.builder()
