@@ -7,9 +7,11 @@ import com.cramit.global.exception.ErrorCode;
 import io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker;
 import io.github.resilience4j.retry.annotation.Retry;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestClient;
 
+@Slf4j
 @Component
 @RequiredArgsConstructor
 public class GeminiChatBotClient {
@@ -38,7 +40,8 @@ public class GeminiChatBotClient {
 
     // CircuitBreaker가 open되거나 재시도 소진 시 호출되는 fallback
     private String fallback(String question, String context, Throwable ex) {
-        throw new BusinessException(ErrorCode.CHATBOT_RESPONSE_ERROR);
+        log.warn("Gemini 호출 실패: {}", ex.getMessage(), ex);
+        throw new BusinessException(ErrorCode.CHATBOT_RESPONSE_ERROR, ex);
     }
 
     private static final String SYSTEM_PROMPT = """
