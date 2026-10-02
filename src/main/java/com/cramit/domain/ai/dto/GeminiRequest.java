@@ -1,6 +1,8 @@
 package com.cramit.domain.ai.dto;
 
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 public record GeminiRequest(
         SystemInstruction systemInstruction,
@@ -23,9 +25,14 @@ public record GeminiRequest(
 
     public record Part(String text) {}
 
-    public record GenerationConfig(String responseMimeType) {
+    public record GenerationConfig(String responseMimeType, Map<String,Object> responseSchema) {
+        private static final Map<String, Object> ANSWER_SCHEMA = Map.of(
+                "type", "OBJECT",
+                "properties", Map.of("answer", Map.of("type", "STRING")),
+                "required", List.of("answer")
+        );
         public static GenerationConfig jsonMode() {
-            return new GenerationConfig("application/json");
+            return new GenerationConfig("application/json", ANSWER_SCHEMA);
         }
     }
 }
