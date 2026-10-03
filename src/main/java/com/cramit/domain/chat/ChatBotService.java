@@ -1,5 +1,6 @@
 package com.cramit.domain.chat;
 
+import com.cramit.domain.ai.GeminiChatBotClient;
 import com.cramit.domain.chat.dto.ChatMessageRequest;
 import com.cramit.domain.chat.dto.ChatMessageResponse;
 import com.cramit.domain.chat.entity.ChatMessage;
@@ -7,6 +8,8 @@ import com.cramit.domain.chat.entity.ChatBotSession;
 import com.cramit.domain.chat.enums.SenderType;
 import com.cramit.domain.chat.repository.ChatBotRepository;
 import com.cramit.domain.chat.repository.ChatBotSessionRepository;
+import com.cramit.domain.week.entity.Week;
+import com.cramit.domain.week.repository.WeekRepository;
 import com.cramit.global.exception.BusinessException;
 import com.cramit.global.exception.ErrorCode;
 import lombok.RequiredArgsConstructor;
@@ -21,6 +24,8 @@ public class ChatBotService {
 
     private final ChatBotRepository chatBotRepository;
     private final ChatBotSessionRepository chatBotSessionRepository;
+    private final WeekRepository weekRepository;
+    private final GeminiChatBotClient geminiChatBotClient;
 
     @Transactional(readOnly = true)
     public List<ChatMessageResponse> getMessages(Long sessionId, Long memberId) {
@@ -38,13 +43,16 @@ public class ChatBotService {
                 .toList();
     }
 
-    @Transactional
     public List<ChatMessageResponse> sendMessage(Long sessionId, ChatMessageRequest request, Long memberId) {
         ChatBotSession session = chatBotSessionRepository.findById(sessionId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.ENTITY_NOT_FOUND));
 
         if (!session.isOwnedBy(memberId)) {
             throw new BusinessException(ErrorCode.CHATBOT_ACCESS_DENIED);
+        }
+
+        if (request.message() == null || request.message().isBlank()) {
+            throw new BusinessException(ErrorCode.EMPTY_QUESTION);
         }
 
         ChatMessage userMessage = ChatMessage.builder()
@@ -54,12 +62,18 @@ public class ChatBotService {
                 .senderType(SenderType.USER)
                 .message(request.message())
                 .build();
+
+        // context 조회 (1차 요약본)
+        Week week = weekRepository.findById(session.getWeekId())
+                .orElseThrow(() -> new BusinessException(ErrorCode.ENTITY_NOT_FOUND));
+
+        if (week.getFirstSummaryMd() == null) {
+            throw new BusinessException(ErrorCode.NO_CONTEXT);
+        }
+
         chatBotRepository.save(userMessage);
+        String answer = geminiChatBotClient.ask(request.message(), week.getFirstSummaryMd());
 
-        // TODO: GeminiChatBotClient 완성되면 실제 AI 응답으로 교체
-        String answer = "AI 응답 준비 중입니다."; // 임시 더미 응답
-
-        // AI 메시지 저장
         ChatMessage aiMessage = ChatMessage.builder()
                 .memberId(memberId)
                 .weekId(session.getWeekId())
