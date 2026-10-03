@@ -99,7 +99,7 @@ class LectureServiceTest {
         // given
         Long lectureId = lectureService.createLecture(
                 new LectureCreateRequest("알고리즘", "박지훈"), MEMBER_ID).lectureId();
-        LectureUpdateRequest request = new LectureUpdateRequest("알고리즘(수정됨)", null, null);
+        LectureUpdateRequest request = new LectureUpdateRequest("알고리즘(수정됨)", null);
 
         // when
         LectureUpdateResponse response = lectureService.updateLecture(request, lectureId, MEMBER_ID);
@@ -128,7 +128,7 @@ class LectureServiceTest {
     @Test
     @DisplayName("존재하지 않는 강의를 수정하면 예외가 발생한다.")
     void updateLectureNotFound() {
-        LectureUpdateRequest request = new LectureUpdateRequest("알고리즘(수정됨)", "박지훈", null);
+        LectureUpdateRequest request = new LectureUpdateRequest("알고리즘(수정됨)", "박지훈");
 
         assertThatThrownBy(() -> lectureService.updateLecture(request, 999L, MEMBER_ID))
                 .isInstanceOfSatisfying(BusinessException.class, ex ->
@@ -154,7 +154,7 @@ class LectureServiceTest {
                         .professorName("박지훈")
                         .build()
         ).getLectureId();
-        LectureUpdateRequest request = new LectureUpdateRequest("알고리즘(수정됨)", "박지훈", null);
+        LectureUpdateRequest request = new LectureUpdateRequest("알고리즘(수정됨)", "박지훈");
 
         // when & then
         assertThatThrownBy(() -> lectureService.updateLecture(request, lectureId, MEMBER_ID))

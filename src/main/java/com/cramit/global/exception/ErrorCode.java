@@ -25,6 +25,7 @@ public enum ErrorCode {
 	LECTURE_INVALID_INPUT(HttpStatus.BAD_REQUEST, "제목을 입력해주세요."),
 	LECTURE_LIMIT_EXCEEDED(HttpStatus.FORBIDDEN, "생성 가능한 강의 수를 초과했습니다."),
 	LECTURE_ACCESS_DENIED(HttpStatus.FORBIDDEN,"접근 권한이 없는 강의입니다."),
+	LECTURE_NOT_FOUND(HttpStatus.NOT_FOUND, "강의를 찾을 수 없습니다."),
 	SHARE_INVALID_PERMISSION(HttpStatus.BAD_REQUEST, "잘못된 공유 권한 값입니다."),
 	SHARE_LINK_EXPIRED(HttpStatus.GONE, "공유 링크가 만료되었거나 존재하지 않습니다."),
 	SHARE_PERMISSION_DENIED(HttpStatus.FORBIDDEN, "편집 권한이 없습니다."),
@@ -56,6 +57,9 @@ public enum ErrorCode {
 
 	// AI 학습 TODO (Phase 9)
 	INVALID_DDAY(HttpStatus.UNPROCESSABLE_ENTITY, "시험 날짜가 이미 지났습니다."),
+
+	// 시험 일정
+	EXAM_NOT_FOUND(HttpStatus.NOT_FOUND, "시험 일정을 찾을 수 없습니다."),
 
 	// TODO 관리
 	TODO_ACCESS_DENIED(HttpStatus.FORBIDDEN, "접근 권한이 없는 할 일입니다.");

@@ -95,7 +95,7 @@ public class LectureService {
                 ? request.professorName()
                 : lecture.getProfessorName();
 
-        lecture.update(request.title(), professorName); // TODO: Exam 엔티티 완성되면 request.examDate() 반영
+        lecture.update(request.title(), professorName);
 
         return new  LectureUpdateResponse(lecture.getLectureId());
     }
