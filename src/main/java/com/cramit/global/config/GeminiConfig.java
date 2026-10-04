@@ -26,6 +26,7 @@ public class GeminiConfig {
 
         return RestClient.builder()
                 .baseUrl("https://generativelanguage.googleapis.com")
+                .requestFactory(requestFactory)
                 .requestInterceptor((request, body, execution) -> {
                     request.getHeaders().add("x-goog-api-key", geminiProperties.apiKey());
                     return execution.execute(request, body);
