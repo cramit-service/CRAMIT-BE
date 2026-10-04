@@ -20,8 +20,8 @@ public class GeminiChatBotClient {
 
     private final RestClient geminiRestClient;
 
-    @Retry(name = "gemini")
-    @CircuitBreaker(name = "gemini", fallbackMethod = "fallback")
+    @Retry(name = "gemini", fallbackMethod = "fallback")
+    @CircuitBreaker(name = "gemini")
     public String ask(String question, String context) {
         GeminiRequest request = GeminiRequest.of(SYSTEM_PROMPT, question, context);
 
