@@ -45,6 +45,9 @@ resilience4j:
         max-attempts: 3
         wait-duration: 500ms
         enable-exponential-backoff: true
+        retry-exceptions:
+          - org.springframework.web.client.HttpServerErrorException
+          - org.springframework.web.client.ResourceAccessException
   circuitbreaker:
     instances:
       oauth:
@@ -65,3 +68,5 @@ resilience4j:
         failure-rate-threshold: 100
         wait-duration-in-open-state: 60s
         permitted-number-of-calls-in-half-open-state: 1
+        ignore-exceptions:
+          - org.springframework.web.client.HttpClientErrorException

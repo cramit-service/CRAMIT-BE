@@ -2,6 +2,14 @@ package com.cramit.domain.chat;
 
 import java.util.List;
 
+import com.cramit.domain.ai.GeminiChatBotClient;
+import com.cramit.domain.chat.repository.ChatBotRepository;
+import org.springframework.boot.test.mock.mockito.MockBean;
+import org.junit.jupiter.api.BeforeEach;
+
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.BDDMockito.given;
+
 import com.cramit.domain.chat.dto.ChatBotSessionCreateRequest;
 import com.cramit.domain.chat.dto.ChatMessageRequest;
 import com.cramit.domain.chat.dto.ChatMessageResponse;
@@ -20,6 +28,7 @@ import com.cramit.domain.week.repository.WeekRepository;
 import com.cramit.global.config.JpaAuditingConfig;
 import com.cramit.global.exception.BusinessException;
 import com.cramit.global.exception.ErrorCode;
+import org.springframework.test.util.ReflectionTestUtils;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -28,6 +37,14 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 @Import({ChatBotService.class, ChatBotSessionService.class, JpaAuditingConfig.class})
 @ActiveProfiles("test")
 class ChatBotServiceTest {
+
+    @MockBean
+    private GeminiChatBotClient geminiChatBotClient;
+
+    @BeforeEach
+    void setUpGeminiStub() {
+        given(geminiChatBotClient.ask(anyString(), anyString())).willReturn("AI 응답입니다.");
+    }
 
     private static final Long MEMBER_ID = 1L;
     private static final Long OTHER_MEMBER_ID = 2L;
@@ -38,6 +55,9 @@ class ChatBotServiceTest {
 
     @Autowired
     private ChatBotSessionService chatBotSessionService;
+
+    @Autowired
+    private ChatBotRepository chatBotRepository;
 
     @Autowired
     private WeekRepository weekRepository;
@@ -110,7 +130,42 @@ class ChatBotServiceTest {
                         assertThat(ex.getErrorCode()).isEqualTo(ErrorCode.CHATBOT_ACCESS_DENIED));
     }
 
+    @Test
+    @DisplayName("1차 요약본이 없는 주차에는 메시지를 전송할 수 없다.")
+    void sendMessageNoContext() {
+        // given
+        Long weekId = saveWeekWithoutSummary(MEMBER_ID);
+        Long sessionId = chatBotSessionService.createSession(
+                new ChatBotSessionCreateRequest(weekId, "DP 질문"), MEMBER_ID).chatBotSessionId();
+
+        // when & then
+        assertThatThrownBy(() -> chatBotService.sendMessage(
+                sessionId, new ChatMessageRequest("질문"), MEMBER_ID))
+                .isInstanceOfSatisfying(BusinessException.class, ex ->
+                        assertThat(ex.getErrorCode()).isEqualTo(ErrorCode.NO_CONTEXT));
+        assertThat(chatBotRepository.count()).isZero();
+    }
+
     private Long saveWeek(Long ownerId) {
+        Long lectureId = lectureRepository.save(
+                Lecture.builder()
+                        .memberId(ownerId)
+                        .title("알고리즘")
+                        .professorName("박지훈")
+                        .build()
+        ).getLectureId();
+
+        Week week = Week.builder()
+                .lectureId(lectureId)
+                .title("1주차")
+                .weekDate(WEEK_DATE)
+                .build();
+        ReflectionTestUtils.setField(week, "firstSummaryMd", "1차 요약본 내용입니다.");
+
+        return weekRepository.save(week).getWeekId();
+    }
+
+    private Long saveWeekWithoutSummary(Long ownerId) {
         Long lectureId = lectureRepository.save(
                 Lecture.builder()
                         .memberId(ownerId)
