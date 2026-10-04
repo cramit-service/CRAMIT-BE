@@ -57,7 +57,7 @@ public class ChatBotService {
         Week week = weekRepository.findById(session.getWeekId())
                 .orElseThrow(() -> new BusinessException(ErrorCode.ENTITY_NOT_FOUND));
 
-        if (week.getFirstSummaryMd().isBlank()) {
+        if (week.getFirstSummaryMd() == null || week.getFirstSummaryMd().isBlank()) {
             throw new BusinessException(ErrorCode.NO_CONTEXT);
         }
 
