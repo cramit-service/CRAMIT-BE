@@ -9,7 +9,12 @@ import io.github.resilience4j.retry.annotation.Retry;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
+import org.springframework.web.client.HttpClientErrorException;
+import org.springframework.web.client.ResourceAccessException;
 import org.springframework.web.client.RestClient;
+
+import java.net.SocketTimeoutException;
+import java.net.http.HttpTimeoutException;
 
 @Slf4j
 @Component
@@ -41,7 +46,22 @@ public class GeminiChatBotClient {
     // CircuitBreaker가 open되거나 재시도 소진 시 호출되는 fallback
     private String fallback(String question, String context, Throwable ex) {
         log.warn("Gemini 호출 실패: {}", ex.getMessage(), ex);
-        throw new BusinessException(ErrorCode.CHATBOT_RESPONSE_ERROR, ex);
+        throw new BusinessException(toErrorCode(ex), ex);
+    }
+
+    private ErrorCode toErrorCode(Throwable ex) {
+        if (ex instanceof BusinessException be) {
+            return be.getErrorCode();
+        }
+        if (ex instanceof HttpClientErrorException.TooManyRequests) {
+            return ErrorCode.AI_RATE_LIMITED;
+        }
+        if (ex instanceof ResourceAccessException
+                && (ex.getCause() instanceof HttpTimeoutException
+                || ex.getCause() instanceof SocketTimeoutException)) {
+            return ErrorCode.AI_TIMEOUT;
+        }
+        return ErrorCode.CHATBOT_RESPONSE_ERROR;
     }
 
     private static final String SYSTEM_PROMPT = """

@@ -68,3 +68,5 @@ resilience4j:
         failure-rate-threshold: 100
         wait-duration-in-open-state: 60s
         permitted-number-of-calls-in-half-open-state: 1
+        ignore-exceptions:
+          - org.springframework.web.client.HttpClientErrorException
