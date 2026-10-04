@@ -51,10 +51,6 @@ public class ChatBotService {
             throw new BusinessException(ErrorCode.CHATBOT_ACCESS_DENIED);
         }
 
-        if (request.message() == null || request.message().isBlank()) {
-            throw new BusinessException(ErrorCode.EMPTY_QUESTION);
-        }
-
         ChatMessage userMessage = ChatMessage.builder()
                 .memberId(memberId)
                 .weekId(session.getWeekId())

@@ -131,21 +131,6 @@ class ChatBotServiceTest {
     }
 
     @Test
-    @DisplayName("빈 질문을 전송하면 예외가 발생한다.")
-    void sendMessageEmptyQuestion() {
-        // given
-        Long weekId = saveWeek(MEMBER_ID);
-        Long sessionId = chatBotSessionService.createSession(
-                new ChatBotSessionCreateRequest(weekId, "DP 질문"), MEMBER_ID).chatBotSessionId();
-
-        // when & then
-        assertThatThrownBy(() -> chatBotService.sendMessage(
-                sessionId, new ChatMessageRequest("   "), MEMBER_ID))
-                .isInstanceOfSatisfying(BusinessException.class, ex ->
-                        assertThat(ex.getErrorCode()).isEqualTo(ErrorCode.EMPTY_QUESTION));
-    }
-
-    @Test
     @DisplayName("1차 요약본이 없는 주차에는 메시지를 전송할 수 없다.")
     void sendMessageNoContext() {
         // given
