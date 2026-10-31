@@ -1,5 +1,6 @@
-package com.cramit.domain.summary;
+package com.cramit.domain.summary.repository;
 
+import com.cramit.domain.summary.entity.Summary;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 import java.util.Optional;

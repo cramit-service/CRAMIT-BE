@@ -1,4 +1,4 @@
-package com.cramit.domain.summary;
+package com.cramit.domain.summary.entity;
 
 import com.cramit.global.async.AsyncJobStatus;
 import com.cramit.global.common.BaseEntity;
