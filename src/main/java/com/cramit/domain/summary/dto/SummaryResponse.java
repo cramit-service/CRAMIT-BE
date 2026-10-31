@@ -1,0 +1,24 @@
+package com.cramit.domain.summary.dto;
+
+import com.cramit.domain.summary.entity.Summary;
+import com.cramit.global.async.AsyncJobStatus;
+
+import java.time.LocalDateTime;
+
+public record SummaryResponse(
+        Long summaryId,
+        Long weekId,
+        AsyncJobStatus status, // 재생성 중이면 PROCESSING이고 content는 이전 요약본
+        String content,
+        LocalDateTime updatedAt
+) {
+    public static SummaryResponse from(Summary summary) {
+        return new SummaryResponse(
+                summary.getSummaryId(),
+                summary.getWeekId(),
+                summary.getStatus(),
+                summary.getContent(),
+                summary.getUpdatedAt()
+        );
+    }
+}
