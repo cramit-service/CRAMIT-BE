@@ -34,6 +34,14 @@ class FileServiceTest {
     }
 
     @Test
+    @DisplayName("AUDIO는 Groq가 받는 확장자로 발급한다")
+    void createUploadUrl_audio() {
+        UploadUrlResponse response = fileService.createUploadUrl(new UploadUrlRequest("5주차 녹음.m4a", FileType.AUDIO));
+
+        assertThat(response.fileUrl()).matches("http://localhost:9000/test-bucket/files/audio/[0-9a-f-]{36}\\.m4a");
+    }
+
+    @Test
     @DisplayName("파일 유형에 맞지 않는 확장자는 FILE_INVALID_TYPE")
     void createUploadUrl_invalidExtension() {
         assertThatThrownBy(() -> fileService.createUploadUrl(new UploadUrlRequest("lecture.mp3", FileType.PPT)))
