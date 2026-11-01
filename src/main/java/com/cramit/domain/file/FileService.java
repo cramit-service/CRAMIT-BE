@@ -42,9 +42,13 @@ public class FileService {
                 .build();
 
         String uploadUrl = s3Presigner.presignPutObject(presignRequest).url().toString();
-        String fileUrl = storageProperties.publicBaseUrl() + "/" + key;
+        String fileUrl = stripTrailingSlash(storageProperties.s3().publicBaseUrl()) + "/" + key;
 
         return new UploadUrlResponse(uploadUrl, fileUrl, UPLOAD_URL_EXPIRATION.toSeconds());
+    }
+
+    private String stripTrailingSlash(String url) {
+        return url.endsWith("/") ? url.substring(0, url.length() - 1) : url;
     }
 
     private String extractExtension(String fileName) {

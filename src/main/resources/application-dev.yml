@@ -61,7 +61,7 @@ aws:
   s3:
     bucket: ${AWS_S3_BUCKET}
     endpoint: ${AWS_S3_ENDPOINT:}
-    public-base-url: ${AWS_S3_PUBLIC_BASE_URL:}
+    public-base-url: ${AWS_S3_PUBLIC_BASE_URL}
 
 logging:
   level:
