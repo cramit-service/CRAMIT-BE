@@ -48,3 +48,12 @@ app:
   oauth2:
     success-redirect-uri: http://localhost:3000/oauth/callback
     failure-redirect-uri: http://localhost:3000/login
+
+aws:
+  access-key: test-access-key
+  secret-key: test-secret-key
+  region: auto
+  s3:
+    bucket: test-bucket
+    endpoint: http://localhost:9000
+    public-base-url: http://localhost:9000/test-bucket
