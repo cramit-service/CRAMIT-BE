@@ -99,14 +99,11 @@ class SummaryGeneratorTest {
     }
 
     @Test
-    @DisplayName("Gemini 호출이 계속 실패하면 FAILED로 저장하고 이전 요약본은 유지한다.")
+    @DisplayName("Gemini 호출이 실패하면 FAILED로 저장한다.")
     void generateFailure() {
         // given
         saveScript(1, 0, null, "내용");
-        Summary summary = Summary.builder().memberId(MEMBER_ID).weekId(WEEK_ID).build();
-        summary.complete("이전 요약본");
-        summary.requestGeneration();
-        Long summaryId = summaryRepository.save(summary).getSummaryId();
+        Long summaryId = savePendingSummary();
         given(geminiSummaryClient.summarize(anyString(), anyString()))
                 .willThrow(new BusinessException(ErrorCode.AI_RATE_LIMITED));
 
@@ -116,7 +113,7 @@ class SummaryGeneratorTest {
         // then
         Summary failed = summaryRepository.findById(summaryId).orElseThrow();
         assertThat(failed.getStatus()).isEqualTo(AsyncJobStatus.FAILED);
-        assertThat(failed.getContent()).isEqualTo("이전 요약본");
+        assertThat(failed.getContent()).isNull();
         verify(geminiSummaryClient, times(1)).summarize(anyString(), anyString());
     }
 

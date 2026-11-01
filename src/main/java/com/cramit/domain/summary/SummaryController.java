@@ -31,12 +31,14 @@ public class SummaryController {
 
     @Operation(summary = "요약본 생성 요청",
             description = "주차의 강의 스크립트로 AI 요약본 생성을 요청합니다. 생성은 비동기로 진행되며 상태 조회 API로 진행 상황을 확인합니다. "
-                    + "이미 요약본이 있으면 다시 생성하고, 생성 중이면 현재 상태를 그대로 반환합니다.")
+                    + "생성 중이면 현재 상태를 그대로 반환하고, 생성에 실패한 경우에만 다시 요청할 수 있습니다.")
     @ApiResponses({
             @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "202", description = "생성 요청 접수"),
             @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "403", description = "접근 권한이 없는 강의 (LECTURE_ACCESS_DENIED)",
                     content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE, schema = @Schema(implementation = ErrorResponse.class))),
             @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "존재하지 않는 주차 (ENTITY_NOT_FOUND) 또는 요약할 스크립트 없음 (NO_CONTEXT)",
+                    content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE, schema = @Schema(implementation = ErrorResponse.class))),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "409", description = "이미 생성된 요약본이 있음 (SUMMARY_ALREADY_EXISTS)",
                     content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE, schema = @Schema(implementation = ErrorResponse.class)))
     })
     @PostMapping("/api/weeks/{weekId}/summary")
@@ -65,7 +67,7 @@ public class SummaryController {
         return ResponseEntity.ok(ApiResponse.of(summaryService.getSummaryStatus(weekId, memberId)));
     }
 
-    @Operation(summary = "요약본 조회", description = "생성된 AI 요약본(마크다운)을 조회합니다. 재생성 중에는 이전 요약본을 반환합니다.")
+    @Operation(summary = "요약본 조회", description = "생성된 AI 요약본(마크다운)을 조회합니다.")
     @ApiResponses({
             @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "조회 성공"),
             @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "403", description = "접근 권한이 없는 강의 (LECTURE_ACCESS_DENIED)",

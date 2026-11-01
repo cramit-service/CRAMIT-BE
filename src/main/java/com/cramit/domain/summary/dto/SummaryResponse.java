@@ -8,7 +8,7 @@ import java.time.LocalDateTime;
 public record SummaryResponse(
         Long summaryId,
         Long weekId,
-        AsyncJobStatus status, // 재생성 중이면 PROCESSING이고 content는 이전 요약본
+        AsyncJobStatus status,
         String content,
         LocalDateTime updatedAt
 ) {

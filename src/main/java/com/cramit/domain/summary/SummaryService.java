@@ -18,6 +18,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.transaction.support.TransactionSynchronization;
 import org.springframework.transaction.support.TransactionSynchronizationManager;
+import com.cramit.global.async.AsyncJobStatus;
 
 import java.time.LocalDateTime;
 
@@ -55,6 +56,10 @@ public class SummaryService {
             return SummaryStatusResponse.from(summary);
         }
 
+        if (summary.getStatus() == AsyncJobStatus.COMPLETED) {
+            throw new BusinessException(ErrorCode.SUMMARY_ALREADY_EXISTS);
+        }
+
         summary.requestGeneration();
         summaryRepository.saveAndFlush(summary);
 
@@ -79,7 +84,6 @@ public class SummaryService {
         return SummaryResponse.from(summary);
     }
 
-    // 커밋 전에 비동기 작업이 시작되면 아직 저장되지 않은 요약본을 조회하게 되므로, 커밋 이후에 실행한다.
     private void startGenerationAfterCommit(Long summaryId) {
         TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
             @Override
