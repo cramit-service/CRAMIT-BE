@@ -36,7 +36,7 @@ public class SttService {
 
     // 페이지 매핑 전 기본 경로: 녹음 전체를 구간 하나로 저장한다.
     @Transactional
-    public void saveResult(Long lectureAudioId, GroqTranscriptionResponse transcription) {
+    public Long saveResult(Long lectureAudioId, GroqTranscriptionResponse transcription) {
         LectureAudio audio = findAudio(lectureAudioId);
         int durationSec = (int) Math.ceil(transcription.duration());
 
@@ -61,6 +61,7 @@ public class SttService {
         scriptDetailRepository.saveAll(details);
 
         audio.completeStt((long) durationSec);
+        return audio.getWeekId();
     }
 
     @Transactional
