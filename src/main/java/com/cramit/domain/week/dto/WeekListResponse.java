@@ -5,6 +5,7 @@ import com.cramit.domain.week.enums.WeekStatus;
 import lombok.Builder;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 
 @Builder
 public record WeekListResponse(
@@ -13,7 +14,8 @@ public record WeekListResponse(
         LocalDate weekDate,
         String professorName,
         WeekStatus status,
-        Integer reviewCount
+        Integer reviewCount,
+        LocalDateTime createdAt
 ) {
     public static WeekListResponse from(Week week) {
         return WeekListResponse.builder()
@@ -23,6 +25,7 @@ public record WeekListResponse(
                 .professorName(week.getProfessorName())
                 .status(week.getStatus())
                 .reviewCount(week.getReviewCount())
+                .createdAt(week.getCreatedAt())
                 .build();
     }
 }
