@@ -9,6 +9,11 @@ spring:
     show-sql: false
   flyway:
     enabled: true
+  data:
+    redis:
+      host: ${REDIS_HOST}
+      port: ${REDIS_PORT:6379}
+      password: ${REDIS_PASSWORD:}
   security:
     oauth2:
       client:
