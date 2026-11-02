@@ -2,6 +2,7 @@ package com.cramit.domain.week;
 
 import com.cramit.domain.lecture.Lecture;
 import com.cramit.domain.lecture.LectureRepository;
+import com.cramit.domain.stt.SttRequestedEvent;
 import com.cramit.domain.week.dto.WeekCreateRequest;
 import com.cramit.domain.week.dto.WeekCreateResponse;
 import com.cramit.domain.week.dto.WeekFirstSummaryResponse;
@@ -20,6 +21,7 @@ import com.cramit.domain.week.repository.WeekRepository;
 import com.cramit.global.exception.BusinessException;
 import com.cramit.global.exception.ErrorCode;
 import lombok.RequiredArgsConstructor;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -33,6 +35,7 @@ public class WeekService {
     private final LectureRepository lectureRepository;
     private final LectureAudioRepository lectureAudioRepository;
     private final LecturePptRepository lecturePptRepository;
+    private final ApplicationEventPublisher eventPublisher;
 
     @Transactional
     public WeekCreateResponse createWeek(Long lectureId, WeekCreateRequest request, Long memberId) {
@@ -74,7 +77,8 @@ public class WeekService {
             lectureAudioRepository.save(audio);
             lectureAudioId = audio.getLectureAudioId();
             sttStatus = audio.getSttStatus();
-        } //TODO: STT 도메인 완성되면 연결
+            eventPublisher.publishEvent(new SttRequestedEvent(lectureAudioId));
+        }
 
         return WeekCreateResponse.of(week, lecturePptId, lectureAudioId, sttStatus);
     }
