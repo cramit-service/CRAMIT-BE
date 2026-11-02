@@ -51,4 +51,18 @@ class FileServiceTest {
                 .isInstanceOf(BusinessException.class)
                 .extracting("errorCode").isEqualTo(ErrorCode.FILE_INVALID_TYPE);
     }
+
+    @Test
+    @DisplayName("저장소 업로드 경로의 주소는 통과")
+    void validateFileUrl() {
+        fileService.validateFileUrl("http://localhost:9000/test-bucket/files/audio/lecture.m4a");
+    }
+
+    @Test
+    @DisplayName("저장소 업로드 경로가 아닌 주소는 FILE_INVALID_URL")
+    void validateFileUrl_invalid() {
+        assertThatThrownBy(() -> fileService.validateFileUrl("http://169.254.169.254/files/audio/lecture.m4a"))
+                .isInstanceOf(BusinessException.class)
+                .extracting("errorCode").isEqualTo(ErrorCode.FILE_INVALID_URL);
+    }
 }

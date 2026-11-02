@@ -47,6 +47,14 @@ public class FileService {
         return new UploadUrlResponse(uploadUrl, fileUrl, UPLOAD_URL_EXPIRATION.toSeconds());
     }
 
+    // 클라이언트가 보낸 fileUrl이 우리 저장소의 업로드 경로인지 확인한다.
+    public void validateFileUrl(String fileUrl) {
+        String allowedPrefix = stripTrailingSlash(storageProperties.s3().publicBaseUrl()) + "/files/";
+        if (fileUrl == null || !fileUrl.startsWith(allowedPrefix)) {
+            throw new BusinessException(ErrorCode.FILE_INVALID_URL);
+        }
+    }
+
     private String stripTrailingSlash(String url) {
         return url.endsWith("/") ? url.substring(0, url.length() - 1) : url;
     }
