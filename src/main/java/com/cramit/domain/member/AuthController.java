@@ -1,6 +1,7 @@
 package com.cramit.domain.member;
 
 import com.cramit.domain.member.dto.AccessTokenResponse;
+import com.cramit.domain.member.dto.TokenResponse;
 import com.cramit.global.common.ApiResponse;
 import com.cramit.global.exception.ErrorResponse;
 import com.cramit.global.security.RefreshTokenCookieProvider;
@@ -35,10 +36,12 @@ public class AuthController {
 	@Operation(
 			summary = "Access Token 재발급",
 			description = "HttpOnly 쿠키로 전달된 refreshToken을 검증해 새 Access Token을 발급합니다 (RTR). "
+					+ "Redis에 저장된 값과 일치할 때만 재발급되며, 재발급과 동시에 refreshToken도 새 값으로 교체되어 "
+					+ "기존 refreshToken은 더 이상 사용할 수 없습니다. "
 					+ "인증 없이 호출 가능하며, 프론트는 fetch의 credentials:'include' 또는 axios의 withCredentials:true만 설정하면 됩니다.")
 	@ApiResponses({
 			@io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "재발급 성공"),
-			@io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "401", description = "Refresh Token이 없거나 만료/위조됨 (AUTH_INVALID_TOKEN)",
+			@io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "401", description = "Refresh Token이 없거나 만료/위조/무효화됨 (AUTH_INVALID_TOKEN)",
 					content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE, schema = @Schema(implementation = ErrorResponse.class)))
 	})
 	@SecurityRequirements
@@ -46,13 +49,16 @@ public class AuthController {
 	public ResponseEntity<ApiResponse<AccessTokenResponse>> refresh(
 			@Parameter(hidden = true)
 			@CookieValue(value = RefreshTokenCookieProvider.COOKIE_NAME, required = false) String refreshToken) {
-		return ResponseEntity.ok(ApiResponse.of(authService.reissueAccessToken(refreshToken)));
+		TokenResponse tokens = authService.reissueAccessToken(refreshToken);
+		return ResponseEntity.ok()
+				.header(HttpHeaders.SET_COOKIE, refreshTokenCookieProvider.create(tokens.refreshToken()).toString())
+				.body(ApiResponse.of(new AccessTokenResponse(tokens.accessToken())));
 	}
 
 	@Operation(
 			summary = "로그아웃",
-			description = "Stateless JWT라 서버에 별도 인증 상태가 없어, refreshToken이 담긴 HttpOnly 쿠키를 만료시키는 역할만 합니다. "
-					+ "accessToken 자체는 서버에서 무효화되지 않으므로 프론트에서 별도로 삭제해야 합니다.")
+			description = "Redis에 저장된 refreshToken을 무효화하고, refreshToken이 담긴 HttpOnly 쿠키를 만료시킵니다. "
+					+ "accessToken 자체는 만료 전까지 서버에서 무효화되지 않으므로 프론트에서 별도로 삭제해야 합니다.")
 	@ApiResponses({
 			@io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "204", description = "로그아웃 성공 (응답 바디 없음)"),
 			@io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "401", description = "Access Token 누락/만료 (AUTH_INVALID_TOKEN)",
@@ -60,7 +66,8 @@ public class AuthController {
 	})
 	@SecurityRequirement(name = "bearerAuth")
 	@PostMapping("/logout")
-	public ResponseEntity<Void> logout() {
+	public ResponseEntity<Void> logout(@Parameter(hidden = true) @AuthenticationPrincipal Long memberId) {
+		authService.logout(memberId);
 		return ResponseEntity.noContent()
 				.header(HttpHeaders.SET_COOKIE, refreshTokenCookieProvider.expire().toString())
 				.build();
@@ -69,7 +76,7 @@ public class AuthController {
 	@Operation(
 			summary = "회원 탈퇴",
 			description = "회원을 soft delete(is_deleted=true) 처리합니다. 소셜 연동 해제나 연관 데이터 삭제는 수행하지 않으며, "
-					+ "탈퇴 후 refreshToken 쿠키를 만료시킵니다. 탈퇴한 계정으로 재로그인을 시도하면 거부됩니다.")
+					+ "Redis에 저장된 refreshToken을 무효화하고 refreshToken 쿠키를 만료시킵니다. 탈퇴한 계정으로 재로그인을 시도하면 거부됩니다.")
 	@ApiResponses({
 			@io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "204", description = "탈퇴 성공 (응답 바디 없음)"),
 			@io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "401", description = "Access Token 누락/만료 (AUTH_INVALID_TOKEN)",

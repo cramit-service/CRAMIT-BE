@@ -1,5 +1,6 @@
 package com.cramit.global.config;
 
+import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.startsWith;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -7,6 +8,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import com.cramit.domain.member.AuthService;
+import com.cramit.domain.member.dto.TokenResponse;
 import com.cramit.global.security.JwtTokenProvider;
 import com.cramit.global.security.RefreshTokenCookieProvider;
 import jakarta.servlet.http.Cookie;
@@ -27,6 +30,9 @@ class SecurityConfigTest {
 
 	@Autowired
 	private JwtTokenProvider jwtTokenProvider;
+
+	@Autowired
+	private AuthService authService;
 
 	@Test
 	void 인증되지_않은_요청은_401과_표준_에러_포맷을_반환한다() throws Exception {
@@ -66,12 +72,23 @@ class SecurityConfigTest {
 
 	@Test
 	void 유효한_refresh_쿠키로_인증_없이_컨트롤러까지_도달해_access_토큰을_재발급받는다() throws Exception {
-		String refreshToken = jwtTokenProvider.createRefreshToken(1L);
+		TokenResponse issued = authService.issueTokens(1L);
+
+		mockMvc.perform(post("/api/auth/refresh")
+						.cookie(new Cookie(RefreshTokenCookieProvider.COOKIE_NAME, issued.refreshToken())))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.data.accessToken").exists())
+				.andExpect(header().string("Set-Cookie", containsString(RefreshTokenCookieProvider.COOKIE_NAME + "=")));
+	}
+
+	@Test
+	void redis에_저장되지_않은_refresh_토큰으로는_재발급받을_수_없다() throws Exception {
+		String refreshToken = jwtTokenProvider.createRefreshToken(999L);
 
 		mockMvc.perform(post("/api/auth/refresh")
 						.cookie(new Cookie(RefreshTokenCookieProvider.COOKIE_NAME, refreshToken)))
-				.andExpect(status().isOk())
-				.andExpect(jsonPath("$.data.accessToken").exists());
+				.andExpect(status().isUnauthorized())
+				.andExpect(jsonPath("$.error.code").value("AUTH_INVALID_TOKEN"));
 	}
 
 }
