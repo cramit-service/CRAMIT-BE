@@ -119,6 +119,7 @@ class ChatBotSessionServiceTest {
                         .memberId(ownerId)
                         .title("알고리즘")
                         .professorName("박지훈")
+                        .colorIndex(1)
                         .build()
         ).getLectureId();
 
@@ -140,6 +141,7 @@ class ChatBotSessionServiceTest {
                         .memberId(OTHER_MEMBER_ID)
                         .title("알고리즘")
                         .professorName("박지훈")
+                        .colorIndex(1)
                         .build()
         ).getLectureId();
 

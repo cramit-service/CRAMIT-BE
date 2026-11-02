@@ -46,7 +46,7 @@ class LectureServiceTest {
     @DisplayName("강의를 생성하면 내 강의 목록에서 조회된다.")
     void createThenGetMyLectures() {
         // given
-        LectureCreateRequest request = new LectureCreateRequest("알고리즘", "박지훈");
+        LectureCreateRequest request = new LectureCreateRequest("알고리즘", "박지훈", 1);
 
         // when
         LectureCreateResponse created = lectureService.createLecture(request, MEMBER_ID);
@@ -62,7 +62,7 @@ class LectureServiceTest {
     @DisplayName("공유 강의는 아직 없으므로 빈 목록이 조회된다.")
     void getSharedLecturesReturnsEmpty() {
         // given
-        lectureService.createLecture(new LectureCreateRequest("알고리즘", "박지훈"), MEMBER_ID);
+        lectureService.createLecture(new LectureCreateRequest("알고리즘", "박지훈", 1), MEMBER_ID);
 
         // when
         List<SharedLectureItem> response = lectureService.getSharedLectures(MEMBER_ID);
@@ -80,7 +80,7 @@ class LectureServiceTest {
         ).getId();
 
         Long lectureId = lectureService.createLecture(
-                new LectureCreateRequest("알고리즘", "박지훈"), memberId).lectureId();
+                new LectureCreateRequest("알고리즘", "박지훈", 1), memberId).lectureId();
 
         // when
         LectureDetailResponse response = lectureService.getLectureDetail(lectureId, memberId);
@@ -98,8 +98,8 @@ class LectureServiceTest {
     void updateLectureKeepsProfessorNameWhenNull() {
         // given
         Long lectureId = lectureService.createLecture(
-                new LectureCreateRequest("알고리즘", "박지훈"), MEMBER_ID).lectureId();
-        LectureUpdateRequest request = new LectureUpdateRequest("알고리즘(수정됨)", null);
+                new LectureCreateRequest("알고리즘", "박지훈", 1), MEMBER_ID).lectureId();
+        LectureUpdateRequest request = new LectureUpdateRequest("알고리즘(수정됨)", null, 1);
 
         // when
         LectureUpdateResponse response = lectureService.updateLecture(request, lectureId, MEMBER_ID);
@@ -116,7 +116,7 @@ class LectureServiceTest {
     void deleteLecture() {
         // given
         Long lectureId = lectureService.createLecture(
-                new LectureCreateRequest("알고리즘", "박지훈"), MEMBER_ID).lectureId();
+                new LectureCreateRequest("알고리즘", "박지훈", 1), MEMBER_ID).lectureId();
 
         // when
         lectureService.deleteLecture(lectureId, MEMBER_ID);
@@ -128,7 +128,7 @@ class LectureServiceTest {
     @Test
     @DisplayName("존재하지 않는 강의를 수정하면 예외가 발생한다.")
     void updateLectureNotFound() {
-        LectureUpdateRequest request = new LectureUpdateRequest("알고리즘(수정됨)", "박지훈");
+        LectureUpdateRequest request = new LectureUpdateRequest("알고리즘(수정됨)", "박지훈", 1);
 
         assertThatThrownBy(() -> lectureService.updateLecture(request, 999L, MEMBER_ID))
                 .isInstanceOfSatisfying(BusinessException.class, ex ->
@@ -152,9 +152,10 @@ class LectureServiceTest {
                         .memberId(OTHER_MEMBER_ID)
                         .title("알고리즘")
                         .professorName("박지훈")
+                        .colorIndex(1)
                         .build()
         ).getLectureId();
-        LectureUpdateRequest request = new LectureUpdateRequest("알고리즘(수정됨)", "박지훈");
+        LectureUpdateRequest request = new LectureUpdateRequest("알고리즘(수정됨)", "박지훈", 1);
 
         // when & then
         assertThatThrownBy(() -> lectureService.updateLecture(request, lectureId, MEMBER_ID))
@@ -171,6 +172,7 @@ class LectureServiceTest {
                         .memberId(OTHER_MEMBER_ID)
                         .title("알고리즘")
                         .professorName("박지훈")
+                        .colorIndex(1)
                         .build()
         ).getLectureId();
 
@@ -189,6 +191,7 @@ class LectureServiceTest {
                         .memberId(OTHER_MEMBER_ID)
                         .title("알고리즘")
                         .professorName("박지훈")
+                        .colorIndex(1)
                         .build()
         ).getLectureId();
 

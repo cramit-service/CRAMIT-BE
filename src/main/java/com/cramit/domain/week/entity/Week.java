@@ -62,4 +62,8 @@ public class Week extends BaseEntity {
     public void updateStatus(WeekStatus status) {
         this.status = status;
     }
+
+    public void updateFirstSummary(String firstSummaryMd) {
+        this.firstSummaryMd = firstSummaryMd;
+    }
 }

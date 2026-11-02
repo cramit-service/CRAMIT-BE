@@ -235,6 +235,7 @@ class WeekServiceTest {
                         .memberId(memberId)
                         .title("알고리즘")
                         .professorName("박지훈")
+                        .colorIndex(1)
                         .build()
         ).getLectureId();
     }
