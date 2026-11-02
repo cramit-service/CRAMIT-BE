@@ -58,6 +58,8 @@ gemini:
   api-key: your-gemini-api-key
 
 stt:
+  groq:
+    api-key: your-groq-api-key
   google:
     credentials-path: your-gcp-service-account-json-path
 

@@ -48,3 +48,7 @@ app:
   oauth2:
     success-redirect-uri: http://localhost:3000/oauth/callback
     failure-redirect-uri: http://localhost:3000/login
+
+stt:
+  groq:
+    api-key: test-groq-api-key
