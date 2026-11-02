@@ -10,6 +10,7 @@ public record LectureDetailResponse(
         Long lectureId,
         String title,
         String professorName,
+        Integer colorIndex,
         Boolean isOwner,
         String ownerNickname,
         Integer memberCount,
@@ -22,6 +23,7 @@ public record LectureDetailResponse(
                 .lectureId(lecture.getLectureId())
                 .title(lecture.getTitle())
                 .professorName(lecture.getProfessorName())
+                .colorIndex(lecture.getColorIndex())
                 .isOwner(lecture.isOwnedBy(memberId))
                 .ownerNickname(ownerNickname)
                 .memberCount(memberCount)
