@@ -12,7 +12,8 @@ public record WeekListResponse(
         String title,
         LocalDate weekDate,
         String professorName,
-        WeekStatus status
+        WeekStatus status,
+        Integer reviewCount
 ) {
     public static WeekListResponse from(Week week) {
         return WeekListResponse.builder()
@@ -21,6 +22,7 @@ public record WeekListResponse(
                 .weekDate(week.getWeekDate())
                 .professorName(week.getProfessorName())
                 .status(week.getStatus())
+                .reviewCount(week.getReviewCount())
                 .build();
     }
 }
