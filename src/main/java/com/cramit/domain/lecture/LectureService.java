@@ -40,6 +40,7 @@ public class LectureService {
                 .memberId(memberId)
                 .title(request.title())
                 .professorName(request.professorName())
+                .colorIndex(request.colorIndex())
                 .build();
 
         lectureRepository.save(lecture);
@@ -95,7 +96,7 @@ public class LectureService {
                 ? request.professorName()
                 : lecture.getProfessorName();
 
-        lecture.update(request.title(), professorName);
+        lecture.update(request.title(), professorName, request.colorIndex());
 
         return new  LectureUpdateResponse(lecture.getLectureId());
     }

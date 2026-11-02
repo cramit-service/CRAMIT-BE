@@ -167,6 +167,7 @@ class ExamServiceTest {
                 Lecture.builder()
                         .memberId(memberId)
                         .title(title)
+                        .colorIndex(1)
                         .build()
         ).getLectureId();
     }

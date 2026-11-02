@@ -29,17 +29,22 @@ public class Lecture extends BaseEntity {
     @Column(length = 100)
     private String professorName;
 
+    @Column(nullable = false)
+    private Integer colorIndex;
+
     @Builder
-    public Lecture(Long memberId, String title, String professorName) {
+    public Lecture(Long memberId, String title, String professorName, Integer colorIndex) {
         this.memberId = memberId;
         this.title = title;
         this.professorName = professorName;
+        this.colorIndex = colorIndex;
     }
 
     // 수정
-    public void update(String title, String professorName) {
+    public void update(String title, String professorName, Integer colorIndex) {
         this.title = title;
         this.professorName = professorName;
+        this.colorIndex = colorIndex;
     }
 
     // 생성자 본인 여부 확인(수정, 삭제 권한 체크에 사용)
