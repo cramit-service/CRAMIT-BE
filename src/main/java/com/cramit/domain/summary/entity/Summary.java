@@ -59,6 +59,9 @@ public class Summary extends BaseEntity {
     }
 
     public void fail() {
+        if (this.status == AsyncJobStatus.COMPLETED) {
+            return;
+        }
         this.status = AsyncJobStatus.FAILED;
     }
 
