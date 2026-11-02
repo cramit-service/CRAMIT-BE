@@ -41,11 +41,20 @@ jobs:
           fetch-depth: 0
 
       - name: gitleaks (시크릿 스캔)
-        uses: gitleaks/gitleaks-action@e0c47f4f8be36e29cdc102c57e68cb5cbf0e8d1e # v3.0.0
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        # gitleaks-action은 조직 소유 레포에서 라이선스를 요구해서, 라이선스가 필요 없는
+        # 오픈소스 CLI 바이너리를 직접 받아 체크섬을 검증한 뒤 실행한다.
+        run: |
+          set -euo pipefail
+          GITLEAKS_VERSION=8.30.1
+          GITLEAKS_SHA256=551f6fc83ea457d62a0d98237cbad105af8d557003051f41f3e7ca7b3f2470eb
+          curl -sSL -o gitleaks.tar.gz \
+            "https://github.com/gitleaks/gitleaks/releases/download/v${GITLEAKS_VERSION}/gitleaks_${GITLEAKS_VERSION}_linux_x64.tar.gz"
+          echo "${GITLEAKS_SHA256}  gitleaks.tar.gz" | sha256sum -c -
+          tar -xzf gitleaks.tar.gz gitleaks
+          ./gitleaks detect --source . --redact -v
 
       - name: Trivy (의존성/파일시스템 취약점 스캔)
+        if: always()
         uses: aquasecurity/trivy-action@a9c7b0f06e461e9d4b4d1711f154ee024b8d7ab8 # v0.36.0
         with:
           scan-type: fs
