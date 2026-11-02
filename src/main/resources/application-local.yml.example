@@ -67,3 +67,7 @@ aws:
   region: ap-northeast-2
   s3:
     bucket: your-s3-bucket-name
+    # R2 등 S3 호환 저장소일 때만. 비우면 AWS S3
+    endpoint:
+    # 업로드한 파일을 읽는 공개 주소 (필수). S3면 https://{bucket}.s3.{region}.amazonaws.com
+    public-base-url:

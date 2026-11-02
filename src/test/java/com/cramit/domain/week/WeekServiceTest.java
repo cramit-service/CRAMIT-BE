@@ -70,8 +70,8 @@ class WeekServiceTest {
         WeekCreateRequest request = new WeekCreateRequest(
                 "1주차",
                 WEEK_DATE,
-                new WeekCreateRequest.PptInfo("slide.pdf", "https://file/slide.pdf", 1024L),
-                new WeekCreateRequest.AudioInfo("audio.mp3", "https://file/audio.mp3", 3600L)
+                new WeekCreateRequest.PptInfo("slide.pdf", "http://localhost:9000/test-bucket/files/ppt/slide.pdf", 1024L),
+                new WeekCreateRequest.AudioInfo("audio.mp3", "http://localhost:9000/test-bucket/files/audio/audio.mp3", 3600L)
         );
 
         WeekCreateResponse created = weekService.createWeek(lectureId, request, MEMBER_ID);
@@ -127,8 +127,8 @@ class WeekServiceTest {
                 new WeekCreateRequest(
                         "1주차",
                         WEEK_DATE,
-                        new WeekCreateRequest.PptInfo("slide.pdf", "https://file/slide.pdf", 1024L),
-                        new WeekCreateRequest.AudioInfo("audio.mp3", "https://file/audio.mp3", 3600L)
+                        new WeekCreateRequest.PptInfo("slide.pdf", "http://localhost:9000/test-bucket/files/ppt/slide.pdf", 1024L),
+                        new WeekCreateRequest.AudioInfo("audio.mp3", "http://localhost:9000/test-bucket/files/audio/audio.mp3", 3600L)
                 ),
                 MEMBER_ID
         ).weekId();
@@ -253,8 +253,8 @@ class WeekServiceTest {
         WeekCreateRequest request = new WeekCreateRequest(
                 "1주차",
                 LocalDate.now(),
-                new WeekCreateRequest.PptInfo("slide.pdf", "https://file/slide.pdf", 1024L),
-                new WeekCreateRequest.AudioInfo("audio.mp3", "https://file/audio.mp3", 3600L)
+                new WeekCreateRequest.PptInfo("slide.pdf", "http://localhost:9000/test-bucket/files/ppt/slide.pdf", 1024L),
+                new WeekCreateRequest.AudioInfo("audio.mp3", "http://localhost:9000/test-bucket/files/audio/audio.mp3", 3600L)
         );
         WeekCreateResponse createdWeek = weekService.createWeek(lectureId, request, MEMBER_ID);
 
