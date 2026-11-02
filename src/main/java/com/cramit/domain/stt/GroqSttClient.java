@@ -14,6 +14,7 @@ import org.springframework.web.client.RestClient;
 public class GroqSttClient {
 
     public static final String MODEL = "whisper-large-v3-turbo";
+    private static final int MAX_AUDIO_BYTES = 25 * 1024 * 1024; // Groq 업로드 한도
 
     private final RestClient groqRestClient;
     private final RestClient audioDownloadRestClient;
@@ -22,10 +23,7 @@ public class GroqSttClient {
     public GroqTranscriptionResponse transcribe(String fileUrl) {
         validateFileUrl(fileUrl);
 
-        byte[] audio = audioDownloadRestClient.get()
-                .uri(fileUrl)
-                .retrieve()
-                .body(byte[].class);
+        byte[] audio = download(fileUrl);
 
         // Groq는 파일명 확장자로 오디오 형식을 판별한다.
         String fileName = fileUrl.substring(fileUrl.lastIndexOf('/') + 1);
@@ -46,6 +44,25 @@ public class GroqSttClient {
                 .body(form)
                 .retrieve()
                 .body(GroqTranscriptionResponse.class);
+    }
+
+    private byte[] download(String fileUrl) {
+        return audioDownloadRestClient.get()
+                .uri(fileUrl)
+                .exchange((request, response) -> {
+                    if (!response.getStatusCode().is2xxSuccessful()) {
+                        throw new IllegalStateException("녹음 다운로드 실패: " + response.getStatusCode());
+                    }
+                    if (response.getHeaders().getContentLength() > MAX_AUDIO_BYTES) {
+                        throw new IllegalStateException("녹음 파일이 25MB를 넘습니다.");
+                    }
+                    // Content-Length가 없을 수도 있어서 한도 + 1바이트까지만 읽고 넘으면 멈춘다.
+                    byte[] audio = response.getBody().readNBytes(MAX_AUDIO_BYTES + 1);
+                    if (audio.length > MAX_AUDIO_BYTES) {
+                        throw new IllegalStateException("녹음 파일이 25MB를 넘습니다.");
+                    }
+                    return audio;
+                });
     }
 
     // 사용자가 넘긴 fileUrl로 서버가 요청을 보내므로, 우리 저장소 공개 주소 아래만 받는다.
