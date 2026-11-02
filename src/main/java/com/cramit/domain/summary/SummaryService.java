@@ -44,6 +44,29 @@ public class SummaryService {
     public SummaryStatusResponse requestSummary(Long weekId, Long memberId) {
         validateWeekOwnership(weekId, memberId);
 
+        return startGeneration(weekId, memberId);
+    }
+
+    /**
+     * STT 완료 후 시스템이 호출한다. 로그인 정보가 없으므로 주차 소유자로 요약을 시작한다.
+     * 이미 요약본이 있거나 스크립트가 없는 등 시작할 수 없는 경우 예외 대신 로그만 남겨, 호출한 STT 처리에 영향을 주지 않는다.
+     * STT 결과를 저장한 트랜잭션 안이나 커밋 이후 어디서 호출해도 되고, 실제 생성은 커밋 이후 비동기로 시작된다.
+     */
+    @Transactional
+    public void requestSummaryAfterStt(Long weekId) {
+        try {
+            Week week = weekRepository.findById(weekId)
+                    .orElseThrow(() -> new BusinessException(ErrorCode.ENTITY_NOT_FOUND));
+            Lecture lecture = lectureRepository.findById(week.getLectureId())
+                    .orElseThrow(() -> new BusinessException(ErrorCode.ENTITY_NOT_FOUND));
+
+            startGeneration(weekId, lecture.getMemberId());
+        } catch (BusinessException e) {
+            log.info("STT 완료 후 요약본 생성을 시작하지 않습니다. weekId={}, reason={}", weekId, e.getErrorCode());
+        }
+    }
+
+    private SummaryStatusResponse startGeneration(Long weekId, Long memberId) {
         // TODO: PDF 텍스트 저장이 구현되면 PDF만 있는 경우도 요약 대상에 포함
         if (!scriptRepository.existsByWeekId(weekId)) {
             throw new BusinessException(ErrorCode.NO_CONTEXT);
@@ -68,9 +91,14 @@ public class SummaryService {
         return SummaryStatusResponse.from(summary);
     }
 
+    // 생성 요청 이력이 없으면 404 대신 NOT_STARTED를 돌려줘 프론트가 에러 처리 없이 폴링할 수 있게 한다.
     @Transactional(readOnly = true)
     public SummaryStatusResponse getSummaryStatus(Long weekId, Long memberId) {
-        return SummaryStatusResponse.from(findOwnedSummary(weekId, memberId));
+        validateWeekOwnership(weekId, memberId);
+
+        return summaryRepository.findByWeekIdAndMemberId(weekId, memberId)
+                .map(SummaryStatusResponse::from)
+                .orElseGet(() -> SummaryStatusResponse.notStarted(weekId));
     }
 
     @Transactional(readOnly = true)

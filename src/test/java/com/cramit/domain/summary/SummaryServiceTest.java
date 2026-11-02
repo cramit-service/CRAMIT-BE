@@ -26,6 +26,7 @@ import java.time.LocalDate;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.assertj.core.api.Assertions.assertThatCode;
 
 @DataJpaTest
 @Import({SummaryService.class, JpaAuditingConfig.class})
@@ -64,7 +65,7 @@ class SummaryServiceTest {
         SummaryStatusResponse response = summaryService.requestSummary(weekId, MEMBER_ID);
 
         // then
-        assertThat(response.status()).isEqualTo(AsyncJobStatus.PENDING);
+        assertThat(response.status()).isEqualTo(AsyncJobStatus.PENDING.name());
         assertThat(summaryRepository.findByWeekIdAndMemberId(weekId, MEMBER_ID)).isPresent();
     }
 
@@ -110,7 +111,7 @@ class SummaryServiceTest {
 
         // then
         assertThat(response.summaryId()).isEqualTo(summaryId);
-        assertThat(response.status()).isEqualTo(AsyncJobStatus.PENDING);
+        assertThat(response.status()).isEqualTo(AsyncJobStatus.PENDING.name());
     }
 
     @Test
@@ -166,15 +167,46 @@ class SummaryServiceTest {
     }
 
     @Test
-    @DisplayName("생성 요청 이력이 없으면 상태 조회 시 ENTITY_NOT_FOUND를 던진다.")
-    void getSummaryStatusNotFound() {
+    @DisplayName("생성 요청 이력이 없으면 상태 조회 시 NOT_STARTED를 반환한다.")
+    void getSummaryStatusNotStarted() {
         // given
         Long weekId = saveWeekWithScript(MEMBER_ID);
 
+        // when
+        SummaryStatusResponse response = summaryService.getSummaryStatus(weekId, MEMBER_ID);
+
+        // then
+        assertThat(response.status()).isEqualTo(SummaryStatusResponse.NOT_STARTED);
+        assertThat(response.summaryId()).isNull();
+        assertThat(response.weekId()).isEqualTo(weekId);
+    }
+
+    @Test
+    @DisplayName("STT 완료 후 호출하면 주차 소유자 기준으로 요약본 생성을 요청한다.")
+    void requestSummaryAfterStt() {
+        // given
+        Long weekId = saveWeekWithScript(MEMBER_ID);
+
+        // when
+        summaryService.requestSummaryAfterStt(weekId);
+
+        // then
+        Summary summary = summaryRepository.findByWeekIdAndMemberId(weekId, MEMBER_ID).orElseThrow();
+        assertThat(summary.getStatus()).isEqualTo(AsyncJobStatus.PENDING);
+    }
+
+    @Test
+    @DisplayName("STT 완료 후 호출 시 요약을 시작할 수 없어도 예외를 던지지 않는다.")
+    void requestSummaryAfterSttIgnoresBusinessException() {
+        // given
+        Long completedWeekId = saveWeekWithScript(MEMBER_ID);
+        saveCompletedSummary(completedWeekId, "요약본");
+        Long noScriptWeekId = saveWeek(MEMBER_ID);
+
         // when & then
-        assertThatThrownBy(() -> summaryService.getSummaryStatus(weekId, MEMBER_ID))
-                .isInstanceOfSatisfying(BusinessException.class, ex ->
-                        assertThat(ex.getErrorCode()).isEqualTo(ErrorCode.ENTITY_NOT_FOUND));
+        assertThatCode(() -> summaryService.requestSummaryAfterStt(completedWeekId)).doesNotThrowAnyException();
+        assertThatCode(() -> summaryService.requestSummaryAfterStt(noScriptWeekId)).doesNotThrowAnyException();
+        assertThat(summaryRepository.findByWeekIdAndMemberId(noScriptWeekId, MEMBER_ID)).isEmpty();
     }
 
     private Summary saveCompletedSummary(Long weekId, String content) {
