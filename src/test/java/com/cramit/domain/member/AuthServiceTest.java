@@ -89,6 +89,16 @@ class AuthServiceTest {
 	}
 
 	@Test
+	void 다른_회원이_토큰을_발급받아도_기존_회원의_refresh_토큰은_유효하다() {
+		TokenResponse first = authService.issueTokens(1L);
+		authService.issueTokens(2L);
+
+		TokenResponse reissued = authService.reissueAccessToken(first.refreshToken());
+
+		assertThat(jwtTokenProvider.getMemberId(reissued.accessToken())).isEqualTo(1L);
+	}
+
+	@Test
 	void access_토큰으로는_재발급을_요청할_수_없다() {
 		TokenResponse issued = authService.issueTokens(1L);
 

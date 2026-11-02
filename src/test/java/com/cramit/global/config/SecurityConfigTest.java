@@ -19,6 +19,7 @@ import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMock
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.web.servlet.MvcResult;
 
 @SpringBootTest
 @AutoConfigureMockMvc
@@ -74,11 +75,19 @@ class SecurityConfigTest {
 	void 유효한_refresh_쿠키로_인증_없이_컨트롤러까지_도달해_access_토큰을_재발급받는다() throws Exception {
 		TokenResponse issued = authService.issueTokens(1L);
 
-		mockMvc.perform(post("/api/auth/refresh")
+		MvcResult first = mockMvc.perform(post("/api/auth/refresh")
 						.cookie(new Cookie(RefreshTokenCookieProvider.COOKIE_NAME, issued.refreshToken())))
 				.andExpect(status().isOk())
 				.andExpect(jsonPath("$.data.accessToken").exists())
-				.andExpect(header().string("Set-Cookie", containsString(RefreshTokenCookieProvider.COOKIE_NAME + "=")));
+				.andExpect(header().string("Set-Cookie", containsString(RefreshTokenCookieProvider.COOKIE_NAME + "=")))
+				.andReturn();
+
+		Cookie rotatedCookie = first.getResponse().getCookie(RefreshTokenCookieProvider.COOKIE_NAME);
+
+		mockMvc.perform(post("/api/auth/refresh")
+						.cookie(rotatedCookie))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.data.accessToken").exists());
 	}
 
 	@Test
