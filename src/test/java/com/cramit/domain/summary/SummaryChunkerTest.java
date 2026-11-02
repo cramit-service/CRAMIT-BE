@@ -35,4 +35,14 @@ class SummaryChunkerTest {
         assertThat(String.join("", chunks)).isEqualTo("x".repeat(25));
         assertThat(chunks).allSatisfy(chunk -> assertThat(chunk.length()).isLessThanOrEqualTo(10));
     }
+
+    @Test
+    @DisplayName("이모지처럼 2칸짜리 문자가 경계에 걸리면 반으로 자르지 않는다.")
+    void keepSurrogatePair() {
+        String segment = "a".repeat(9) + "😀";
+
+        List<String> chunks = SummaryChunker.split(List.of(segment), 10);
+
+        assertThat(chunks).containsExactly("a".repeat(9), "😀");
+    }
 }

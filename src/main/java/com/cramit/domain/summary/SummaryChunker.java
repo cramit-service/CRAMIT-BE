@@ -40,8 +40,14 @@ final class SummaryChunker {
 
     private static List<String> cut(String segment, int maxChars) {
         List<String> pieces = new ArrayList<>();
-        for (int start = 0; start < segment.length(); start += maxChars) {
-            pieces.add(segment.substring(start, Math.min(segment.length(), start + maxChars)));
+        int start = 0;
+        while (start < segment.length()) {
+            int end = Math.min(segment.length(), start + maxChars);
+            if (end < segment.length() && end - start > 1 && Character.isHighSurrogate(segment.charAt(end - 1))) {
+                end--;
+            }
+            pieces.add(segment.substring(start, end));
+            start = end;
         }
         return pieces;
     }
