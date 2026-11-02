@@ -1,5 +1,6 @@
 package com.cramit.domain.week;
 
+import com.cramit.domain.file.FileService;
 import com.cramit.domain.lecture.Lecture;
 import com.cramit.domain.lecture.LectureRepository;
 import com.cramit.domain.stt.SttRequestedEvent;
@@ -35,6 +36,7 @@ public class WeekService {
     private final LectureRepository lectureRepository;
     private final LectureAudioRepository lectureAudioRepository;
     private final LecturePptRepository lecturePptRepository;
+    private final FileService fileService;
     private final ApplicationEventPublisher eventPublisher;
 
     @Transactional
@@ -55,6 +57,7 @@ public class WeekService {
 
         Long lecturePptId = null;
         if (request.ppt() != null) {
+            fileService.validateFileUrl(request.ppt().fileUrl());
             LecturePpt ppt = LecturePpt.builder()
                     .weekId(week.getWeekId())
                     .fileName(request.ppt().fileName())
@@ -68,6 +71,7 @@ public class WeekService {
         Long lectureAudioId = null;
         SttStatus sttStatus = null;
         if (request.audio() != null) {
+            fileService.validateFileUrl(request.audio().fileUrl());
             LectureAudio audio = LectureAudio.builder()
                     .weekId(week.getWeekId())
                     .fileName(request.audio().fileName())

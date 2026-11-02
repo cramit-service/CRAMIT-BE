@@ -233,6 +233,7 @@ class TodoServiceTest {
                         .memberId(MEMBER_ID)
                         .title("알고리즘")
                         .professorName("박지훈")
+                        .colorIndex(1)
                         .build()
         ).getLectureId();
 
@@ -253,6 +254,7 @@ class TodoServiceTest {
                         .memberId(OTHER_MEMBER_ID)
                         .title("다른 사람 강의")
                         .professorName("교수님")
+                        .colorIndex(1)
                         .build()
         ).getLectureId();
 
@@ -282,6 +284,7 @@ class TodoServiceTest {
                         .memberId(OTHER_MEMBER_ID)
                         .title("다른 사람 강의")
                         .professorName("교수님")
+                        .colorIndex(1)
                         .build()
         ).getLectureId();
 
