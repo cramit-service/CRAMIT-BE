@@ -1,0 +1,76 @@
+name: CI
+
+on:
+  push:
+    branches: [develop]
+  pull_request:
+    branches: [develop]
+  schedule:
+    # 코드가 그대로여도 새 취약점이 공개될 수 있어 매주 월요일 09:00(KST)에 재스캔한다
+    - cron: "0 0 * * 1"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    if: github.event_name != 'schedule'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-java@b843ebf9b913146b38da2eaa7aeddf76074ae1ad # v6.1.0
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - uses: gradle/actions/setup-gradle@7296c772c13d12d9871528814b51fb2143c138ef # v6.4.1
+
+      - name: Run tests
+        run: ./gradlew test
+
+  security:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      security-events: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: gitleaks (시크릿 스캔)
+        # gitleaks-action은 조직 소유 레포에서 라이선스를 요구해서, 라이선스가 필요 없는
+        # 오픈소스 CLI 바이너리를 직접 받아 체크섬을 검증한 뒤 실행한다.
+        run: |
+          set -euo pipefail
+          GITLEAKS_VERSION=8.30.1
+          GITLEAKS_SHA256=551f6fc83ea457d62a0d98237cbad105af8d557003051f41f3e7ca7b3f2470eb
+          curl -sSL -o gitleaks.tar.gz \
+            "https://github.com/gitleaks/gitleaks/releases/download/v${GITLEAKS_VERSION}/gitleaks_${GITLEAKS_VERSION}_linux_x64.tar.gz"
+          echo "${GITLEAKS_SHA256}  gitleaks.tar.gz" | sha256sum -c -
+          tar -xzf gitleaks.tar.gz gitleaks
+          ./gitleaks detect --source . --redact -v
+
+      - name: Trivy (의존성/파일시스템 취약점 스캔)
+        if: always()
+        uses: aquasecurity/trivy-action@a9c7b0f06e461e9d4b4d1711f154ee024b8d7ab8 # v0.36.0
+        with:
+          scan-type: fs
+          scan-ref: .
+          format: sarif
+          output: trivy-results.sarif
+          severity: CRITICAL,HIGH
+          # 신규 취약점 발견 시 먼저 결과를 Security 탭에서 확인하고 triage한 뒤
+          # 이슈로 정리해 고칠 예정이라 아직 빌드를 막지는 않는다 (exit-code 0)
+          exit-code: "0"
+
+      - name: Trivy 결과 업로드 (Security 탭)
+        if: always()
+        uses: github/codeql-action/upload-sarif@e1c541575b54ca50e5f5dcc7da77615756cf9f51 # v3.39.1
+        with:
+          sarif_file: trivy-results.sarif
