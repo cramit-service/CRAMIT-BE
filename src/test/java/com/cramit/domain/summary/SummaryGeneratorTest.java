@@ -130,6 +130,25 @@ class SummaryGeneratorTest {
     }
 
     @Test
+    @DisplayName("이미 완료된 요약본은 늦게 시작된 작업이 다시 생성하지 않는다.")
+    void generateSkipsCompleted() {
+        // given
+        saveScript(1, 0, null, "내용");
+        Summary summary = Summary.builder().memberId(MEMBER_ID).weekId(weekId).build();
+        summary.complete("요약본");
+        Long summaryId = summaryRepository.save(summary).getSummaryId();
+
+        // when
+        summaryGenerator.generate(summaryId);
+
+        // then
+        Summary result = summaryRepository.findById(summaryId).orElseThrow();
+        assertThat(result.getStatus()).isEqualTo(AsyncJobStatus.COMPLETED);
+        assertThat(result.getContent()).isEqualTo("요약본");
+        verify(geminiSummaryClient, never()).summarize(anyString(), anyString());
+    }
+
+    @Test
     @DisplayName("이미 완료된 요약본은 늦게 끝난 작업이 실패해도 FAILED로 바뀌지 않는다.")
     void markFailedKeepsCompleted() {
         // given

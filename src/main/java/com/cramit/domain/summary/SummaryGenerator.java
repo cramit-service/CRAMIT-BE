@@ -65,9 +65,14 @@ public class SummaryGenerator {
     public void generate(Long summaryId) {
         Long weekId = transactionTemplate.execute(status -> {
             Summary summary = findSummary(summaryId);
-            summary.startProcessing();
+            if (!summary.startProcessing()) {
+                return null;
+            }
             return summary.getWeekId();
         });
+        if (weekId == null) {
+            return;
+        }
 
         try {
             List<String> segments = loadScriptSegments(weekId);

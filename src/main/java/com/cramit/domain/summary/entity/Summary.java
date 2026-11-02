@@ -49,8 +49,13 @@ public class Summary extends BaseEntity {
         this.status = AsyncJobStatus.PENDING;
     }
 
-    public void startProcessing() {
+    // 큐에서 오래 기다린 이전 작업이 늦게 시작돼도, 이미 완료된 요약본은 다시 생성하지 않는다.
+    public boolean startProcessing() {
+        if (this.status == AsyncJobStatus.COMPLETED) {
+            return false;
+        }
         this.status = AsyncJobStatus.PROCESSING;
+        return true;
     }
 
     public void complete(String content) {
