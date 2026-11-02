@@ -8,7 +8,8 @@ public record MyLectureItem(
         Long lectureId,
         String title,
         String professorName,
-        Integer weekCount
+        Integer weekCount,
+        Integer colorIndex
 ) {
     public static MyLectureItem from(Lecture lecture) {
         return MyLectureItem.builder()
@@ -16,6 +17,7 @@ public record MyLectureItem(
                 .title(lecture.getTitle())
                 .professorName(lecture.getProfessorName())
                 .weekCount(0) // TODO: Week 완성되면 실제 개수로 교체
+                .colorIndex(lecture.getColorIndex())
                 .build();
     }
 }

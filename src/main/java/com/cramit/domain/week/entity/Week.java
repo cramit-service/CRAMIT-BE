@@ -70,4 +70,8 @@ public class Week extends BaseEntity {
     public void updateReviewCount(Integer reviewCount) {
         this.reviewCount = reviewCount;
     }
+
+    public void updateFirstSummary(String firstSummaryMd) {
+        this.firstSummaryMd = firstSummaryMd;
+    }
 }
