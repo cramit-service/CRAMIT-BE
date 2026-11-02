@@ -68,5 +68,7 @@ resilience4j:
         failure-rate-threshold: 100
         wait-duration-in-open-state: 60s
         permitted-number-of-calls-in-half-open-state: 1
+        # 응답 형식 오류(BusinessException)는 Gemini 장애가 아니므로 집계하지 않는다. 5xx·타임아웃은 계속 집계한다.
         ignore-exceptions:
-          - org.springframework.web.client.HttpClientErrorException
+            - org.springframework.web.client.HttpClientErrorException
+            - com.cramit.global.exception.BusinessException

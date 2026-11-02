@@ -3,6 +3,7 @@ package com.cramit.domain.ai.dto;
 import com.cramit.global.exception.BusinessException;
 import com.cramit.global.exception.ErrorCode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.JsonNode;
 
 import java.util.List;
 
@@ -24,6 +25,21 @@ public record GeminiResponse(List<Candidate> candidates) {
             throw new BusinessException(ErrorCode.CHATBOT_RESPONSE_ERROR);
         }
         return answer;
+    }
+
+    public String extractField(String fieldName, ErrorCode errorCode) {
+        JsonNode value;
+        try {
+            String rawJson = candidates.get(0).content().parts().get(0).text();
+            value = OBJECT_MAPPER.readTree(rawJson).get(fieldName);
+        } catch (Exception e) {
+            throw new BusinessException(errorCode);
+        }
+
+        if (value == null || !value.isTextual() || value.asText().isBlank()) {
+            throw new BusinessException(errorCode);
+        }
+        return value.asText();
     }
 
     public record Candidate(Content content) {}

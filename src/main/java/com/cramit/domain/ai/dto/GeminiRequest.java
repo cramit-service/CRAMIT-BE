@@ -18,6 +18,14 @@ public record GeminiRequest(
         );
     }
 
+    public static GeminiRequest of(String systemPrompt, String userText, Map<String, Object> responseSchema) {
+        return new GeminiRequest(
+                new SystemInstruction(List.of(new Part(systemPrompt))),
+                List.of(new Content("user", List.of(new Part(userText)))),
+                new GenerationConfig("application/json", responseSchema)
+        );
+    }
+
     public record SystemInstruction(List<Part> parts) {}
 
     public record Content(String role, List<Part> parts) {}

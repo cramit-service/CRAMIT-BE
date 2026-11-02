@@ -18,11 +18,20 @@ public class GeminiConfig {
 
     @Bean
     public RestClient geminiRestClient() {
+        return buildGeminiRestClient(Duration.ofSeconds(20));
+    }
+
+    @Bean
+    public RestClient geminiSummaryRestClient() {
+        return buildGeminiRestClient(Duration.ofSeconds(90));
+    }
+
+    private RestClient buildGeminiRestClient(Duration readTimeout) {
         HttpClient httpClient = HttpClient.newBuilder()
                 .connectTimeout(Duration.ofSeconds(3))
                 .build();
         JdkClientHttpRequestFactory requestFactory = new JdkClientHttpRequestFactory(httpClient);
-        requestFactory.setReadTimeout(Duration.ofSeconds(20));
+        requestFactory.setReadTimeout(readTimeout);
 
         return RestClient.builder()
                 .baseUrl("https://generativelanguage.googleapis.com")
