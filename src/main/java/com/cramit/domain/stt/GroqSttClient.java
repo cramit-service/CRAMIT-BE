@@ -17,8 +17,11 @@ public class GroqSttClient {
 
     private final RestClient groqRestClient;
     private final RestClient audioDownloadRestClient;
+    private final SttDownloadProperties sttDownloadProperties;
 
     public GroqTranscriptionResponse transcribe(String fileUrl) {
+        validateFileUrl(fileUrl);
+
         byte[] audio = audioDownloadRestClient.get()
                 .uri(fileUrl)
                 .retrieve()
@@ -43,5 +46,17 @@ public class GroqSttClient {
                 .body(form)
                 .retrieve()
                 .body(GroqTranscriptionResponse.class);
+    }
+
+    // 사용자가 넘긴 fileUrl로 서버가 요청을 보내므로, 우리 저장소 공개 주소 아래만 받는다.
+    private void validateFileUrl(String fileUrl) {
+        String prefix = sttDownloadProperties.allowedUrlPrefix();
+        if (prefix == null || prefix.isBlank()) {
+            throw new IllegalStateException("stt.download.allowed-url-prefix가 설정되지 않았습니다.");
+        }
+        String normalizedPrefix = prefix.endsWith("/") ? prefix : prefix + "/";
+        if (!fileUrl.startsWith(normalizedPrefix)) {
+            throw new IllegalArgumentException("허용되지 않은 녹음 주소입니다: " + fileUrl);
+        }
     }
 }

@@ -52,3 +52,5 @@ app:
 stt:
   groq:
     api-key: test-groq-api-key
+  download:
+    allowed-url-prefix: https://test-storage.example.com

@@ -60,6 +60,8 @@ gemini:
 stt:
   groq:
     api-key: your-groq-api-key
+  download:
+    allowed-url-prefix: https://your-storage-public-base-url
   google:
     credentials-path: your-gcp-service-account-json-path
 
