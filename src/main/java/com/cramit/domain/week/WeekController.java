@@ -4,6 +4,8 @@ import com.cramit.domain.week.dto.WeekCreateRequest;
 import com.cramit.domain.week.dto.WeekCreateResponse;
 import com.cramit.domain.week.dto.WeekFirstSummaryResponse;
 import com.cramit.domain.week.dto.WeekListResponse;
+import com.cramit.domain.week.dto.WeekReviewCountUpdateRequest;
+import com.cramit.domain.week.dto.WeekReviewCountUpdateResponse;
 import com.cramit.domain.week.dto.WeekStatusUpdateRequest;
 import com.cramit.domain.week.dto.WeekStatusUpdateResponse;
 import com.cramit.domain.week.dto.WeekUpdateRequest;
@@ -117,6 +119,21 @@ public class WeekController {
             @Valid @RequestBody WeekStatusUpdateRequest request
     ){
         return ResponseEntity.ok(ApiResponse.of(weekService.updateWeekStatus(weekId, request, memberId)));
+    }
+
+    @Operation(summary = "주차 회독 수 변경", description = "주차의 회독 수를 0 이상의 값으로 설정합니다.")
+    @ApiResponses({
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "변경 성공"),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "존재하지 않는 주차 (ENTITY_NOT_FOUND)",
+                    content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE, schema = @Schema(implementation = ErrorResponse.class)))
+    })
+    @PatchMapping("/api/weeks/{weekId}/review-count")
+    public ResponseEntity<ApiResponse<WeekReviewCountUpdateResponse>> updateReviewCount(
+            @Parameter(hidden = true) @AuthenticationPrincipal Long memberId,
+            @PathVariable Long weekId,
+            @Valid @RequestBody WeekReviewCountUpdateRequest request
+    ){
+        return ResponseEntity.ok(ApiResponse.of(weekService.updateReviewCount(weekId, request, memberId)));
     }
 
     @Operation(summary = "1차 요약본 조회", description = "자료 업로드 직후 AI가 생성한 1차 요약본을 조회합니다.")

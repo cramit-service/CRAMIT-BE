@@ -6,6 +6,8 @@ import com.cramit.domain.week.dto.WeekCreateRequest;
 import com.cramit.domain.week.dto.WeekCreateResponse;
 import com.cramit.domain.week.dto.WeekFirstSummaryResponse;
 import com.cramit.domain.week.dto.WeekListResponse;
+import com.cramit.domain.week.dto.WeekReviewCountUpdateRequest;
+import com.cramit.domain.week.dto.WeekReviewCountUpdateResponse;
 import com.cramit.domain.week.dto.WeekStatusUpdateRequest;
 import com.cramit.domain.week.dto.WeekStatusUpdateResponse;
 import com.cramit.domain.week.dto.WeekUpdateRequest;
@@ -151,6 +153,23 @@ public class WeekService {
         week.updateStatus(request.status());
 
         return new WeekStatusUpdateResponse(week.getWeekId(), week.getStatus());
+    }
+
+    @Transactional
+    public WeekReviewCountUpdateResponse updateReviewCount(Long weekId, WeekReviewCountUpdateRequest request, Long memberId) {
+        Week week = weekRepository.findById(weekId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.ENTITY_NOT_FOUND));
+
+        Lecture lecture = lectureRepository.findById(week.getLectureId())
+                .orElseThrow(() -> new BusinessException(ErrorCode.ENTITY_NOT_FOUND));
+
+        if (!lecture.isOwnedBy(memberId)) {
+            throw new BusinessException(ErrorCode.LECTURE_ACCESS_DENIED);
+        }
+
+        week.updateReviewCount(request.reviewCount());
+
+        return new WeekReviewCountUpdateResponse(week.getWeekId(), week.getReviewCount());
     }
 
     @Transactional(readOnly = true)
