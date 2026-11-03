@@ -57,4 +57,9 @@ public class LectureAudio extends BaseEntity {
     public void updateSttStatus(SttStatus sttStatus) {
         this.sttStatus = sttStatus;
     }
+
+    public void completeStt(Long durationSec) {
+        this.durationSec = durationSec;
+        this.sttStatus = SttStatus.COMPLETED;
+    }
 }

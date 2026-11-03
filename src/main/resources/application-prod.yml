@@ -56,6 +56,10 @@ gemini:
   api-key: ${GEMINI_API_KEY}
 
 stt:
+  groq:
+    api-key: ${GROQ_API_KEY}
+  download:
+    allowed-url-prefix: ${AWS_S3_PUBLIC_BASE_URL}
   google:
     credentials-path: ${GOOGLE_STT_CREDENTIALS_PATH}
 
