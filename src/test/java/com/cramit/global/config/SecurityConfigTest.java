@@ -88,6 +88,11 @@ class SecurityConfigTest {
 						.cookie(rotatedCookie))
 				.andExpect(status().isOk())
 				.andExpect(jsonPath("$.data.accessToken").exists());
+
+		mockMvc.perform(post("/api/auth/refresh")
+						.cookie(new Cookie(RefreshTokenCookieProvider.COOKIE_NAME, issued.refreshToken())))
+				.andExpect(status().isUnauthorized())
+				.andExpect(jsonPath("$.error.code").value("AUTH_INVALID_TOKEN"));
 	}
 
 	@Test
