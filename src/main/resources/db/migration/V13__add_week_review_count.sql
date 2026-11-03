@@ -1,0 +1,1 @@
+ALTER TABLE week ADD COLUMN review_count INT NOT NULL DEFAULT 0;
