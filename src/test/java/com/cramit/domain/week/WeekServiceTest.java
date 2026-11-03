@@ -167,6 +167,57 @@ class WeekServiceTest {
     }
 
     @Test
+    @DisplayName("주차에 등록된 PPT를 조회한다.")
+    void getPpt() {
+        Long lectureId = saveLecture(MEMBER_ID);
+        Long weekId = weekService.createWeek(
+                lectureId,
+                new WeekCreateRequest(
+                        "1주차",
+                        WEEK_DATE,
+                        new WeekCreateRequest.PptInfo("slide.pdf", "http://localhost:9000/test-bucket/files/ppt/slide.pdf", 1024L),
+                        null
+                ),
+                MEMBER_ID
+        ).weekId();
+
+        var response = weekService.getPpt(weekId, MEMBER_ID);
+
+        assertThat(response.weekId()).isEqualTo(weekId);
+        assertThat(response.fileName()).isEqualTo("slide.pdf");
+        assertThat(response.fileUrl()).isEqualTo("http://localhost:9000/test-bucket/files/ppt/slide.pdf");
+        assertThat(response.fileSize()).isEqualTo(1024L);
+    }
+
+    @Test
+    @DisplayName("PPT가 등록되지 않은 주차는 조회할 수 없다.")
+    void getPptNotFound() {
+        Long lectureId = saveLecture(MEMBER_ID);
+        Long weekId = weekService.createWeek(lectureId, createRequest("1주차", WEEK_DATE), MEMBER_ID).weekId();
+
+        assertThatThrownBy(() -> weekService.getPpt(weekId, MEMBER_ID))
+                .isInstanceOfSatisfying(BusinessException.class, ex ->
+                        assertThat(ex.getErrorCode()).isEqualTo(ErrorCode.ENTITY_NOT_FOUND));
+    }
+
+    @Test
+    @DisplayName("생성자가 아니면 주차 PPT를 조회할 수 없다.")
+    void getPptForbidden() {
+        Long lectureId = saveLecture(OTHER_MEMBER_ID);
+        Long weekId = weekRepository.save(
+                Week.builder()
+                        .lectureId(lectureId)
+                        .title("1주차")
+                        .weekDate(WEEK_DATE)
+                        .build()
+        ).getWeekId();
+
+        assertThatThrownBy(() -> weekService.getPpt(weekId, MEMBER_ID))
+                .isInstanceOfSatisfying(BusinessException.class, ex ->
+                        assertThat(ex.getErrorCode()).isEqualTo(ErrorCode.LECTURE_ACCESS_DENIED));
+    }
+
+    @Test
     @DisplayName("존재하지 않는 주차를 수정하면 예외가 발생한다.")
     void updateWeekNotFound() {
         WeekUpdateRequest request = new WeekUpdateRequest("1주차(수정)", WEEK_DATE, null);
