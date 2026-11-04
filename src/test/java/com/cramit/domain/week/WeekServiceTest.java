@@ -10,6 +10,7 @@ import com.cramit.domain.week.dto.WeekStatusUpdateRequest;
 import com.cramit.domain.week.dto.WeekStatusUpdateResponse;
 import com.cramit.domain.week.dto.WeekUpdateRequest;
 import com.cramit.domain.week.dto.WeekUpdateResponse;
+import com.cramit.domain.week.entity.LecturePpt;
 import com.cramit.domain.week.entity.Week;
 import com.cramit.domain.week.enums.SttStatus;
 import com.cramit.domain.week.enums.WeekStatus;
@@ -164,6 +165,96 @@ class WeekServiceTest {
         assertThatThrownBy(() -> weekService.getFirstSummary(weekId, MEMBER_ID))
                 .isInstanceOfSatisfying(BusinessException.class, ex ->
                         assertThat(ex.getErrorCode()).isEqualTo(ErrorCode.FIRST_SUMMARY_NOT_READY));
+    }
+
+    @Test
+    @DisplayName("주차에 등록된 PPT를 조회한다.")
+    void getPpt() {
+        Long lectureId = saveLecture(MEMBER_ID);
+        Long weekId = weekRepository.save(
+                Week.builder()
+                        .lectureId(lectureId)
+                        .title("1주차")
+                        .weekDate(WEEK_DATE)
+                        .build()
+        ).getWeekId();
+        Long lecturePptId = lecturePptRepository.save(new LecturePpt(
+                weekId,
+                "slide.pdf",
+                "http://localhost:9000/test-bucket/files/ppt/slide.pdf",
+                1024L,
+                12
+        )).getLecturePptId();
+
+        var response = weekService.getPpt(weekId, MEMBER_ID);
+
+        assertThat(response.lecturePptId()).isEqualTo(lecturePptId);
+        assertThat(response.lecturePptId()).isNotEqualTo(weekId);
+        assertThat(response.weekId()).isEqualTo(weekId);
+        assertThat(response.fileName()).isEqualTo("slide.pdf");
+        assertThat(response.fileUrl()).isEqualTo("http://localhost:9000/test-bucket/files/ppt/slide.pdf");
+        assertThat(response.fileSize()).isEqualTo(1024L);
+        assertThat(response.pageCount()).isEqualTo(12);
+    }
+
+    @Test
+    @DisplayName("PPT가 등록되지 않은 주차는 조회할 수 없다.")
+    void getPptNotFound() {
+        Long lectureId = saveLecture(MEMBER_ID);
+        Long weekId = weekService.createWeek(lectureId, createRequest("1주차", WEEK_DATE), MEMBER_ID).weekId();
+
+        assertThatThrownBy(() -> weekService.getPpt(weekId, MEMBER_ID))
+                .isInstanceOfSatisfying(BusinessException.class, ex ->
+                        assertThat(ex.getErrorCode()).isEqualTo(ErrorCode.ENTITY_NOT_FOUND));
+    }
+
+    @Test
+    @DisplayName("존재하지 않는 주차의 PPT를 조회하면 예외가 발생한다.")
+    void getPptWeekNotFound() {
+        assertThatThrownBy(() -> weekService.getPpt(999L, MEMBER_ID))
+                .isInstanceOfSatisfying(BusinessException.class, ex ->
+                        assertThat(ex.getErrorCode()).isEqualTo(ErrorCode.ENTITY_NOT_FOUND));
+    }
+
+    @Test
+    @DisplayName("생성자가 아니면 주차 PPT를 조회할 수 없다.")
+    void getPptForbidden() {
+        Long lectureId = saveLecture(OTHER_MEMBER_ID);
+        Long weekId = weekRepository.save(
+                Week.builder()
+                        .lectureId(lectureId)
+                        .title("1주차")
+                        .weekDate(WEEK_DATE)
+                        .build()
+        ).getWeekId();
+
+        assertThatThrownBy(() -> weekService.getPpt(weekId, MEMBER_ID))
+                .isInstanceOfSatisfying(BusinessException.class, ex ->
+                        assertThat(ex.getErrorCode()).isEqualTo(ErrorCode.LECTURE_ACCESS_DENIED));
+    }
+
+    @Test
+    @DisplayName("생성자가 아니면 PPT가 등록된 주차도 조회할 수 없다.")
+    void getPptForbiddenWhenPptExists() {
+        Long lectureId = saveLecture(OTHER_MEMBER_ID);
+        Long weekId = weekRepository.save(
+                Week.builder()
+                        .lectureId(lectureId)
+                        .title("1주차")
+                        .weekDate(WEEK_DATE)
+                        .build()
+        ).getWeekId();
+        lecturePptRepository.save(new LecturePpt(
+                weekId,
+                "slide.pdf",
+                "http://localhost:9000/test-bucket/files/ppt/slide.pdf",
+                1024L,
+                10
+        ));
+
+        assertThatThrownBy(() -> weekService.getPpt(weekId, MEMBER_ID))
+                .isInstanceOfSatisfying(BusinessException.class, ex ->
+                        assertThat(ex.getErrorCode()).isEqualTo(ErrorCode.LECTURE_ACCESS_DENIED));
     }
 
     @Test

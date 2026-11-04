@@ -4,6 +4,7 @@ import com.cramit.domain.week.dto.WeekCreateRequest;
 import com.cramit.domain.week.dto.WeekCreateResponse;
 import com.cramit.domain.week.dto.WeekFirstSummaryResponse;
 import com.cramit.domain.week.dto.WeekListResponse;
+import com.cramit.domain.week.dto.WeekPptResponse;
 import com.cramit.domain.week.dto.WeekReviewCountUpdateRequest;
 import com.cramit.domain.week.dto.WeekReviewCountUpdateResponse;
 import com.cramit.domain.week.dto.WeekStatusUpdateRequest;
@@ -150,5 +151,21 @@ public class WeekController {
             @Parameter(hidden = true) @AuthenticationPrincipal Long memberId
     ){
         return ResponseEntity.ok(ApiResponse.of(weekService.getFirstSummary(weekId, memberId)));
+    }
+
+    @Operation(summary = "주차 PPT 조회", description = "주차에 등록된 PPT 파일 정보를 조회합니다.")
+    @ApiResponses({
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "조회 성공"),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "403", description = "접근 권한이 없는 강의 (LECTURE_ACCESS_DENIED)",
+                    content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE, schema = @Schema(implementation = ErrorResponse.class))),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "존재하지 않는 주차이거나 등록된 PPT가 없음 (ENTITY_NOT_FOUND)",
+                    content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE, schema = @Schema(implementation = ErrorResponse.class)))
+    })
+    @GetMapping("/api/weeks/{weekId}/ppt")
+    public ResponseEntity<ApiResponse<WeekPptResponse>> getWeekPpt(
+            @PathVariable Long weekId,
+            @Parameter(hidden = true) @AuthenticationPrincipal Long memberId
+    ){
+        return ResponseEntity.ok(ApiResponse.of(weekService.getPpt(weekId, memberId)));
     }
 }

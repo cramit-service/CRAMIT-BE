@@ -8,6 +8,7 @@ import com.cramit.domain.week.dto.WeekCreateRequest;
 import com.cramit.domain.week.dto.WeekCreateResponse;
 import com.cramit.domain.week.dto.WeekFirstSummaryResponse;
 import com.cramit.domain.week.dto.WeekListResponse;
+import com.cramit.domain.week.dto.WeekPptResponse;
 import com.cramit.domain.week.dto.WeekReviewCountUpdateRequest;
 import com.cramit.domain.week.dto.WeekReviewCountUpdateResponse;
 import com.cramit.domain.week.dto.WeekStatusUpdateRequest;
@@ -197,6 +198,24 @@ public class WeekService {
         }
 
         return  new WeekFirstSummaryResponse(week.getWeekId(), week.getFirstSummaryMd());
+    }
+
+    @Transactional(readOnly = true)
+    public WeekPptResponse getPpt(Long weekId, Long memberId) {
+        Week week = weekRepository.findById(weekId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.ENTITY_NOT_FOUND));
+
+        Lecture lecture = lectureRepository.findById(week.getLectureId())
+                .orElseThrow(() -> new BusinessException(ErrorCode.ENTITY_NOT_FOUND));
+
+        if (!lecture.isOwnedBy(memberId)) {
+            throw new BusinessException(ErrorCode.LECTURE_ACCESS_DENIED);
+        }
+
+        LecturePpt ppt = lecturePptRepository.findByWeekId(weekId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.ENTITY_NOT_FOUND));
+
+        return WeekPptResponse.from(ppt);
     }
 
 }
