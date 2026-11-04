@@ -131,6 +131,24 @@ class ChatBotServiceTest {
     }
 
     @Test
+    @DisplayName("AI 응답에 실패하면 질문도 저장하지 않는다.")
+    void sendMessageAiFailure() {
+        // given
+        Long weekId = saveWeek(MEMBER_ID);
+        Long sessionId = chatBotSessionService.createSession(
+                new ChatBotSessionCreateRequest(weekId, "DP 질문"), MEMBER_ID).chatBotSessionId();
+        given(geminiChatBotClient.ask(anyString(), anyString()))
+                .willThrow(new BusinessException(ErrorCode.AI_TIMEOUT));
+
+        // when & then
+        assertThatThrownBy(() -> chatBotService.sendMessage(
+                sessionId, new ChatMessageRequest("질문"), MEMBER_ID))
+                .isInstanceOfSatisfying(BusinessException.class, ex ->
+                        assertThat(ex.getErrorCode()).isEqualTo(ErrorCode.AI_TIMEOUT));
+        assertThat(chatBotRepository.count()).isZero();
+    }
+
+    @Test
     @DisplayName("1차 요약본이 없는 주차에는 메시지를 전송할 수 없다.")
     void sendMessageNoContext() {
         // given

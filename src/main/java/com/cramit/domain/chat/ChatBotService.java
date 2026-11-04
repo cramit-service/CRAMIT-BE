@@ -61,6 +61,9 @@ public class ChatBotService {
             throw new BusinessException(ErrorCode.NO_CONTEXT);
         }
 
+        // AI 응답을 먼저 받고, 성공했을 때만 질문과 답변을 함께 저장한다.
+        String answer = geminiChatBotClient.ask(request.message(), week.getFirstSummaryMd());
+
         ChatMessage userMessage = ChatMessage.builder()
                 .memberId(memberId)
                 .weekId(session.getWeekId())
@@ -68,9 +71,6 @@ public class ChatBotService {
                 .senderType(SenderType.USER)
                 .message(request.message())
                 .build();
-        chatBotRepository.save(userMessage);
-
-        String answer = geminiChatBotClient.ask(request.message(), week.getFirstSummaryMd());
 
         ChatMessage aiMessage = ChatMessage.builder()
                 .memberId(memberId)
@@ -80,7 +80,8 @@ public class ChatBotService {
                 .message(answer)
                 .referencedPage(null)
                 .build();
-        chatBotRepository.save(aiMessage);
+
+        chatBotRepository.saveAll(List.of(userMessage, aiMessage));
 
         return List.of(
                 ChatMessageResponse.from(userMessage),

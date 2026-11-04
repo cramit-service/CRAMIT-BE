@@ -43,6 +43,9 @@ public class Week extends BaseEntity {
     @Column(columnDefinition = "TEXT")
     private String firstSummaryMd; // STT 완료 후 AI가 자동 생성하는 1차요약본 (nullable)
 
+    @Column(nullable = false)
+    private Integer reviewCount;
+
     @Builder
     public Week(Long lectureId, String title, LocalDate weekDate, String professorName) {
         this.lectureId = lectureId;
@@ -50,6 +53,7 @@ public class Week extends BaseEntity {
         this.weekDate = weekDate;
         this.professorName = professorName;
         this.status = WeekStatus.BEFORE;
+        this.reviewCount = 0;
     }
 
     //수정
@@ -61,6 +65,10 @@ public class Week extends BaseEntity {
 
     public void updateStatus(WeekStatus status) {
         this.status = status;
+    }
+
+    public void updateReviewCount(Integer reviewCount) {
+        this.reviewCount = reviewCount;
     }
 
     public void updateFirstSummary(String firstSummaryMd) {
