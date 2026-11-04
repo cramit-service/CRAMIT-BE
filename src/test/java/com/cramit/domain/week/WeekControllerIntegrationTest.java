@@ -54,7 +54,10 @@ class WeekControllerIntegrationTest {
 						.header("Authorization", "Bearer " + accessToken))
 				.andExpect(status().isOk())
 				.andExpect(jsonPath("$.data.weekId").value(weekId))
-				.andExpect(jsonPath("$.data.fileName").value("slide.pdf"));
+				.andExpect(jsonPath("$.data.fileName").value("slide.pdf"))
+				.andExpect(jsonPath("$.data.fileUrl").value("http://localhost:9000/test-bucket/files/ppt/slide.pdf"))
+				.andExpect(jsonPath("$.data.fileSize").value(1024))
+				.andExpect(jsonPath("$.data.pageCount").value(12));
 	}
 
 	@Test
