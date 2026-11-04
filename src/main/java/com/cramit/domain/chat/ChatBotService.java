@@ -98,9 +98,8 @@ public class ChatBotService {
 
     private String buildContext(List<PageContext> pages) {
         return pages.stream()
-                .map(page -> "[p." + page.pageNumber() + "]" + (page.title() != null ? " " + page.title() : "")
-                        + "\n" + page.content())
-                .collect(Collectors.joining("\n\n"));
+                .map(PageContext::formatted)
+                .collect(Collectors.joining(PageContext.SEPARATOR));
     }
 
     // 모델이 근거로 제시한 페이지가 실제로 context에 포함된 후보인지 검증한다. 벗어나면 신뢰하지 않는다.

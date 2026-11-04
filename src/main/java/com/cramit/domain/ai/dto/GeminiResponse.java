@@ -23,7 +23,13 @@ public record GeminiResponse(List<Candidate> candidates) {
         if (payload.answer() == null || payload.answer().isBlank()) {
             throw new BusinessException(ErrorCode.CHATBOT_RESPONSE_ERROR);
         }
-        return new ChatAnswer(payload.answer(), payload.referencedPage());
+        return new ChatAnswer(payload.answer(), toIntegralPage(payload.referencedPage()));
+    }
+
+    // Integer로 바로 바인딩하면 Jackson 기본 설정상 2.7 같은 소수도 2로 잘려 들어온다.
+    // 정수 노드가 아니면 페이지 번호를 신뢰하지 않고 답변만 저장한다.
+    private Integer toIntegralPage(JsonNode node) {
+        return node != null && node.isInt() ? node.intValue() : null;
     }
 
     public String extractField(String fieldName, ErrorCode errorCode) {
@@ -47,5 +53,5 @@ public record GeminiResponse(List<Candidate> candidates) {
 
     public record Part(String text) {}
 
-    private record ChatAnswerPayload(String answer, Integer referencedPage) {}
+    private record ChatAnswerPayload(String answer, JsonNode referencedPage) {}
 }

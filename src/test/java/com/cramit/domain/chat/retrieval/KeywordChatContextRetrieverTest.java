@@ -84,6 +84,22 @@ class KeywordChatContextRetrieverTest {
         assertThat(pages).extracting(PageContext::pageNumber).contains(4);
     }
 
+    @Test
+    @DisplayName("예산을 넘는 페이지를 만나도 멈추지 않고, 뒤에 있는 더 작은 후보까지 계속 검사한다.")
+    void skipsOversizedPageButKeepsCheckingSmallerCandidates() {
+        // 거의 예산만큼 큰 페이지 두 개(A, B)와 아주 작은 페이지(C)를 준비한다.
+        // A를 선택하고 나면 B는 혼자서도 예산을 넘겨 들어갈 수 없지만, C는 여전히 들어갈 여유가 있다.
+        String bigFiller = "학습 내용을 설명하는 문장입니다. ".repeat(1050); // 약 19,950자
+
+        saveScriptWithDetail(10, 1, "핵심", bigFiller + " 핵심 개념 설명"); // 키워드 2개 일치 -> 최우선 선택
+        saveScriptWithDetail(20, 2, "보조", bigFiller + " 핵심 설명"); // 키워드 1개 일치 -> A 다음 순위지만 용량 초과로 건너뜀
+        saveScriptWithDetail(30, 3, "참고", "참고용 보충 자료입니다."); // 키워드 불일치지만 용량이 작아 들어갈 수 있음
+
+        List<PageContext> pages = chatContextRetriever.retrieve(WEEK_ID, "핵심 개념이 뭐야?");
+
+        assertThat(pages).extracting(PageContext::pageNumber).containsExactly(10, 30);
+    }
+
     private void saveScriptWithDetail(int pageNumber, int sequence, String title, String content) {
         Script script = scriptRepository.save(Script.builder()
                 .weekId(WEEK_ID)

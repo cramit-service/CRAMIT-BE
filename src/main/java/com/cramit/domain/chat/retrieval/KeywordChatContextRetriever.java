@@ -37,12 +37,19 @@ public class KeywordChatContextRetriever implements ChatContextRetriever {
             return List.of();
         }
 
-        int totalChars = pages.stream().mapToInt(page -> page.content().length()).sum();
+        int totalChars = totalFormattedChars(pages);
         if (totalChars <= CONTEXT_BUDGET_CHARS) {
             return pages;
         }
 
         return selectRelevantPages(pages, question);
+    }
+
+    // ChatBotService가 실제로 모델에 보내는 문자열([p.N] 제목·줄바꿈·페이지 구분자 포함) 기준으로 예산을 계산한다.
+    private int totalFormattedChars(List<PageContext> pages) {
+        int contentChars = pages.stream().mapToInt(page -> page.formatted().length()).sum();
+        int separatorChars = pages.isEmpty() ? 0 : (pages.size() - 1) * PageContext.SEPARATOR.length();
+        return contentChars + separatorChars;
     }
 
     private List<PageContext> selectRelevantPages(List<PageContext> pages, String question) {
@@ -55,12 +62,17 @@ public class KeywordChatContextRetriever implements ChatContextRetriever {
         List<PageContext> selected = new ArrayList<>();
         int chars = 0;
         for (PageContext page : rankedByRelevance) {
-            boolean overBudget = !selected.isEmpty() && chars + page.content().length() > CONTEXT_BUDGET_CHARS;
-            if (selected.size() >= MAX_PAGES || overBudget) {
+            if (selected.size() >= MAX_PAGES) {
                 break;
             }
+            int separatorChars = selected.isEmpty() ? 0 : PageContext.SEPARATOR.length();
+            int pageChars = separatorChars + page.formatted().length();
+            if (chars + pageChars > CONTEXT_BUDGET_CHARS) {
+                // 이 페이지는 예산을 넘지만, 순위가 낮아도 예산에 맞는 다음 후보는 계속 검사한다.
+                continue;
+            }
             selected.add(page);
-            chars += page.content().length();
+            chars += pageChars;
         }
 
         // 선별 후에는 원래 페이지 순서로 되돌려 모델이 흐름을 따라가기 쉽게 한다.
@@ -77,13 +89,31 @@ public class KeywordChatContextRetriever implements ChatContextRetriever {
         return (int) keywords.stream().filter(pageTokens::contains).count();
     }
 
+    // 완전한 형태소 분석은 아니지만, 흔한 조사를 떼어내 질문과 페이지 쪽 토큰을 같은 기준으로 맞춘다.
+    // (예: "양자역학이"와 "양자역학은"이 서로 다른 토큰이 되어 겹침 점수가 0이 되는 것을 막는다)
+    private static final List<String> PARTICLES = List.of(
+            "으로서", "으로써", "이라는", "라는", "에서", "부터", "까지", "에게", "한테", "보다", "에는",
+            "으로", "이나", "와", "과", "나", "도", "만", "은", "는", "이", "가", "을", "를", "의", "에", "로"
+    );
+
     private Set<String> tokenize(String text) {
         if (text == null || text.isBlank()) {
             return Set.of();
         }
         return Arrays.stream(text.toLowerCase(Locale.ROOT).split("[^\\p{IsAlphabetic}\\p{IsDigit}]+"))
                 .filter(token -> token.length() > 1)
+                .map(this::stripParticle)
+                .filter(token -> !token.isBlank())
                 .collect(Collectors.toSet());
+    }
+
+    private String stripParticle(String token) {
+        for (String particle : PARTICLES) {
+            if (token.length() > particle.length() && token.endsWith(particle)) {
+                return token.substring(0, token.length() - particle.length());
+            }
+        }
+        return token;
     }
 
     private List<PageContext> loadPages(Long weekId) {
