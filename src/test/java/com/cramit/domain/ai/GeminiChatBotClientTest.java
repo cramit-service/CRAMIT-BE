@@ -1,5 +1,6 @@
 package com.cramit.domain.ai;
 
+import com.cramit.domain.ai.dto.ChatAnswer;
 import com.cramit.global.exception.BusinessException;
 import com.cramit.global.exception.ErrorCode;
 import org.junit.jupiter.api.DisplayName;
@@ -19,7 +20,7 @@ import static org.springframework.test.web.client.response.MockRestResponseCreat
 class GeminiChatBotClientTest {
 
     @Test
-    @DisplayName("Gemini가 JSON으로 응답하면 answer를 추출한다.")
+    @DisplayName("Gemini가 JSON으로 응답하면 answer와 referencedPage를 추출한다.")
     void ask() {
         // given
         RestClient.Builder builder = RestClient.builder();
@@ -32,7 +33,7 @@ class GeminiChatBotClientTest {
                     {
                       "content": {
                         "parts": [
-                          {"text": "{\\"answer\\": \\"TCP는 연결형 프로토콜입니다.\\"}"}
+                          {"text": "{\\"answer\\": \\"TCP는 연결형 프로토콜입니다.\\", \\"referencedPage\\": 2}"}
                         ]
                       }
                     }
@@ -45,10 +46,11 @@ class GeminiChatBotClientTest {
                 .andRespond(withSuccess(responseBody, MediaType.APPLICATION_JSON));
 
         // when
-        String answer = client.ask("TCP와 UDP 차이를 알려줘.", "네트워크 강의 요약본...");
+        ChatAnswer answer = client.ask("TCP와 UDP 차이를 알려줘.", "[p.2] 네트워크 강의 요약본...");
 
         // then
-        assertThat(answer).isEqualTo("TCP는 연결형 프로토콜입니다.");
+        assertThat(answer.answer()).isEqualTo("TCP는 연결형 프로토콜입니다.");
+        assertThat(answer.referencedPage()).isEqualTo(2);
         server.verify();
     }
 
