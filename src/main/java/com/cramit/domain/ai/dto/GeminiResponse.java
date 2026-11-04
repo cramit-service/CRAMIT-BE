@@ -11,20 +11,19 @@ public record GeminiResponse(List<Candidate> candidates) {
 
     private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
 
-    public String extractAnswer() {
-        AnswerPayload payload;
+    public ChatAnswer extractChatAnswer() {
+        ChatAnswerPayload payload;
         try {
             String rawJson = candidates.get(0).content().parts().get(0).text();
-            payload = OBJECT_MAPPER.readValue(rawJson, AnswerPayload.class);
+            payload = OBJECT_MAPPER.readValue(rawJson, ChatAnswerPayload.class);
         } catch (Exception e) {
             throw new BusinessException(ErrorCode.CHATBOT_RESPONSE_ERROR);
         }
 
-        String answer = payload.answer();
-        if (answer == null || answer.isBlank()) {
+        if (payload.answer() == null || payload.answer().isBlank()) {
             throw new BusinessException(ErrorCode.CHATBOT_RESPONSE_ERROR);
         }
-        return answer;
+        return new ChatAnswer(payload.answer(), payload.referencedPage());
     }
 
     public String extractField(String fieldName, ErrorCode errorCode) {
@@ -48,5 +47,5 @@ public record GeminiResponse(List<Candidate> candidates) {
 
     public record Part(String text) {}
 
-    private record AnswerPayload(String answer) {}
+    private record ChatAnswerPayload(String answer, Integer referencedPage) {}
 }
