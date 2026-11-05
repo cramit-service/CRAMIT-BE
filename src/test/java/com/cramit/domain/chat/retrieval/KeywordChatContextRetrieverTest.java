@@ -116,6 +116,21 @@ class KeywordChatContextRetrieverTest {
     }
 
     @Test
+    @DisplayName("단일 과대 페이지를 자를 때, 질문 키워드가 등장하는 지점을 포함하도록 자른다.")
+    void truncationKeepsKeywordMatchEvenNearTheEnd() {
+        // 앞부분은 질문과 무관한 내용으로 채우고, 끝부분에만 질문 키워드("양자역학")를 넣는다.
+        // 앞에서부터 단순히 자르면 이 부분이 통째로 날아간다.
+        String irrelevantFiller = "학습 내용을 설명하는 문장입니다. ".repeat(2000); // 약 38,000자
+        String relevantTail = "강의 후반부에서 다루는 양자역학은 미시세계를 설명하는 이론입니다.";
+        saveScriptWithDetail(1, 1, "전체 녹음", irrelevantFiller + relevantTail);
+
+        List<PageContext> pages = chatContextRetriever.retrieve(WEEK_ID, "양자역학이 뭐야?");
+
+        assertThat(pages).hasSize(1);
+        assertThat(pages.get(0).content()).contains("양자역학은 미시세계를 설명하는 이론입니다.");
+    }
+
+    @Test
     @DisplayName("복합 조사가 붙은 질문 토큰도 반복 제거를 거쳐 페이지 토큰과 같은 키워드로 정규화된다.")
     void stripsCompoundParticles() {
         // 예산을 넘겨야 키워드 점수 선별 경로를 타므로, 관련 없는 큰 페이지를 하나 더 둔다.

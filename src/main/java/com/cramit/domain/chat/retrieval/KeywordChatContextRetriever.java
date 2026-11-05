@@ -78,7 +78,7 @@ public class KeywordChatContextRetriever implements ChatContextRetriever {
         if (selected.isEmpty()) {
             // 가장 관련도 높은 페이지 혼자서도 예산을 넘으면(예: STT로 긴 녹음 전체가 페이지 1개로 저장된 경우),
             // 잘라서라도 포함해 컨텍스트가 완전히 비는 것(=매번 1차 요약본으로 대체)을 막는다.
-            selected.add(truncateToBudget(rankedByRelevance.get(0)));
+            selected.add(truncateToBudget(rankedByRelevance.get(0), keywords));
         }
 
         // 선별 후에는 원래 페이지 순서로 되돌려 모델이 흐름을 따라가기 쉽게 한다.
@@ -87,7 +87,9 @@ public class KeywordChatContextRetriever implements ChatContextRetriever {
                 .toList();
     }
 
-    private PageContext truncateToBudget(PageContext page) {
+    // 질문 키워드가 처음 등장하는 지점을 중심으로 잘라낸다. 앞부분만 자르면 관련 내용이 뒤쪽에 있을 때
+    // (예: 긴 강의 후반부 질문) 정작 필요한 구간이 통째로 날아갈 수 있다.
+    private PageContext truncateToBudget(PageContext page, Set<String> keywords) {
         int overhead = page.formatted().length() - page.content().length();
         int maxContentChars = Math.max(0, CONTEXT_BUDGET_CHARS - overhead);
         String content = page.content();
@@ -95,11 +97,30 @@ public class KeywordChatContextRetriever implements ChatContextRetriever {
             return page;
         }
 
-        int end = maxContentChars;
-        if (end > 0 && Character.isHighSurrogate(content.charAt(end - 1))) {
+        int anchor = findKeywordAnchor(content, keywords);
+        int start = Math.max(0, Math.min(anchor - maxContentChars / 4, content.length() - maxContentChars));
+        int end = Math.min(content.length(), start + maxContentChars);
+
+        if (start > 0 && Character.isLowSurrogate(content.charAt(start))) {
+            start++;
+        }
+        if (end < content.length() && Character.isHighSurrogate(content.charAt(end - 1))) {
             end--;
         }
-        return new PageContext(page.pageNumber(), page.title(), content.substring(0, end));
+        return new PageContext(page.pageNumber(), page.title(), content.substring(start, end));
+    }
+
+    // 키워드가 여럿이면 content에 가장 먼저 등장하는 키워드의 위치를 기준점으로 삼는다.
+    private int findKeywordAnchor(String content, Set<String> keywords) {
+        if (keywords.isEmpty()) {
+            return 0;
+        }
+        String lower = content.toLowerCase(Locale.ROOT);
+        return keywords.stream()
+                .mapToInt(lower::indexOf)
+                .filter(index -> index >= 0)
+                .min()
+                .orElse(0);
     }
 
     private int overlapScore(PageContext page, Set<String> keywords) {
