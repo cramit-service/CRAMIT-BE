@@ -100,6 +100,35 @@ class KeywordChatContextRetrieverTest {
         assertThat(pages).extracting(PageContext::pageNumber).containsExactly(10, 30);
     }
 
+    @Test
+    @DisplayName("가장 관련도 높은 페이지 혼자서도 예산을 넘으면, 잘라서라도 포함해 컨텍스트가 비지 않게 한다.")
+    void truncatesSinglePageThatAloneExceedsBudget() {
+        // STT로 녹음 전체가 페이지 1개로 저장된 경우를 흉내낸다: 하나의 거대한 페이지만 존재.
+        String hugeContent = "학습 내용을 설명하는 문장입니다. ".repeat(2000); // 약 38,000자, 예산(20,000)을 훌쩍 넘음
+        saveScriptWithDetail(1, 1, "전체 녹음", hugeContent);
+
+        List<PageContext> pages = chatContextRetriever.retrieve(WEEK_ID, "질문");
+
+        assertThat(pages).hasSize(1);
+        assertThat(pages.get(0).pageNumber()).isEqualTo(1);
+        assertThat(pages.get(0).content()).isNotEmpty();
+        assertThat(pages.get(0).formatted().length()).isLessThanOrEqualTo(20_000);
+    }
+
+    @Test
+    @DisplayName("복합 조사가 붙은 질문 토큰도 반복 제거를 거쳐 페이지 토큰과 같은 키워드로 정규화된다.")
+    void stripsCompoundParticles() {
+        // 예산을 넘겨야 키워드 점수 선별 경로를 타므로, 관련 없는 큰 페이지를 하나 더 둔다.
+        saveScriptWithDetail(1, 1, "경제", "경제는 자원 배분을 다루는 학문입니다.");
+        String filler = "학습 내용을 설명하는 문장입니다. ".repeat(1200); // 약 22,800자, 예산 초과
+        saveScriptWithDetail(2, 2, "다른 주제", filler);
+
+        // "경제에서는"은 단순 접미사 제거 한 번으로는 "경제"까지 못 벗겨진다(조사가 겹쳐 붙음).
+        List<PageContext> pages = chatContextRetriever.retrieve(WEEK_ID, "경제에서는 무엇을 다루나요?");
+
+        assertThat(pages).extracting(PageContext::pageNumber).contains(1);
+    }
+
     private void saveScriptWithDetail(int pageNumber, int sequence, String title, String content) {
         Script script = scriptRepository.save(Script.builder()
                 .weekId(WEEK_ID)

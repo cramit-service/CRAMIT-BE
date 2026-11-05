@@ -75,10 +75,31 @@ public class KeywordChatContextRetriever implements ChatContextRetriever {
             chars += pageChars;
         }
 
+        if (selected.isEmpty()) {
+            // 가장 관련도 높은 페이지 혼자서도 예산을 넘으면(예: STT로 긴 녹음 전체가 페이지 1개로 저장된 경우),
+            // 잘라서라도 포함해 컨텍스트가 완전히 비는 것(=매번 1차 요약본으로 대체)을 막는다.
+            selected.add(truncateToBudget(rankedByRelevance.get(0)));
+        }
+
         // 선별 후에는 원래 페이지 순서로 되돌려 모델이 흐름을 따라가기 쉽게 한다.
         return selected.stream()
                 .sorted(Comparator.comparing(PageContext::pageNumber))
                 .toList();
+    }
+
+    private PageContext truncateToBudget(PageContext page) {
+        int overhead = page.formatted().length() - page.content().length();
+        int maxContentChars = Math.max(0, CONTEXT_BUDGET_CHARS - overhead);
+        String content = page.content();
+        if (content.length() <= maxContentChars) {
+            return page;
+        }
+
+        int end = maxContentChars;
+        if (end > 0 && Character.isHighSurrogate(content.charAt(end - 1))) {
+            end--;
+        }
+        return new PageContext(page.pageNumber(), page.title(), content.substring(0, end));
     }
 
     private int overlapScore(PageContext page, Set<String> keywords) {
@@ -107,9 +128,25 @@ public class KeywordChatContextRetriever implements ChatContextRetriever {
                 .collect(Collectors.toSet());
     }
 
+    // 조사는 "경제에서는"처럼 겹쳐 붙기도 해서, 더 이상 떨어져 나갈 조사가 없을 때까지 반복해서 떼어낸다.
+    // (최소 2글자는 남겨 짧은 단어가 과하게 잘려나가지 않게 한다)
+    private static final int MAX_PARTICLE_STRIP_ROUNDS = 3;
+
     private String stripParticle(String token) {
+        String current = token;
+        for (int round = 0; round < MAX_PARTICLE_STRIP_ROUNDS; round++) {
+            String stripped = stripOneParticle(current);
+            if (stripped.equals(current)) {
+                break;
+            }
+            current = stripped;
+        }
+        return current;
+    }
+
+    private String stripOneParticle(String token) {
         for (String particle : PARTICLES) {
-            if (token.length() > particle.length() && token.endsWith(particle)) {
+            if (token.length() - particle.length() >= 2 && token.endsWith(particle)) {
                 return token.substring(0, token.length() - particle.length());
             }
         }
