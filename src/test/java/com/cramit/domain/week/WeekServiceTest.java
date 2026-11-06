@@ -17,6 +17,10 @@ import com.cramit.domain.week.enums.WeekStatus;
 import com.cramit.domain.week.repository.LectureAudioRepository;
 import com.cramit.domain.week.repository.LecturePptRepository;
 import com.cramit.domain.week.repository.WeekRepository;
+import com.cramit.domain.stt.SttEventListener;
+import com.cramit.domain.week.dto.WeekReviewCountUpdateRequest;
+import com.cramit.domain.week.dto.WeekReviewCountUpdateResponse;
+import org.springframework.boot.test.mock.mockito.MockBean;
 import com.cramit.global.config.JpaAuditingConfig;
 import com.cramit.global.exception.BusinessException;
 import com.cramit.global.exception.ErrorCode;
@@ -63,6 +67,9 @@ class WeekServiceTest {
 
     @Autowired
     private EntityManager em; // jakarta.persistence.EntityManager
+
+    @MockBean
+    private SttEventListener sttEventListener;
 
     @Test
     @DisplayName("주차를 생성하면 PPT/음성과 함께 저장되고 목록에서 조회된다.")
@@ -154,6 +161,37 @@ class WeekServiceTest {
         assertThat(response.status()).isEqualTo(WeekStatus.IN_PROCESS);
         assertThat(weekRepository.findById(weekId).orElseThrow().getStatus())
                 .isEqualTo(WeekStatus.IN_PROCESS);
+    }
+
+    @Test
+    @DisplayName("주차 회독 수를 변경한다.")
+    void updateReviewCount() {
+        Long lectureId = saveLecture(MEMBER_ID);
+        Long weekId = weekService.createWeek(lectureId, createRequest("1주차", WEEK_DATE), MEMBER_ID).weekId();
+
+        WeekReviewCountUpdateResponse response = weekService.updateReviewCount(
+                weekId, new WeekReviewCountUpdateRequest(3), MEMBER_ID);
+
+        assertThat(response.weekId()).isEqualTo(weekId);
+        assertThat(response.reviewCount()).isEqualTo(3);
+        assertThat(weekRepository.findById(weekId).orElseThrow().getReviewCount()).isEqualTo(3);
+    }
+
+    @Test
+    @DisplayName("생성자가 아니면 주차 회독 수를 변경할 수 없다.")
+    void updateReviewCountForbidden() {
+        Long lectureId = saveLecture(OTHER_MEMBER_ID);
+        Long weekId = weekRepository.save(
+                Week.builder()
+                        .lectureId(lectureId)
+                        .title("1주차")
+                        .weekDate(WEEK_DATE)
+                        .build()
+        ).getWeekId();
+
+        assertThatThrownBy(() -> weekService.updateReviewCount(weekId, new WeekReviewCountUpdateRequest(3), MEMBER_ID))
+                .isInstanceOfSatisfying(BusinessException.class, ex ->
+                        assertThat(ex.getErrorCode()).isEqualTo(ErrorCode.LECTURE_ACCESS_DENIED));
     }
 
     @Test
