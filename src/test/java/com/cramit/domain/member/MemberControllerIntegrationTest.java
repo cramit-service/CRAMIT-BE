@@ -10,6 +10,11 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import com.cramit.domain.subscription.Plan;
+import com.cramit.domain.subscription.PlanRepository;
+import com.cramit.domain.subscription.PlanType;
+import com.cramit.domain.term.Term;
+import com.cramit.domain.term.TermRepository;
 import com.cramit.global.security.JwtTokenProvider;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -34,6 +39,12 @@ class MemberControllerIntegrationTest {
 
 	@Autowired
 	private MemberRepository memberRepository;
+
+	@Autowired
+	private TermRepository termRepository;
+
+	@Autowired
+	private PlanRepository planRepository;
 
 	@Test
 	void 인증된_회원은_자신의_프로필을_조회하고_수정하고_탈퇴할_수_있다() throws Exception {
@@ -71,6 +82,77 @@ class MemberControllerIntegrationTest {
 		mockMvc.perform(get("/api/users/me/profile"))
 				.andExpect(status().isUnauthorized())
 				.andExpect(jsonPath("$.error.code").value("AUTH_INVALID_TOKEN"));
+	}
+
+	@Test
+	void 닉네임_중복확인을_할_수_있다() throws Exception {
+		Member member = memberRepository.save(Member.ofSocialSignup("서윤", SocialProvider.KAKAO, "12345", null));
+		String accessToken = jwtTokenProvider.createAccessToken(member.getId());
+
+		mockMvc.perform(get("/api/users/check-nickname")
+						.queryParam("nickname", "서윤")
+						.header("Authorization", "Bearer " + accessToken))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.data.available").value(false));
+
+		mockMvc.perform(get("/api/users/check-nickname")
+						.queryParam("nickname", "사용안한닉네임")
+						.header("Authorization", "Bearer " + accessToken))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.data.available").value(true));
+	}
+
+	@Test
+	void 필수_약관에_동의하고_요금제를_선택해_온보딩을_완료할_수_있다() throws Exception {
+		Member member = memberRepository.save(
+				Member.ofSocialSignup("카카오닉네임", SocialProvider.KAKAO, "12345", null));
+		String accessToken = jwtTokenProvider.createAccessToken(member.getId());
+		Term requiredTerm = termRepository.save(Term.builder().title("이용약관").content("내용").required(true).build());
+		planRepository.save(Plan.builder().type(PlanType.FREE).price(0).description("무료").build());
+
+		mockMvc.perform(post("/api/users/me/onboarding")
+						.header("Authorization", "Bearer " + accessToken)
+						.contentType(MediaType.APPLICATION_JSON)
+						.content("{\"nickname\":\"배서윤\",\"agreedTermIds\":[" + requiredTerm.getId() + "],\"plan\":\"FREE\"}"))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.data.nickname").value("배서윤"))
+				.andExpect(jsonPath("$.data.plan").value("FREE"));
+
+		mockMvc.perform(get("/api/users/me/profile")
+						.header("Authorization", "Bearer " + accessToken))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.data.nickname").value("배서윤"));
+	}
+
+	@Test
+	void 필수_약관에_동의하지_않으면_온보딩할_수_없다() throws Exception {
+		Member member = memberRepository.save(
+				Member.ofSocialSignup("카카오닉네임", SocialProvider.KAKAO, "12345", null));
+		String accessToken = jwtTokenProvider.createAccessToken(member.getId());
+		termRepository.save(Term.builder().title("이용약관").content("내용").required(true).build());
+		planRepository.save(Plan.builder().type(PlanType.FREE).price(0).description("무료").build());
+
+		mockMvc.perform(post("/api/users/me/onboarding")
+						.header("Authorization", "Bearer " + accessToken)
+						.contentType(MediaType.APPLICATION_JSON)
+						.content("{\"nickname\":\"배서윤\",\"agreedTermIds\":[],\"plan\":\"FREE\"}"))
+				.andExpect(status().isBadRequest())
+				.andExpect(jsonPath("$.error.code").value("TERMS_NOT_AGREED"));
+	}
+
+	@Test
+	void 이미_온보딩을_완료한_회원은_다시_온보딩할_수_없다() throws Exception {
+		Member member = memberRepository.save(
+				Member.ofSocialSignup("서윤", SocialProvider.KAKAO, "12345", null));
+		member.completeOnboarding("서윤");
+		String accessToken = jwtTokenProvider.createAccessToken(member.getId());
+
+		mockMvc.perform(post("/api/users/me/onboarding")
+						.header("Authorization", "Bearer " + accessToken)
+						.contentType(MediaType.APPLICATION_JSON)
+						.content("{\"nickname\":\"배서윤\",\"agreedTermIds\":[],\"plan\":\"FREE\"}"))
+				.andExpect(status().isConflict())
+				.andExpect(jsonPath("$.error.code").value("ONBOARDING_ALREADY_COMPLETED"));
 	}
 
 }

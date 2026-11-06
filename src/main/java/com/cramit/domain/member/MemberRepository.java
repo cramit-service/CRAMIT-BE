@@ -7,4 +7,8 @@ public interface MemberRepository extends JpaRepository<Member, Long> {
 
 	Optional<Member> findBySocialProviderAndSocialId(SocialProvider socialProvider, String socialId);
 
+	boolean existsByNicknameAndDeletedFalse(String nickname);
+
+	boolean existsByNicknameAndDeletedFalseAndIdNot(String nickname, Long id);
+
 }
