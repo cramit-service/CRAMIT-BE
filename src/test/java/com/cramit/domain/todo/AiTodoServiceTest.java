@@ -22,6 +22,7 @@ import org.springframework.context.annotation.Import;
 import org.springframework.test.context.ActiveProfiles;
 
 import java.time.LocalDate;
+import java.util.Arrays;
 import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -82,6 +83,7 @@ class AiTodoServiceTest {
         assertThat(todo.content()).isEqualTo("정렬 알고리즘 정리");
         assertThat(todo.memo()).isEqualTo("시간복잡도 위주로");
         assertThat(todo.dueDate().toLocalDate()).isEqualTo(TODAY.plusDays(1));
+        assertThat(todoRepository.findById(todo.todoId()).orElseThrow().getExamId()).isEqualTo(examId);
         verify(geminiTodoClient).generate(eq(AiTodoPrompts.SYSTEM), contains("weekId=" + weekId));
     }
 
@@ -117,16 +119,18 @@ class AiTodoServiceTest {
     }
 
     @Test
-    @DisplayName("다시 생성하면 같은 강의의 미완료 AI TODO만 바뀌고, 완료한 AI TODO와 직접 만든 TODO는 유지된다.")
+    @DisplayName("다시 생성하면 같은 시험의 미완료 AI TODO만 바뀌고, 완료한 AI TODO·직접 만든 TODO·다른 시험의 계획은 유지된다.")
     void generateReplacesIncompleteAiTodos() {
         // given
         Long lectureId = saveLecture(MEMBER_ID);
         Long weekId = saveWeek(lectureId, TODAY.minusDays(7), "## 정렬");
         Long examId = saveExam(lectureId, TODAY.plusDays(5));
-        Todo oldAi = saveTodo(weekId, "이전 AI 계획", TodoType.AI);
-        Todo doneAi = saveTodo(weekId, "완료한 AI 계획", TodoType.AI);
+        Long finalExamId = saveExam(lectureId, TODAY.plusDays(40));
+        Todo oldAi = saveTodo(weekId, examId, "이전 AI 계획", TodoType.AI);
+        Todo doneAi = saveTodo(weekId, examId, "완료한 AI 계획", TodoType.AI);
         doneAi.toggleComplete();
-        Todo userTodo = saveTodo(weekId, "직접 만든 할 일", TodoType.USER);
+        Todo userTodo = saveTodo(weekId, null, "직접 만든 할 일", TodoType.USER);
+        Todo finalExamAi = saveTodo(weekId, finalExamId, "기말 AI 계획", TodoType.AI);
         given(geminiTodoClient.generate(anyString(), anyString())).willReturn(List.of(
                 new GeminiTodoItem(weekId, "새 AI 계획", TODAY.plusDays(1).toString(), null)
         ));
@@ -137,9 +141,29 @@ class AiTodoServiceTest {
         // then
         assertThat(todoRepository.findByMemberIdOrderByTodoIdDesc(MEMBER_ID))
                 .extracting(Todo::getContent)
-                .containsExactlyInAnyOrder("완료한 AI 계획", "직접 만든 할 일", "새 AI 계획");
+                .containsExactlyInAnyOrder("완료한 AI 계획", "직접 만든 할 일", "기말 AI 계획", "새 AI 계획");
         assertThat(todoRepository.findById(oldAi.getTodoId())).isEmpty();
         assertThat(todoRepository.findById(userTodo.getTodoId())).isPresent();
+        assertThat(todoRepository.findById(finalExamAi.getTodoId())).isPresent();
+    }
+
+    @Test
+    @DisplayName("AI 응답에 null 항목이 섞여 있으면 건너뛰고 나머지를 저장한다.")
+    void generateSkipsNullItem() {
+        // given
+        Long lectureId = saveLecture(MEMBER_ID);
+        Long weekId = saveWeek(lectureId, TODAY.minusDays(7), "## 정렬");
+        Long examId = saveExam(lectureId, TODAY.plusDays(5));
+        given(geminiTodoClient.generate(anyString(), anyString())).willReturn(Arrays.asList(
+                null,
+                new GeminiTodoItem(weekId, "정렬 정리", TODAY.plusDays(1).toString(), null)
+        ));
+
+        // when
+        List<TodoListResponse> response = aiTodoService.generate(examId, MEMBER_ID);
+
+        // then
+        assertThat(response).extracting(TodoListResponse::content).containsExactly("정렬 정리");
     }
 
     @Test
@@ -193,7 +217,7 @@ class AiTodoServiceTest {
         Long lectureId = saveLecture(MEMBER_ID);
         Long weekId = saveWeek(lectureId, TODAY.minusDays(7), "## 정렬");
         Long examId = saveExam(lectureId, TODAY.plusDays(5));
-        saveTodo(weekId, "이전 AI 계획", TodoType.AI);
+        saveTodo(weekId, examId, "이전 AI 계획", TodoType.AI);
         given(geminiTodoClient.generate(anyString(), anyString())).willReturn(List.of(
                 new GeminiTodoItem(999L, "없는 주차", TODAY.plusDays(1).toString(), null)
         ));
@@ -236,10 +260,11 @@ class AiTodoServiceTest {
                 .build()).getExamId();
     }
 
-    private Todo saveTodo(Long weekId, String content, TodoType todoType) {
+    private Todo saveTodo(Long weekId, Long examId, String content, TodoType todoType) {
         return todoRepository.save(Todo.builder()
                 .memberId(MEMBER_ID)
                 .weekId(weekId)
+                .examId(examId)
                 .content(content)
                 .dueDate(TODAY.plusDays(2).atTime(23, 59))
                 .todoType(todoType)

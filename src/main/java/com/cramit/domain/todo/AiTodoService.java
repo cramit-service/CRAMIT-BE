@@ -32,7 +32,6 @@ import java.util.stream.Collectors;
 public class AiTodoService {
 
     static final int MAX_TODOS_PER_DAY = 3;
-    static final int MAX_TODOS = 30;
     private static final int MAX_CONTENT_LENGTH = 255;
     private static final LocalTime DUE_TIME = LocalTime.of(23, 59);
 
@@ -59,7 +58,13 @@ public class AiTodoService {
         }
 
         return transactionTemplate.execute(status -> {
-            todoRepository.deleteIncompleteAiTodos(memberId, context.lectureWeekIds());
+            Exam lockedExam = examRepository.findByIdForUpdate(examId)
+                    .orElseThrow(() -> new BusinessException(ErrorCode.EXAM_NOT_FOUND));
+            if (!lockedExam.getExamDate().equals(context.exam().getExamDate())) {
+                throw new BusinessException(ErrorCode.TODO_GENERATION_FAILED);
+            }
+
+            todoRepository.deleteIncompleteAiTodos(memberId, examId);
             return todoRepository.saveAll(todos).stream()
                     .map(TodoListResponse::from)
                     .toList();
@@ -94,8 +99,7 @@ public class AiTodoService {
             throw new BusinessException(ErrorCode.NO_CONTEXT);
         }
 
-        List<Long> lectureWeekIds = lectureWeeks.stream().map(Week::getWeekId).toList();
-        return new PlanContext(exam, summaryWeeks, lectureWeekIds);
+        return new PlanContext(exam, summaryWeeks);
     }
 
     private List<Todo> toTodos(List<GeminiTodoItem> items, PlanContext context, Long memberId, LocalDate today) {
@@ -108,10 +112,8 @@ public class AiTodoService {
         List<Todo> todos = new ArrayList<>();
 
         for (GeminiTodoItem item : items) {
-            if (todos.size() >= MAX_TODOS) {
-                break;
-            }
-            if (item.weekId() == null || !allowedWeekIds.contains(item.weekId())
+
+            if (item == null || item.weekId() == null || !allowedWeekIds.contains(item.weekId())
                     || item.content() == null || item.content().isBlank()) {
                 continue;
             }
@@ -131,6 +133,7 @@ public class AiTodoService {
             todos.add(Todo.builder()
                     .memberId(memberId)
                     .weekId(item.weekId())
+                    .examId(context.exam().getExamId())
                     .content(truncate(item.content().strip()))
                     .memo(item.memo() != null && !item.memo().isBlank() ? item.memo().strip() : null)
                     .dueDate(dueDate.atTime(DUE_TIME))
@@ -155,5 +158,5 @@ public class AiTodoService {
         return content.length() > MAX_CONTENT_LENGTH ? content.substring(0, MAX_CONTENT_LENGTH) : content;
     }
 
-    private record PlanContext(Exam exam, List<Week> summaryWeeks, List<Long> lectureWeekIds) {}
+    private record PlanContext(Exam exam, List<Week> summaryWeeks) {}
 }

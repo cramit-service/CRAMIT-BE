@@ -26,6 +26,8 @@ public class Todo extends BaseEntity  {
 
     private Long weekId;
 
+    private Long examId; // AI 학습 계획을 만든 시험. 직접 만든 TODO면 null
+
     @Column(nullable = false)
     private Long memberId;
 
@@ -50,9 +52,10 @@ public class Todo extends BaseEntity  {
     private Integer sortOrder;
 
     @Builder
-    public Todo(Long memberId, Long weekId, String content, String memo, LocalDateTime dueDate, TodoType todoType) {
+    public Todo(Long memberId, Long weekId, Long examId, String content, String memo, LocalDateTime dueDate, TodoType todoType) {
         this.memberId = memberId;
         this.weekId = weekId;
+        this.examId = examId;
         this.content = content;
         this.memo = memo;
         this.dueDate = dueDate;
@@ -76,6 +79,7 @@ public class Todo extends BaseEntity  {
         this.content = content;
         this.memo = memo;
         this.dueDate = dueDate;
+        this.todoType = TodoType.USER;
     }
 
     // TODO: 순서 변경 API 도입 여부 팀 논의 필요 (현재 API 미구현, 이 메서드도 미사용 상태)
