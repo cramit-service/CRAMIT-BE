@@ -3,7 +3,13 @@ package com.cramit.domain.chat;
 import java.util.List;
 
 import com.cramit.domain.ai.GeminiChatBotClient;
+import com.cramit.domain.ai.dto.ChatAnswer;
 import com.cramit.domain.chat.repository.ChatBotRepository;
+import com.cramit.domain.chat.retrieval.KeywordChatContextRetriever;
+import com.cramit.domain.week.entity.Script;
+import com.cramit.domain.week.entity.ScriptDetail;
+import com.cramit.domain.week.repository.ScriptDetailRepository;
+import com.cramit.domain.week.repository.ScriptRepository;
 import org.springframework.boot.test.mock.mockito.MockBean;
 import org.junit.jupiter.api.BeforeEach;
 
@@ -34,7 +40,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 @DataJpaTest
-@Import({ChatBotService.class, ChatBotSessionService.class, JpaAuditingConfig.class})
+@Import({ChatBotService.class, ChatBotSessionService.class, KeywordChatContextRetriever.class, JpaAuditingConfig.class})
 @ActiveProfiles("test")
 class ChatBotServiceTest {
 
@@ -43,7 +49,7 @@ class ChatBotServiceTest {
 
     @BeforeEach
     void setUpGeminiStub() {
-        given(geminiChatBotClient.ask(anyString(), anyString())).willReturn("AI 응답입니다.");
+        given(geminiChatBotClient.ask(anyString(), anyString())).willReturn(new ChatAnswer("AI 응답입니다.", null));
     }
 
     private static final Long MEMBER_ID = 1L;
@@ -64,6 +70,12 @@ class ChatBotServiceTest {
 
     @Autowired
     private LectureRepository lectureRepository;
+
+    @Autowired
+    private ScriptRepository scriptRepository;
+
+    @Autowired
+    private ScriptDetailRepository scriptDetailRepository;
 
     @Test
     @DisplayName("메시지를 전송하면 사용자 메시지와 AI 응답이 함께 저장된다.")
@@ -149,6 +161,44 @@ class ChatBotServiceTest {
     }
 
     @Test
+    @DisplayName("스크립트가 있으면 관련 페이지를 context로 사용하고, 후보 페이지의 referencedPage는 그대로 저장된다.")
+    void sendMessageWithScriptPage() {
+        // given
+        Long weekId = saveWeek(MEMBER_ID);
+        saveScriptPage(weekId, 3, "재귀와 메모이제이션", "메모이제이션은 계산 결과를 저장해 재사용하는 기법입니다.");
+        Long sessionId = chatBotSessionService.createSession(
+                new ChatBotSessionCreateRequest(weekId, "DP 질문"), MEMBER_ID).chatBotSessionId();
+        given(geminiChatBotClient.ask(anyString(), anyString()))
+                .willReturn(new ChatAnswer("메모이제이션은 계산 결과를 저장하는 기법입니다.", 3));
+
+        // when
+        List<ChatMessageResponse> response = chatBotService.sendMessage(
+                sessionId, new ChatMessageRequest("메모이제이션이 뭐야?"), MEMBER_ID);
+
+        // then
+        assertThat(response.get(1).referencedPage()).isEqualTo(3);
+    }
+
+    @Test
+    @DisplayName("AI가 후보에 없는 페이지를 근거로 제시하면 referencedPage를 신뢰하지 않고 null로 저장한다.")
+    void sendMessageIgnoresHallucinatedReferencedPage() {
+        // given
+        Long weekId = saveWeek(MEMBER_ID);
+        saveScriptPage(weekId, 1, "서론", "강의 소개입니다.");
+        Long sessionId = chatBotSessionService.createSession(
+                new ChatBotSessionCreateRequest(weekId, "DP 질문"), MEMBER_ID).chatBotSessionId();
+        given(geminiChatBotClient.ask(anyString(), anyString()))
+                .willReturn(new ChatAnswer("답변입니다.", 999));
+
+        // when
+        List<ChatMessageResponse> response = chatBotService.sendMessage(
+                sessionId, new ChatMessageRequest("질문"), MEMBER_ID);
+
+        // then
+        assertThat(response.get(1).referencedPage()).isNull();
+    }
+
+    @Test
     @DisplayName("1차 요약본이 없는 주차에는 메시지를 전송할 수 없다.")
     void sendMessageNoContext() {
         // given
@@ -162,6 +212,24 @@ class ChatBotServiceTest {
                 .isInstanceOfSatisfying(BusinessException.class, ex ->
                         assertThat(ex.getErrorCode()).isEqualTo(ErrorCode.NO_CONTEXT));
         assertThat(chatBotRepository.count()).isZero();
+    }
+
+    private void saveScriptPage(Long weekId, Integer pageNumber, String title, String content) {
+        Script script = scriptRepository.save(Script.builder()
+                .weekId(weekId)
+                .pageNumber(pageNumber)
+                .startSec(0)
+                .endSec(60)
+                .title(title)
+                .sequence(1)
+                .build());
+
+        scriptDetailRepository.save(ScriptDetail.builder()
+                .scriptId(script.getScriptId())
+                .timeSec(0)
+                .content(content)
+                .sequence(1)
+                .build());
     }
 
     private Long saveWeek(Long ownerId) {

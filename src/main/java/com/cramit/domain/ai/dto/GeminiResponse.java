@@ -11,20 +11,25 @@ public record GeminiResponse(List<Candidate> candidates) {
 
     private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
 
-    public String extractAnswer() {
-        AnswerPayload payload;
+    public ChatAnswer extractChatAnswer() {
+        ChatAnswerPayload payload;
         try {
             String rawJson = candidates.get(0).content().parts().get(0).text();
-            payload = OBJECT_MAPPER.readValue(rawJson, AnswerPayload.class);
+            payload = OBJECT_MAPPER.readValue(rawJson, ChatAnswerPayload.class);
         } catch (Exception e) {
             throw new BusinessException(ErrorCode.CHATBOT_RESPONSE_ERROR);
         }
 
-        String answer = payload.answer();
-        if (answer == null || answer.isBlank()) {
+        if (payload.answer() == null || payload.answer().isBlank()) {
             throw new BusinessException(ErrorCode.CHATBOT_RESPONSE_ERROR);
         }
-        return answer;
+        return new ChatAnswer(payload.answer(), toIntegralPage(payload.referencedPage()));
+    }
+
+    // Integer로 바로 바인딩하면 Jackson 기본 설정상 2.7 같은 소수도 2로 잘려 들어온다.
+    // 정수 노드가 아니면 페이지 번호를 신뢰하지 않고 답변만 저장한다.
+    private Integer toIntegralPage(JsonNode node) {
+        return node != null && node.isInt() ? node.intValue() : null;
     }
 
     public String extractField(String fieldName, ErrorCode errorCode) {
@@ -48,5 +53,5 @@ public record GeminiResponse(List<Candidate> candidates) {
 
     public record Part(String text) {}
 
-    private record AnswerPayload(String answer) {}
+    private record ChatAnswerPayload(String answer, JsonNode referencedPage) {}
 }
