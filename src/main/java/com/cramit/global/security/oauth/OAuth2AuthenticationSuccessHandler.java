@@ -34,6 +34,7 @@ public class OAuth2AuthenticationSuccessHandler implements AuthenticationSuccess
 
 		String redirectUri = UriComponentsBuilder.fromUriString(successRedirectUri)
 				.queryParam("accessToken", tokens.accessToken())
+				.queryParam("isNewUser", oAuth2User.isOnboardingRequired())
 				.build()
 				.toUriString();
 

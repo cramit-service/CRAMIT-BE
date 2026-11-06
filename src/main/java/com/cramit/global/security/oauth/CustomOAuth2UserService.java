@@ -41,6 +41,7 @@ public class CustomOAuth2UserService extends DefaultOAuth2UserService {
 
 		return new CustomOAuth2User(
 				member.getId(),
+				!member.isOnboardingCompleted(),
 				oAuth2User.getAttributes(),
 				List.of(new SimpleGrantedAuthority("ROLE_USER")));
 	}
