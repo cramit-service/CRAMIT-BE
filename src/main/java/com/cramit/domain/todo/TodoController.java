@@ -61,7 +61,6 @@ public class TodoController {
 
     @Operation(summary = "AI 학습 계획(TODO) 생성",
             description = "시험 일정과 주차별 1차 요약본을 바탕으로 오늘부터 시험일까지 날짜별 할 일을 AI가 생성합니다. "
-                    + "같은 강의에서 이전에 생성한 AI TODO 중 완료하지 않은 것은 새 계획으로 바뀌고, 완료한 것과 직접 만든 TODO는 유지됩니다."
                     + "같은 시험으로 이전에 생성한 AI TODO 중 완료하지 않은 것은 새 계획으로 바뀌고, 완료한 것·직접 만들거나 수정한 TODO·다른 시험의 계획은 유지됩니다.")
     @ApiResponses({
             @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "201", description = "생성 성공 (생성된 TODO 목록)"),
