@@ -38,6 +38,7 @@ public enum ErrorCode {
 	UPLOAD_INTERRUPTED(HttpStatus.REQUEST_TIMEOUT, "업로드가 중단되었습니다. 다시 시도해주세요."),
 	AUDIO_INVALID_FORMAT(HttpStatus.UNSUPPORTED_MEDIA_TYPE, "지원하지 않는 오디오 형식입니다."),
 	STT_TIMEOUT(HttpStatus.GATEWAY_TIMEOUT, "음성 변환이 지연되고 있습니다."),
+	SCRIPT_NOT_READY(HttpStatus.UNPROCESSABLE_ENTITY, "아직 스크립트가 생성되지 않았습니다."),
 
 	// AI 요약 (Phase 3)
 	CONTENT_TOO_LONG(HttpStatus.PAYLOAD_TOO_LARGE, "강의 분량이 많아 분할 처리 중입니다."),
