@@ -84,6 +84,24 @@ class MemberServiceTest {
 	}
 
 	@Test
+	void 임시_닉네임_형식의_닉네임으로는_프로필을_수정할_수_없다() {
+		Member member = Member.ofSocialSignup("서윤", SocialProvider.KAKAO, "12345", null);
+		when(memberRepository.findById(1L)).thenReturn(Optional.of(member));
+
+		assertThatThrownBy(() -> memberService.updateProfile(1L, new ProfileUpdateRequest("kakao_999", null)))
+				.isInstanceOf(BusinessException.class)
+				.extracting("errorCode")
+				.isEqualTo(ErrorCode.VALIDATION_ERROR);
+	}
+
+	@Test
+	void 임시_닉네임_형식은_중복확인에서_항상_사용_불가능하다고_응답한다() {
+		NicknameAvailabilityResponse response = memberService.checkNicknameAvailability("kakao_999");
+
+		assertThat(response.available()).isFalse();
+	}
+
+	@Test
 	void 사용_중이지_않은_닉네임은_사용_가능하다고_응답한다() {
 		when(memberRepository.existsByNicknameAndDeletedFalse("서윤")).thenReturn(false);
 
@@ -164,6 +182,18 @@ class MemberServiceTest {
 				.isInstanceOf(BusinessException.class)
 				.extracting("errorCode")
 				.isEqualTo(ErrorCode.ONBOARDING_ALREADY_COMPLETED);
+	}
+
+	@Test
+	void 임시_닉네임_형식의_닉네임으로는_온보딩할_수_없다() {
+		Member member = Member.ofSocialSignup("서윤", SocialProvider.KAKAO, "12345", null);
+		when(memberRepository.findByIdForUpdate(1L)).thenReturn(Optional.of(member));
+
+		assertThatThrownBy(() -> memberService.completeOnboarding(
+				1L, new OnboardingRequest("kakao_999", List.of(), PlanType.FREE)))
+				.isInstanceOf(BusinessException.class)
+				.extracting("errorCode")
+				.isEqualTo(ErrorCode.VALIDATION_ERROR);
 	}
 
 	@Test

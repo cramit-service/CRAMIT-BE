@@ -1,5 +1,6 @@
 package com.cramit.global.exception;
 
+import java.util.Locale;
 import java.util.stream.Collectors;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.dao.DataIntegrityViolationException;
@@ -36,7 +37,7 @@ public class GlobalExceptionHandler {
 	@ExceptionHandler(DataIntegrityViolationException.class)
 	public ResponseEntity<ErrorResponse> handleDataIntegrityViolation(DataIntegrityViolationException e) {
 		String cause = e.getMostSpecificCause().getMessage();
-		if (cause != null && cause.contains("uq_member_nickname_active")) {
+		if (cause != null && cause.toLowerCase(Locale.ROOT).contains("uq_member_nickname_active")) {
 			log.warn("Nickname uniqueness violation: {}", cause);
 			return ResponseEntity.status(ErrorCode.NICKNAME_DUPLICATED.getStatus())
 					.body(ErrorResponse.of(ErrorCode.NICKNAME_DUPLICATED));

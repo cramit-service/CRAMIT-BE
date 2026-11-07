@@ -62,6 +62,13 @@ class GlobalExceptionHandlerTest {
 	}
 
 	@Test
+	void nicknameUniqueViolation_uppercaseConstraintName_stillReturns_409() throws Exception {
+		mockMvc.perform(get("/test/nickname-unique-violation-uppercase"))
+				.andExpect(status().isConflict())
+				.andExpect(jsonPath("$.error.code").value("NICKNAME_DUPLICATED"));
+	}
+
+	@Test
 	void otherDataIntegrityViolation_returns_500() throws Exception {
 		mockMvc.perform(get("/test/other-data-integrity-violation"))
 				.andExpect(status().isInternalServerError())
