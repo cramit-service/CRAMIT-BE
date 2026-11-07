@@ -3,7 +3,8 @@ server:
     remoteip:
       # nginx(docker-compose.prod.yml)의 내부 네트워크 고정 IP. 대역 전체를 허용하면 같은 네트워크의
       # 다른 컨테이너가 X-Forwarded-For를 위조해도 신뢰하게 되므로 이 주소 하나만 둔다.
-      internal-proxies: 172\.28\.0\.10
+      # .env의 APP_NGINX_INTERNAL_IP를 바꿨다면 이 값도 반드시 그 IP의 정규식(점은 \.)으로 맞춰야 한다.
+      internal-proxies: ${APP_NGINX_INTERNAL_IP_REGEX:172\.28\.0\.10}
 
 spring:
   datasource:
