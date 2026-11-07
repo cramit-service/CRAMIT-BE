@@ -55,7 +55,8 @@ class MemberControllerIntegrationTest {
 		mockMvc.perform(get("/api/users/me/profile")
 						.header("Authorization", "Bearer " + accessToken))
 				.andExpect(status().isOk())
-				.andExpect(jsonPath("$.data.nickname").value("서윤"));
+				.andExpect(jsonPath("$.data.nickname").value("서윤"))
+				.andExpect(jsonPath("$.data.onboardingCompleted").value(false));
 
 		mockMvc.perform(patch("/api/users/me/profile")
 						.header("Authorization", "Bearer " + accessToken)
@@ -121,7 +122,8 @@ class MemberControllerIntegrationTest {
 		mockMvc.perform(get("/api/users/me/profile")
 						.header("Authorization", "Bearer " + accessToken))
 				.andExpect(status().isOk())
-				.andExpect(jsonPath("$.data.nickname").value("배서윤"));
+				.andExpect(jsonPath("$.data.nickname").value("배서윤"))
+				.andExpect(jsonPath("$.data.onboardingCompleted").value(true));
 	}
 
 	@Test
@@ -182,6 +184,20 @@ class MemberControllerIntegrationTest {
 				.andExpect(status().isOk())
 				.andExpect(jsonPath("$.data[0].title").value("이용약관"))
 				.andExpect(jsonPath("$.data[0].required").value(true));
+	}
+
+	@Test
+	void 약관_목록은_등록된_순서대로_조회된다() throws Exception {
+		Member member = memberRepository.save(Member.ofSocialSignup("서윤", SocialProvider.KAKAO, "12345", null));
+		String accessToken = jwtTokenProvider.createAccessToken(member.getId());
+		Term first = termRepository.save(Term.builder().title("이용약관").content("내용").required(true).build());
+		Term second = termRepository.save(Term.builder().title("개인정보 수집 동의").content("내용").required(true).build());
+
+		mockMvc.perform(get("/api/terms")
+						.header("Authorization", "Bearer " + accessToken))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.data[0].termId").value(first.getId()))
+				.andExpect(jsonPath("$.data[1].termId").value(second.getId()));
 	}
 
 }

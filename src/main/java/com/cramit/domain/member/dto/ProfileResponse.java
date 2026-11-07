@@ -7,6 +7,7 @@ public record ProfileResponse(
 		String nickname,
 		String profileImageUrl,
 		String socialProvider,
+		boolean onboardingCompleted,
 		LocalDateTime createdAt
 ) {
 }

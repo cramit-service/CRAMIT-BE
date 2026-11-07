@@ -7,4 +7,6 @@ public interface TermRepository extends JpaRepository<Term, Long> {
 
 	List<Term> findByRequiredTrue();
 
+	List<Term> findAllByOrderByIdAsc();
+
 }
