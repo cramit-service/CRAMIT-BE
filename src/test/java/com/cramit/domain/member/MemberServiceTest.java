@@ -49,6 +49,18 @@ class MemberServiceTest {
 		assertThat(response.nickname()).isEqualTo("서윤");
 		assertThat(response.profileImageUrl()).isEqualTo("https://example.com/profile.jpg");
 		assertThat(response.socialProvider()).isEqualTo("KAKAO");
+		assertThat(response.onboardingCompleted()).isFalse();
+	}
+
+	@Test
+	void 온보딩을_완료한_회원의_프로필조회에는_온보딩완료여부가_true로_담긴다() {
+		Member member = Member.ofSocialSignup("서윤", SocialProvider.KAKAO, "12345", null);
+		member.completeOnboarding("배서윤");
+		when(memberRepository.findById(1L)).thenReturn(Optional.of(member));
+
+		ProfileResponse response = memberService.getProfile(1L);
+
+		assertThat(response.onboardingCompleted()).isTrue();
 	}
 
 	@Test

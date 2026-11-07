@@ -14,7 +14,7 @@ public class TermService {
 
 	@Transactional(readOnly = true)
 	public List<TermResponse> getTerms() {
-		return termRepository.findAll().stream()
+		return termRepository.findAllByOrderByIdAsc().stream()
 				.map(TermResponse::from)
 				.toList();
 	}

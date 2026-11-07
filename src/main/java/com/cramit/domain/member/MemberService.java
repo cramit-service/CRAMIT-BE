@@ -124,6 +124,7 @@ public class MemberService {
 				member.getNickname(),
 				member.getProfileImageUrl(),
 				member.getSocialProvider().name(),
+				member.isOnboardingCompleted(),
 				member.getCreatedAt());
 	}
 
