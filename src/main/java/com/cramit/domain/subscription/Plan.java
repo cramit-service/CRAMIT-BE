@@ -25,7 +25,7 @@ public class Plan {
 	private Long id;
 
 	@Enumerated(EnumType.STRING)
-	@Column(nullable = false, length = 20)
+	@Column(nullable = false, unique = true, length = 20)
 	private PlanType type;
 
 	@Column(nullable = false)

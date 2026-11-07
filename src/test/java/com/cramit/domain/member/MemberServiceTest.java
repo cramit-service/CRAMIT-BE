@@ -3,7 +3,9 @@ package com.cramit.domain.member;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.anyLong;
+import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.cramit.domain.member.dto.NicknameAvailabilityResponse;
@@ -15,11 +17,13 @@ import com.cramit.domain.subscription.Plan;
 import com.cramit.domain.subscription.PlanRepository;
 import com.cramit.domain.subscription.PlanType;
 import com.cramit.domain.subscription.SubscriptionRepository;
+import com.cramit.domain.term.MemberTerm;
 import com.cramit.domain.term.MemberTermRepository;
 import com.cramit.domain.term.Term;
 import com.cramit.domain.term.TermRepository;
 import com.cramit.global.exception.BusinessException;
 import com.cramit.global.exception.ErrorCode;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import org.junit.jupiter.api.Test;
@@ -104,7 +108,7 @@ class MemberServiceTest {
 		Term optionalTerm = optionalTerm(2L);
 		Plan plan = plan(10L, PlanType.FREE);
 
-		when(memberRepository.findById(1L)).thenReturn(Optional.of(member));
+		when(memberRepository.findByIdForUpdate(1L)).thenReturn(Optional.of(member));
 		when(memberRepository.existsByNicknameAndDeletedFalseAndIdNot("배서윤", 1L)).thenReturn(false);
 		when(termRepository.findAll()).thenReturn(List.of(requiredTerm, optionalTerm));
 		when(planRepository.findByType(PlanType.FREE)).thenReturn(Optional.of(plan));
@@ -118,10 +122,42 @@ class MemberServiceTest {
 	}
 
 	@Test
+	void 탈퇴한_회원은_온보딩할_수_없다() {
+		Member member = Member.ofSocialSignup("서윤", SocialProvider.KAKAO, "12345", null);
+		member.withdraw();
+		when(memberRepository.findByIdForUpdate(1L)).thenReturn(Optional.of(member));
+
+		assertThatThrownBy(() -> memberService.completeOnboarding(
+				1L, new OnboardingRequest("배서윤", List.of(), PlanType.FREE)))
+				.isInstanceOf(BusinessException.class)
+				.extracting("errorCode")
+				.isEqualTo(ErrorCode.MEMBER_WITHDRAWN);
+	}
+
+	@Test
+	void 중복된_약관_id는_한_번만_동의_처리된다() {
+		Member member = Member.ofSocialSignup("카카오닉네임", SocialProvider.KAKAO, "12345", null);
+		Term requiredTerm = requiredTerm(1L);
+		Plan plan = plan(10L, PlanType.FREE);
+		when(memberRepository.findByIdForUpdate(1L)).thenReturn(Optional.of(member));
+		when(memberRepository.existsByNicknameAndDeletedFalseAndIdNot("배서윤", 1L)).thenReturn(false);
+		when(termRepository.findAll()).thenReturn(List.of(requiredTerm));
+		when(planRepository.findByType(PlanType.FREE)).thenReturn(Optional.of(plan));
+
+		memberService.completeOnboarding(1L, new OnboardingRequest("배서윤", List.of(1L, 1L), PlanType.FREE));
+
+		verify(memberTermRepository).saveAll(argThat(agreements -> {
+			List<MemberTerm> list = new ArrayList<>();
+			agreements.forEach(list::add);
+			return list.size() == 1;
+		}));
+	}
+
+	@Test
 	void 이미_온보딩을_완료한_회원은_다시_온보딩할_수_없다() {
 		Member member = Member.ofSocialSignup("서윤", SocialProvider.KAKAO, "12345", null);
 		member.completeOnboarding("서윤");
-		when(memberRepository.findById(1L)).thenReturn(Optional.of(member));
+		when(memberRepository.findByIdForUpdate(1L)).thenReturn(Optional.of(member));
 
 		assertThatThrownBy(() -> memberService.completeOnboarding(
 				1L, new OnboardingRequest("배서윤", List.of(), PlanType.FREE)))
@@ -133,7 +169,7 @@ class MemberServiceTest {
 	@Test
 	void 다른_회원이_이미_쓰는_닉네임으로는_온보딩할_수_없다() {
 		Member member = Member.ofSocialSignup("서윤", SocialProvider.KAKAO, "12345", null);
-		when(memberRepository.findById(1L)).thenReturn(Optional.of(member));
+		when(memberRepository.findByIdForUpdate(1L)).thenReturn(Optional.of(member));
 		when(memberRepository.existsByNicknameAndDeletedFalseAndIdNot("배서윤", 1L)).thenReturn(true);
 
 		assertThatThrownBy(() -> memberService.completeOnboarding(
@@ -147,7 +183,7 @@ class MemberServiceTest {
 	void 필수_약관에_동의하지_않으면_온보딩할_수_없다() {
 		Member member = Member.ofSocialSignup("서윤", SocialProvider.KAKAO, "12345", null);
 		Term requiredTerm = requiredTerm(1L);
-		when(memberRepository.findById(1L)).thenReturn(Optional.of(member));
+		when(memberRepository.findByIdForUpdate(1L)).thenReturn(Optional.of(member));
 		when(memberRepository.existsByNicknameAndDeletedFalseAndIdNot("배서윤", 1L)).thenReturn(false);
 		when(termRepository.findAll()).thenReturn(List.of(requiredTerm));
 
@@ -162,7 +198,7 @@ class MemberServiceTest {
 	void 존재하지_않는_약관_id로는_온보딩할_수_없다() {
 		Member member = Member.ofSocialSignup("서윤", SocialProvider.KAKAO, "12345", null);
 		Term requiredTerm = requiredTerm(1L);
-		when(memberRepository.findById(1L)).thenReturn(Optional.of(member));
+		when(memberRepository.findByIdForUpdate(1L)).thenReturn(Optional.of(member));
 		when(memberRepository.existsByNicknameAndDeletedFalseAndIdNot("배서윤", 1L)).thenReturn(false);
 		when(termRepository.findAll()).thenReturn(List.of(requiredTerm));
 
@@ -177,7 +213,7 @@ class MemberServiceTest {
 	void 존재하지_않는_요금제로는_온보딩할_수_없다() {
 		Member member = Member.ofSocialSignup("서윤", SocialProvider.KAKAO, "12345", null);
 		Term requiredTerm = requiredTerm(1L);
-		when(memberRepository.findById(1L)).thenReturn(Optional.of(member));
+		when(memberRepository.findByIdForUpdate(1L)).thenReturn(Optional.of(member));
 		when(memberRepository.existsByNicknameAndDeletedFalseAndIdNot("배서윤", 1L)).thenReturn(false);
 		when(termRepository.findAll()).thenReturn(List.of(requiredTerm));
 		when(planRepository.findByType(PlanType.PREMIUM)).thenReturn(Optional.empty());

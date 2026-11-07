@@ -2,6 +2,7 @@ package com.cramit.global.security.oauth;
 
 import com.cramit.domain.member.Member;
 import com.cramit.domain.member.MemberRepository;
+import com.cramit.domain.member.SocialProvider;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
@@ -30,7 +31,7 @@ public class CustomOAuth2UserService extends DefaultOAuth2UserService {
 		Member member = memberRepository
 				.findBySocialProviderAndSocialId(oAuthAttributes.socialProvider(), oAuthAttributes.socialId())
 				.orElseGet(() -> memberRepository.save(Member.ofSocialSignup(
-						oAuthAttributes.nickname(),
+						provisionalNickname(oAuthAttributes.socialProvider(), oAuthAttributes.socialId()),
 						oAuthAttributes.socialProvider(),
 						oAuthAttributes.socialId(),
 						oAuthAttributes.profileImageUrl())));
@@ -44,6 +45,12 @@ public class CustomOAuth2UserService extends DefaultOAuth2UserService {
 				!member.isOnboardingCompleted(),
 				oAuth2User.getAttributes(),
 				List.of(new SimpleGrantedAuthority("ROLE_USER")));
+	}
+
+	// 소셜 제공자 닉네임은 다른 회원과 겹칠 수 있어, 유니크 닉네임 제약에 걸리지 않는 값으로 가입시킨다.
+	// 실제 닉네임은 온보딩(completeOnboarding)에서 다시 받는다.
+	private String provisionalNickname(SocialProvider socialProvider, String socialId) {
+		return socialProvider.name().toLowerCase() + "_" + socialId;
 	}
 
 }

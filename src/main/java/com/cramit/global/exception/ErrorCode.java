@@ -22,6 +22,7 @@ public enum ErrorCode {
 	MEMBER_CREATE_FAILED(HttpStatus.INTERNAL_SERVER_ERROR, "일시적인 오류입니다. 잠시 후 다시 시도해주세요."),
 
 	// 온보딩
+	MEMBER_WITHDRAWN(HttpStatus.FORBIDDEN, "탈퇴한 회원입니다."),
 	NICKNAME_DUPLICATED(HttpStatus.CONFLICT, "이미 사용 중인 닉네임입니다."),
 	TERMS_NOT_AGREED(HttpStatus.BAD_REQUEST, "필수 약관에 모두 동의해야 합니다."),
 	PLAN_NOT_FOUND(HttpStatus.BAD_REQUEST, "존재하지 않는 요금제입니다."),

@@ -155,4 +155,33 @@ class MemberControllerIntegrationTest {
 				.andExpect(jsonPath("$.error.code").value("ONBOARDING_ALREADY_COMPLETED"));
 	}
 
+	@Test
+	void 탈퇴한_회원은_만료되지_않은_토큰으로도_온보딩할_수_없다() throws Exception {
+		Member member = memberRepository.save(
+				Member.ofSocialSignup("서윤", SocialProvider.KAKAO, "12345", null));
+		String accessToken = jwtTokenProvider.createAccessToken(member.getId());
+		member.withdraw();
+		memberRepository.save(member);
+
+		mockMvc.perform(post("/api/users/me/onboarding")
+						.header("Authorization", "Bearer " + accessToken)
+						.contentType(MediaType.APPLICATION_JSON)
+						.content("{\"nickname\":\"배서윤\",\"agreedTermIds\":[],\"plan\":\"FREE\"}"))
+				.andExpect(status().isForbidden())
+				.andExpect(jsonPath("$.error.code").value("MEMBER_WITHDRAWN"));
+	}
+
+	@Test
+	void 약관_목록을_조회할_수_있다() throws Exception {
+		Member member = memberRepository.save(Member.ofSocialSignup("서윤", SocialProvider.KAKAO, "12345", null));
+		String accessToken = jwtTokenProvider.createAccessToken(member.getId());
+		termRepository.save(Term.builder().title("이용약관").content("내용").required(true).build());
+
+		mockMvc.perform(get("/api/terms")
+						.header("Authorization", "Bearer " + accessToken))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.data[0].title").value("이용약관"))
+				.andExpect(jsonPath("$.data[0].required").value(true));
+	}
+
 }

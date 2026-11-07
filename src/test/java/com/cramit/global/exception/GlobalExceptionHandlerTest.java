@@ -55,6 +55,20 @@ class GlobalExceptionHandlerTest {
 	}
 
 	@Test
+	void nicknameUniqueViolation_returns_409_NICKNAME_DUPLICATED() throws Exception {
+		mockMvc.perform(get("/test/nickname-unique-violation"))
+				.andExpect(status().isConflict())
+				.andExpect(jsonPath("$.error.code").value("NICKNAME_DUPLICATED"));
+	}
+
+	@Test
+	void otherDataIntegrityViolation_returns_500() throws Exception {
+		mockMvc.perform(get("/test/other-data-integrity-violation"))
+				.andExpect(status().isInternalServerError())
+				.andExpect(jsonPath("$.error.code").value("INTERNAL_SERVER_ERROR"));
+	}
+
+	@Test
 	void unexpectedException_returns_500() throws Exception {
 		mockMvc.perform(get("/test/unexpected"))
 				.andExpect(status().isInternalServerError())

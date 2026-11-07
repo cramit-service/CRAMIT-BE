@@ -56,7 +56,12 @@ public class MemberService {
 
 	@Transactional
 	public OnboardingResponse completeOnboarding(Long memberId, OnboardingRequest request) {
-		Member member = findMember(memberId);
+		// 동시에 들어온 온보딩 요청이 둘 다 완료 여부를 통과해 약관 동의/구독이 중복 저장되지 않도록, 행을 잠그고 처리한다.
+		Member member = memberRepository.findByIdForUpdate(memberId)
+				.orElseThrow(() -> new BusinessException(ErrorCode.ENTITY_NOT_FOUND));
+		if (member.isDeleted()) {
+			throw new BusinessException(ErrorCode.MEMBER_WITHDRAWN);
+		}
 		if (member.isOnboardingCompleted()) {
 			throw new BusinessException(ErrorCode.ONBOARDING_ALREADY_COMPLETED);
 		}
@@ -65,14 +70,15 @@ public class MemberService {
 		}
 
 		List<Term> terms = termRepository.findAll();
-		validateAgreedTermIds(terms, request.agreedTermIds());
+		List<Long> agreedTermIds = request.agreedTermIds().stream().distinct().toList();
+		validateAgreedTermIds(terms, agreedTermIds);
 
 		Plan plan = planRepository.findByType(request.plan())
 				.orElseThrow(() -> new BusinessException(ErrorCode.PLAN_NOT_FOUND));
 
 		member.completeOnboarding(request.nickname());
 
-		memberTermRepository.saveAll(request.agreedTermIds().stream()
+		memberTermRepository.saveAll(agreedTermIds.stream()
 				.map(termId -> MemberTerm.agree(memberId, termId))
 				.toList());
 
