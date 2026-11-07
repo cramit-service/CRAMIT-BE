@@ -1,0 +1,48 @@
+# CRAMIT-BE 앞단 프록시. nginx 이미지가 기동할 때 ${APP_DOMAIN}만 환경변수로 채운다
+# ($host 같은 nginx 변수는 그대로 남는다). 앱(app:8080)은 compose 내부 네트워크에만 있고 밖에서는 이 서버로만 들어온다.
+server_tokens off;
+
+# HTTP: Let's Encrypt 확인 경로만 열고 나머지는 HTTPS로 보낸다.
+server {
+	listen 80 default_server;
+	server_name _;
+
+	location /.well-known/acme-challenge/ {
+		root /var/www/certbot;
+	}
+
+	location / {
+		return 301 https://${APP_DOMAIN}$request_uri;
+	}
+}
+
+server {
+	listen 443 ssl default_server;
+	http2 on;
+	server_name ${APP_DOMAIN};
+
+	# 인증서는 tls 볼륨의 current 심볼릭 링크가 가리키는 버전 디렉터리에 있다(publish-cert.sh가 교체):
+	# 처음에는 tls-init이 만든 연습용(자체 서명), 서버에서는 Let's Encrypt 발급본으로 원자적으로 바뀐다.
+	ssl_certificate /etc/nginx/certs/current/fullchain.pem;
+	ssl_certificate_key /etc/nginx/certs/current/privkey.pem;
+	ssl_protocols TLSv1.2 TLSv1.3;
+	ssl_prefer_server_ciphers off;
+	ssl_session_cache shared:TLS:10m;
+	ssl_session_timeout 1d;
+	ssl_session_tickets off;
+
+	client_max_body_size 10m;
+
+	location / {
+		proxy_pass http://app:8080;
+		proxy_http_version 1.1;
+		proxy_set_header Host $host;
+		# 클라이언트가 보낸 값을 그대로 잇지 않고 실제 접속 주소로 덮어쓴다. 앱은 이 컨테이너 주소만 믿는다.
+		proxy_set_header X-Forwarded-For $remote_addr;
+		proxy_set_header X-Real-IP $remote_addr;
+		proxy_set_header X-Forwarded-Proto https;
+		proxy_set_header Forwarded "";
+		proxy_set_header X-Forwarded-Host "";
+		proxy_set_header X-Forwarded-Port "";
+	}
+}
