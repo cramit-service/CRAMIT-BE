@@ -3,6 +3,8 @@ spring:
     name: cramit
   profiles:
     active: local
+  jpa:
+    open-in-view: false
 
 springdoc:
   swagger-ui:
