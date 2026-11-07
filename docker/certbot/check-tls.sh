@@ -4,8 +4,8 @@
 #   - --require-ca: 연습용(자체 서명)이 아니라 브라우저가 믿는 공개 인증기관까지 체인이 이어져야 한다 (issue.sh·renew.sh)
 set -eu
 : "${APP_DOMAIN:?확인할 도메인이 필요합니다}"
-cert=/tls/fullchain.pem
-key=/tls/privkey.pem
+cert=/tls/current/fullchain.pem
+key=/tls/current/privkey.pem
 
 fail() {
 	echo "인증서 확인 실패: $1" >&2

@@ -7,19 +7,13 @@
 set -eu
 cd "$(dirname "$0")/../.."
 
-docker compose -f docker-compose.prod.yml --profile certbot run --rm certbot sh -c '
+docker compose -f docker-compose.prod.yml --profile certbot run --rm --entrypoint sh certbot -c '
 	set -eu
 	: "${APP_DOMAIN:?APP_DOMAIN이 필요합니다}"
 	: "${APP_CERT_EMAIL:?APP_CERT_EMAIL이 필요합니다}"
 	certbot certonly --webroot -w /var/www/certbot \
 		-d "$APP_DOMAIN" --email "$APP_CERT_EMAIL" --agree-tos --no-eff-email --non-interactive \
-		--deploy-hook '"'"'
-			cp -L "$RENEWED_LINEAGE/fullchain.pem" /tls/fullchain.pem.new &&
-			cp -L "$RENEWED_LINEAGE/privkey.pem" /tls/privkey.pem.new &&
-			chmod 600 /tls/privkey.pem.new &&
-			mv -f /tls/fullchain.pem.new /tls/fullchain.pem &&
-			mv -f /tls/privkey.pem.new /tls/privkey.pem
-		'"'"'
+		--deploy-hook "/scripts/publish-cert.sh \$RENEWED_LINEAGE/fullchain.pem \$RENEWED_LINEAGE/privkey.pem"
 '
 docker compose -f docker-compose.prod.yml --profile certbot run --rm --entrypoint sh certbot /scripts/check-tls.sh --require-ca
 docker compose -f docker-compose.prod.yml exec nginx nginx -t

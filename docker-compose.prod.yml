@@ -35,6 +35,7 @@ services:
     volumes:
       - tls:/tls
       - ./docker/certbot/self-signed.sh:/scripts/self-signed.sh:ro
+      - ./docker/certbot/publish-cert.sh:/scripts/publish-cert.sh:ro
     network_mode: none
 
   nginx:
@@ -73,6 +74,7 @@ services:
       - acme-webroot:/var/www/certbot
       - tls:/tls
       - ./docker/certbot/check-tls.sh:/scripts/check-tls.sh:ro
+      - ./docker/certbot/publish-cert.sh:/scripts/publish-cert.sh:ro
 
 networks:
   internal:

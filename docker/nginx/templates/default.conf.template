@@ -21,9 +21,10 @@ server {
 	http2 on;
 	server_name ${APP_DOMAIN};
 
-	# 인증서는 tls 볼륨에 있다: 처음에는 tls-init이 만든 연습용(자체 서명), 서버에서는 Let's Encrypt 발급본.
-	ssl_certificate /etc/nginx/certs/fullchain.pem;
-	ssl_certificate_key /etc/nginx/certs/privkey.pem;
+	# 인증서는 tls 볼륨의 current 심볼릭 링크가 가리키는 버전 디렉터리에 있다(publish-cert.sh가 교체):
+	# 처음에는 tls-init이 만든 연습용(자체 서명), 서버에서는 Let's Encrypt 발급본으로 원자적으로 바뀐다.
+	ssl_certificate /etc/nginx/certs/current/fullchain.pem;
+	ssl_certificate_key /etc/nginx/certs/current/privkey.pem;
 	ssl_protocols TLSv1.2 TLSv1.3;
 	ssl_prefer_server_ciphers off;
 	ssl_session_cache shared:TLS:10m;
