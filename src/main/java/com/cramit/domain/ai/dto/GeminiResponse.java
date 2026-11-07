@@ -47,6 +47,20 @@ public record GeminiResponse(List<Candidate> candidates) {
         return value.asText();
     }
 
+    public String extractText(ErrorCode errorCode) {
+        try {
+            String text = candidates.get(0).content().parts().get(0).text();
+            if (text == null || text.isBlank()) {
+                throw new BusinessException(errorCode);
+            }
+            return text;
+        } catch (BusinessException e) {
+            throw e;
+        } catch (Exception e) {
+            throw new BusinessException(errorCode);
+        }
+    }
+
     public record Candidate(Content content) {}
 
     public record Content(List<Part> parts) {}
