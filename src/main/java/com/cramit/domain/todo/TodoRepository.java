@@ -3,6 +3,7 @@ package com.cramit.domain.todo;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
+import org.springframework.data.jpa.repository.Modifying;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -32,6 +33,9 @@ public interface TodoRepository extends JpaRepository<Todo, Long> {
     List<Todo> findByMemberIdAndIsCompletedTrueOrderByTodoIdDesc(Long memberId);
     List<Todo> findByMemberIdAndWeekIdAndIsCompletedTrueOrderByTodoIdDesc(Long memberId, Long weekId);
 
-
+    @Modifying(flushAutomatically = true, clearAutomatically = true)
+    @Query("DELETE FROM Todo t WHERE t.memberId = :memberId AND t.examId = :examId " +
+            "AND t.todoType = com.cramit.domain.todo.enums.TodoType.AI AND t.isCompleted = false")
+    void deleteIncompleteAiTodos(@Param("memberId") Long memberId, @Param("examId") Long examId);
 
 }
