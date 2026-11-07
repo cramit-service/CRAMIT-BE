@@ -10,6 +10,8 @@ import com.cramit.domain.lecture.dto.SharedLectureItem;
 import com.cramit.domain.member.Member;
 import com.cramit.domain.member.MemberRepository;
 import com.cramit.domain.member.SocialProvider;
+import com.cramit.domain.week.entity.Week;
+import com.cramit.domain.week.repository.WeekRepository;
 import com.cramit.global.config.JpaAuditingConfig;
 import com.cramit.global.exception.BusinessException;
 import com.cramit.global.exception.ErrorCode;
@@ -20,10 +22,12 @@ import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
 import org.springframework.context.annotation.Import;
 import org.springframework.test.context.ActiveProfiles;
 
+import java.time.LocalDate;
 import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.assertj.core.api.Assertions.tuple;
 
 @DataJpaTest
 @Import({LectureService.class, JpaAuditingConfig.class})
@@ -42,6 +46,9 @@ class LectureServiceTest {
     @Autowired
     private MemberRepository memberRepository;
 
+    @Autowired
+    private WeekRepository weekRepository;
+
     @Test
     @DisplayName("강의를 생성하면 내 강의 목록에서 조회된다.")
     void createThenGetMyLectures() {
@@ -56,6 +63,30 @@ class LectureServiceTest {
         assertThat(created.lectureId()).isNotNull();
         assertThat(response).hasSize(1);
         assertThat(response.get(0).title()).isEqualTo("알고리즘");
+    }
+
+    @Test
+    @DisplayName("내 강의 목록의 weekCount는 강의별 주차 수이고, 주차가 없으면 0이다.")
+    void getMyLecturesCountsWeeks() {
+        // given
+        Long withWeeks = lectureService.createLecture(new LectureCreateRequest("알고리즘", "박지훈", 1), MEMBER_ID).lectureId();
+        Long withoutWeeks = lectureService.createLecture(new LectureCreateRequest("운영체제", "박지훈", 2), MEMBER_ID).lectureId();
+        saveWeek(withWeeks, "1주차");
+        saveWeek(withWeeks, "2주차");
+
+        // when
+        List<MyLectureItem> response = lectureService.getMyLectures(MEMBER_ID);
+
+        // then
+        assertThat(response)
+                .extracting(MyLectureItem::lectureId, MyLectureItem::weekCount)
+                .containsExactlyInAnyOrder(tuple(withWeeks, 2), tuple(withoutWeeks, 0));
+    }
+
+    @Test
+    @DisplayName("강의가 없으면 내 강의 목록은 빈 목록이다.")
+    void getMyLecturesReturnsEmpty() {
+        assertThat(lectureService.getMyLectures(MEMBER_ID)).isEmpty();
     }
 
     @Test
@@ -200,5 +231,12 @@ class LectureServiceTest {
                 .isInstanceOfSatisfying(BusinessException.class, ex ->
                         assertThat(ex.getErrorCode()).isEqualTo(ErrorCode.LECTURE_ACCESS_DENIED));
     }
-}
 
+    private void saveWeek(Long lectureId, String title) {
+        weekRepository.save(Week.builder()
+                .lectureId(lectureId)
+                .title(title)
+                .weekDate(LocalDate.now())
+                .build());
+    }
+}
