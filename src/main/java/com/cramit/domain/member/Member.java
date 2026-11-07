@@ -40,12 +40,16 @@ public class Member extends BaseEntity {
 	@Column(name = "social_id", nullable = false)
 	private String socialId;
 
+	@Column(name = "onboarding_completed", nullable = false)
+	private boolean onboardingCompleted;
+
 	private Member(String nickname, SocialProvider socialProvider, String socialId, String profileImageUrl) {
 		this.nickname = nickname;
 		this.socialProvider = socialProvider;
 		this.socialId = socialId;
 		this.profileImageUrl = profileImageUrl;
 		this.deleted = false;
+		this.onboardingCompleted = false;
 	}
 
 	public static Member ofSocialSignup(String nickname, SocialProvider socialProvider, String socialId, String profileImageUrl) {
@@ -55,6 +59,11 @@ public class Member extends BaseEntity {
 	public void updateProfile(String nickname, String profileImageUrl) {
 		this.nickname = nickname;
 		this.profileImageUrl = profileImageUrl;
+	}
+
+	public void completeOnboarding(String nickname) {
+		this.nickname = nickname;
+		this.onboardingCompleted = true;
 	}
 
 	public void withdraw() {
