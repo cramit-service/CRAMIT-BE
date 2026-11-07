@@ -43,7 +43,7 @@ public class AiTodoService {
     private final TransactionTemplate transactionTemplate;
 
     /**
-     * 같은 강의의 이전 AI TODO 중 완료하지 않은 것은 지우고 새 계획으로 바꾼다. (완료한 것과 직접 만든 TODO는 유지)
+     * 같은 시험의 이전 AI TODO 중 완료하지 않은 것은 지우고 새 계획으로 바꾼다.(완료한 것, 직접 만들거나 수정한 TODO, 같은 강의의 다른 시험 계획은 유지)
      */
     public List<TodoListResponse> generate(Long examId, Long memberId) {
         LocalDate today = LocalDate.now();
