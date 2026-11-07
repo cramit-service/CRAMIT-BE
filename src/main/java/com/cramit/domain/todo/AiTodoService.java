@@ -50,7 +50,8 @@ public class AiTodoService {
         PlanContext context = transactionTemplate.execute(status -> loadContext(examId, memberId, today));
 
         List<GeminiTodoItem> items = geminiTodoClient.generate(
-                AiTodoPrompts.SYSTEM, AiTodoPrompts.userInput(context.exam(), today, context.summaryWeeks()));
+                AiTodoPrompts.SYSTEM,
+                AiTodoPrompts.userInput(context.exam(), today, context.summaryWeeks(), context.remainingTodos()));
 
         List<Todo> todos = toTodos(items, context, memberId, today);
         if (todos.isEmpty()) {
@@ -99,7 +100,8 @@ public class AiTodoService {
             throw new BusinessException(ErrorCode.NO_CONTEXT);
         }
 
-        return new PlanContext(exam, summaryWeeks);
+        List<Todo> remainingTodos = todoRepository.findRemainingTodos(memberId, examId);
+        return new PlanContext(exam, summaryWeeks, remainingTodos);
     }
 
     private List<Todo> toTodos(List<GeminiTodoItem> items, PlanContext context, Long memberId, LocalDate today) {
@@ -109,6 +111,12 @@ public class AiTodoService {
         LocalDate examDate = context.exam().getExamDate();
 
         Map<LocalDate, Integer> countByDate = new HashMap<>();
+        for (Todo remaining : context.remainingTodos()) {
+            if (remaining.getDueDate() != null) {
+                countByDate.merge(remaining.getDueDate().toLocalDate(), 1, Integer::sum);
+            }
+        }
+
         List<Todo> todos = new ArrayList<>();
 
         for (GeminiTodoItem item : items) {
@@ -158,5 +166,5 @@ public class AiTodoService {
         return content.length() > MAX_CONTENT_LENGTH ? content.substring(0, MAX_CONTENT_LENGTH) : content;
     }
 
-    private record PlanContext(Exam exam, List<Week> summaryWeeks) {}
+    private record PlanContext(Exam exam, List<Week> summaryWeeks, List<Todo> remainingTodos) {}
 }
