@@ -20,6 +20,10 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -74,8 +78,22 @@ public class TodoService {
             todos = todoRepository.findByMemberIdOrderByTodoIdDesc(memberId);
         }
 
+        return toResponses(todos, memberId);
+    }
+
+    private List<TodoListResponse> toResponses(List<Todo> todos, Long memberId) {
+        List<Long> weekIds = todos.stream()
+                .map(Todo::getWeekId)
+                .filter(Objects::nonNull)
+                .distinct()
+                .toList();
+        Map<Long, Long> lectureIdsByWeek = weekRepository.findAllById(weekIds).stream()
+                .collect(Collectors.toMap(Week::getWeekId, Week::getLectureId));
+        Map<Long, Lecture> lectures = lectureRepository.findByMemberId(memberId).stream()
+                .collect(Collectors.toMap(Lecture::getLectureId, Function.identity()));
+
         return todos.stream()
-                .map(TodoListResponse::from)
+                .map(todo -> TodoListResponse.of(todo, lectures.get(lectureIdsByWeek.get(todo.getWeekId()))))
                 .toList();
     }
 

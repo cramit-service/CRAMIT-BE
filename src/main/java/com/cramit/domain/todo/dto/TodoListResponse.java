@@ -1,5 +1,6 @@
 package com.cramit.domain.todo.dto;
 
+import com.cramit.domain.lecture.Lecture;
 import com.cramit.domain.todo.Todo;
 import com.cramit.domain.todo.enums.TodoType;
 import lombok.Builder;
@@ -10,6 +11,8 @@ import java.time.LocalDateTime;
 public record TodoListResponse(
         Long todoId,
         Long weekId,
+        Long lectureId,
+        String lectureName,
         String content,
         String memo,
         LocalDateTime dueDate,
@@ -17,10 +20,12 @@ public record TodoListResponse(
         Boolean isCompleted,
         Integer sortOrder
 ) {
-    public static TodoListResponse from(Todo todo) {
+    public static TodoListResponse of(Todo todo, Lecture lecture) {
         return TodoListResponse.builder()
                 .todoId(todo.getTodoId())
                 .weekId(todo.getWeekId())
+                .lectureId(lecture != null ? lecture.getLectureId() : null)
+                .lectureName(lecture != null ? lecture.getTitle() : null)
                 .content(todo.getContent())
                 .memo(todo.getMemo())
                 .dueDate(todo.getDueDate())

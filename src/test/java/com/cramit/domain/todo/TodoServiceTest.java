@@ -27,6 +27,7 @@ import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.assertj.core.api.Assertions.tuple;
 
 @DataJpaTest
 @Import({TodoService.class, JpaAuditingConfig.class})
@@ -351,5 +352,25 @@ class TodoServiceTest {
         // then
         assertThat(response).hasSize(1);
         assertThat(response.get(0).content()).isEqualTo("기한 지남");
+    }
+
+    @Test
+    @DisplayName("todo 목록에 연결된 주차의 강의 정보를 함께 내려준다.")
+    void getTodosWithLectureInfo() {
+        // given
+        Long weekId = saveWeek();
+        Long lectureId = weekRepository.findById(weekId).orElseThrow().getLectureId();
+        todoService.createTodo(new TodoCreateRequest(weekId, "복습하기", null, null), MEMBER_ID);
+        todoService.createTodo(new TodoCreateRequest(null, "교재 구매", null, null), MEMBER_ID);
+
+        // when
+        List<TodoListResponse> response = todoService.getTodos(MEMBER_ID, null, "ALL");
+
+        // then
+        assertThat(response)
+                .extracting(TodoListResponse::content, TodoListResponse::lectureId, TodoListResponse::lectureName)
+                .containsExactlyInAnyOrder(
+                        tuple("복습하기", lectureId, "알고리즘"),
+                        tuple("교재 구매", null, null));
     }
 }
