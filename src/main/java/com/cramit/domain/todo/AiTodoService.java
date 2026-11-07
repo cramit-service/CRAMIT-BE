@@ -60,7 +60,8 @@ public class AiTodoService {
         return transactionTemplate.execute(status -> {
             Exam lockedExam = examRepository.findByIdForUpdate(examId)
                     .orElseThrow(() -> new BusinessException(ErrorCode.EXAM_NOT_FOUND));
-            if (!lockedExam.getExamDate().equals(context.exam().getExamDate())) {
+            if (!lockedExam.getExamDate().equals(context.exam().getExamDate())
+                    || !lockedExam.getLectureId().equals(context.exam().getLectureId())) {
                 throw new BusinessException(ErrorCode.TODO_GENERATION_FAILED);
             }
 

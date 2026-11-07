@@ -20,6 +20,8 @@ import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.context.annotation.Import;
 import org.springframework.test.context.ActiveProfiles;
+import org.springframework.transaction.annotation.Propagation;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
 import java.util.Arrays;
@@ -229,6 +231,35 @@ class AiTodoServiceTest {
         assertThat(todoRepository.findByMemberIdOrderByTodoIdDesc(MEMBER_ID))
                 .extracting(Todo::getContent)
                 .containsExactly("이전 AI 계획");
+    }
+
+    @Test
+    @Transactional(propagation = Propagation.NOT_SUPPORTED)
+    @DisplayName("AI가 계획을 만드는 동안 시험일이 바뀌면 저장하지 않고 실패한다.")
+    void generateFailsWhenExamChangedDuringGeneration() {
+        // given
+        Long lectureId = saveLecture(MEMBER_ID);
+        Long weekId = saveWeek(lectureId, TODAY.minusDays(7), "## 정렬");
+        Long examId = saveExam(lectureId, TODAY.plusDays(10));
+        given(geminiTodoClient.generate(anyString(), anyString())).willAnswer(invocation -> {
+            Exam exam = examRepository.findById(examId).orElseThrow();
+            exam.update(exam.getLectureId(), exam.getTitle(), TODAY.plusDays(2), exam.getMemo());
+            examRepository.save(exam);
+            return List.of(new GeminiTodoItem(weekId, "정렬 정리", TODAY.plusDays(8).toString(), null));
+        });
+
+        try {
+            // when & then
+            assertThatThrownBy(() -> aiTodoService.generate(examId, MEMBER_ID))
+                    .isInstanceOfSatisfying(BusinessException.class, ex ->
+                            assertThat(ex.getErrorCode()).isEqualTo(ErrorCode.TODO_GENERATION_FAILED));
+            assertThat(todoRepository.findByMemberIdOrderByTodoIdDesc(MEMBER_ID)).isEmpty();
+        } finally {
+            todoRepository.deleteAll();
+            examRepository.deleteAll();
+            weekRepository.deleteAll();
+            lectureRepository.deleteAll();
+        }
     }
 
     private Long saveLecture(Long memberId) {
