@@ -1,0 +1,76 @@
+# 운영 서버 배포용. `.env`를 채운 뒤 `docker compose -f docker-compose.prod.yml up -d --build`.
+# DB(RDS)·Redis(ElastiCache 또는 운영 Redis)는 이미 외부에 떠 있다고 보고 app 컨테이너만 그 주소로 접속한다.
+# 여는 포트는 nginx 80(HTTPS로 리다이렉트)·443뿐이다. app은 밖에 포트를 열지 않는다.
+# 인증서: 처음 뜰 때 tls-init이 연습용(자체 서명)을 만들고, 서버에서는 docker/certbot/issue.sh로 Let's Encrypt로 바꾼다.
+
+name: cramit-prod
+
+services:
+  app:
+    build: .
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      SPRING_PROFILES_ACTIVE: prod
+      # GOOGLE_STT_CREDENTIALS_PATH는 .env에서 /app/secrets/gcp-stt.json로 지정한다 (아래 volumes와 맞춰야 함)
+    volumes:
+      # 서버의 실제 GCP STT 서비스 계정 키 파일을 읽기 전용으로 마운트한다. 이 파일은 저장소에 올리지 않는다.
+      - ./secrets/gcp-stt.json:/app/secrets/gcp-stt.json:ro
+    networks:
+      - internal
+
+  # 인증서가 없을 때만 연습용(자체 서명) 인증서를 만드는 일회성 컨테이너. 이미 있으면 아무것도 하지 않는다.
+  tls-init:
+    image: certbot/certbot:v5.8.0
+    entrypoint: ["sh", "/scripts/self-signed.sh"]
+    environment:
+      APP_DOMAIN: ${APP_DOMAIN:?접속 도메인을 .env에 넣어 주세요}
+    volumes:
+      - tls:/tls
+      - ./docker/certbot/self-signed.sh:/scripts/self-signed.sh:ro
+    network_mode: none
+
+  nginx:
+    image: nginx:1.28-alpine
+    restart: unless-stopped
+    depends_on:
+      app:
+        condition: service_started
+      tls-init:
+        condition: service_completed_successfully
+    environment:
+      APP_DOMAIN: ${APP_DOMAIN:?접속 도메인을 .env에 넣어 주세요}
+    ports:
+      - "0.0.0.0:80:80"
+      - "0.0.0.0:443:443"
+    volumes:
+      - ./docker/nginx/templates:/etc/nginx/templates:ro
+      - tls:/etc/nginx/certs:ro
+      - acme-webroot:/var/www/certbot:ro
+    networks:
+      internal:
+        # application-prod.yml의 server.tomcat.remoteip.internal-proxies와 같은 주소여야 한다.
+        ipv4_address: 172.28.0.10
+
+  # Let's Encrypt 발급·갱신 전용 (docker/certbot/issue.sh·renew.sh가 실행). 평소 up에는 뜨지 않는다.
+  certbot:
+    image: certbot/certbot:v5.8.0
+    profiles: ["certbot"]
+    environment:
+      APP_DOMAIN: ${APP_DOMAIN:?접속 도메인을 .env에 넣어 주세요}
+    volumes:
+      - letsencrypt:/etc/letsencrypt
+      - acme-webroot:/var/www/certbot
+      - tls:/tls
+      - ./docker/certbot/check-tls.sh:/scripts/check-tls.sh:ro
+
+networks:
+  internal:
+    ipam:
+      config:
+        - subnet: 172.28.0.0/24
+
+volumes:
+  tls:
+  letsencrypt:
+  acme-webroot:
