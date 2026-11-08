@@ -21,6 +21,8 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.Collections;
 import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -51,8 +53,16 @@ public class LectureService {
     @Transactional(readOnly = true)
     public List<MyLectureItem> getMyLectures(Long memberId) {
         List<Lecture> myLectures = lectureRepository.findByMemberId(memberId);
+        List<Long> lectureIds = myLectures.stream().map(Lecture::getLectureId).toList();
+        Map<Long, Long> weekCounts = weekRepository.countByLectureIds(lectureIds).stream()
+                .collect(Collectors.toMap(
+                        WeekRepository.LectureWeekCount::getLectureId,
+                        WeekRepository.LectureWeekCount::getWeekCount));
+
         return myLectures.stream()
-                .map(MyLectureItem::from)
+                .map(lecture -> MyLectureItem.from(
+                        lecture,
+                        weekCounts.getOrDefault(lecture.getLectureId(), 0L).intValue()))
                 .toList();
     }
 

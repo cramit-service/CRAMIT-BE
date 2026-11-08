@@ -14,6 +14,8 @@ RUN ./gradlew bootJar --no-daemon -x test
 FROM eclipse-temurin:17.0.20_8-jre-jammy
 WORKDIR /app
 
+ENV TZ=Asia/Seoul
+
 RUN addgroup --system spring && adduser --system --ingroup spring spring
 USER spring:spring
 
