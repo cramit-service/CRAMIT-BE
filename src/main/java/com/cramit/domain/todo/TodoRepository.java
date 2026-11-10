@@ -33,6 +33,10 @@ public interface TodoRepository extends JpaRepository<Todo, Long> {
     List<Todo> findByMemberIdAndIsCompletedTrueOrderByTodoIdDesc(Long memberId);
     List<Todo> findByMemberIdAndWeekIdAndIsCompletedTrueOrderByTodoIdDesc(Long memberId, Long weekId);
 
+    @Query("SELECT t FROM Todo t WHERE t.memberId = :memberId AND t.examId = :examId " +
+            "AND (t.isCompleted = true OR t.todoType <> com.cramit.domain.todo.enums.TodoType.AI) ORDER BY t.dueDate ASC")
+    List<Todo> findRemainingTodos(@Param("memberId") Long memberId, @Param("examId") Long examId);
+
     @Modifying(flushAutomatically = true, clearAutomatically = true)
     @Query("DELETE FROM Todo t WHERE t.memberId = :memberId AND t.examId = :examId " +
             "AND t.todoType = com.cramit.domain.todo.enums.TodoType.AI AND t.isCompleted = false")

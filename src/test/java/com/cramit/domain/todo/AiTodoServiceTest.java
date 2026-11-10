@@ -30,6 +30,7 @@ import java.util.List;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.ArgumentMatchers.contains;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.BDDMockito.given;
@@ -231,6 +232,57 @@ class AiTodoServiceTest {
         assertThat(todoRepository.findByMemberIdOrderByTodoIdDesc(MEMBER_ID))
                 .extracting(Todo::getContent)
                 .containsExactly("이전 AI 계획");
+    }
+
+    @Test
+    @DisplayName("다시 생성하면 남아 있는 같은 시험의 TODO(완료한 것, 직접 만들거나 수정한 것)를 프롬프트에 넣는다.")
+    void generateSendsRemainingTodos() {
+        // given
+        Long lectureId = saveLecture(MEMBER_ID);
+        Long weekId = saveWeek(lectureId, TODAY.minusDays(7), "## 정렬");
+        Long examId = saveExam(lectureId, TODAY.plusDays(5));
+        Todo doneAi = saveTodo(weekId, examId, "버블 정렬 정리", TodoType.AI);
+        doneAi.toggleComplete();
+        saveTodo(weekId, examId, "내가 고친 퀵 정렬 계획", TodoType.USER);
+        saveTodo(weekId, examId, "지워질 AI 계획", TodoType.AI);
+        given(geminiTodoClient.generate(anyString(), anyString())).willReturn(List.of(
+                new GeminiTodoItem(weekId, "병합 정렬 정리", TODAY.plusDays(1).toString(), null)
+        ));
+
+        // when
+        aiTodoService.generate(examId, MEMBER_ID);
+
+        // then
+        verify(geminiTodoClient).generate(eq(AiTodoPrompts.SYSTEM), argThat(input ->
+                input.contains("[완료] " + TODAY.plusDays(2) + " | 버블 정렬 정리")
+                        && input.contains("[예정] " + TODAY.plusDays(2) + " | 내가 고친 퀵 정렬 계획")
+                        && !input.contains("지워질 AI 계획")));
+    }
+
+    @Test
+    @DisplayName("하루 최대 개수는 남아 있는 같은 시험의 TODO까지 합쳐서 세고, 다른 시험의 TODO는 세지 않는다.")
+    void generateCountsRemainingTodosPerDay() {
+        // given
+        Long lectureId = saveLecture(MEMBER_ID);
+        Long weekId = saveWeek(lectureId, TODAY.minusDays(7), "## 정렬");
+        Long examId = saveExam(lectureId, TODAY.plusDays(5));
+        Long otherExamId = saveExam(lectureId, TODAY.plusDays(40));
+        LocalDate day = TODAY.plusDays(2);
+        saveTodo(weekId, examId, "직접 만든 할 일 1", TodoType.USER);
+        saveTodo(weekId, examId, "직접 만든 할 일 2", TodoType.USER);
+        saveTodo(weekId, otherExamId, "기말 계획", TodoType.USER);
+        given(geminiTodoClient.generate(anyString(), anyString())).willReturn(List.of(
+                new GeminiTodoItem(weekId, "새 계획 1", day.toString(), null),
+                new GeminiTodoItem(weekId, "새 계획 2", day.toString(), null),
+                new GeminiTodoItem(weekId, "다음 날 계획", day.plusDays(1).toString(), null)
+        ));
+
+        // when
+        List<TodoListResponse> response = aiTodoService.generate(examId, MEMBER_ID);
+
+        // then
+        assertThat(response).extracting(TodoListResponse::content)
+                .containsExactly("새 계획 1", "다음 날 계획");
     }
 
     @Test
