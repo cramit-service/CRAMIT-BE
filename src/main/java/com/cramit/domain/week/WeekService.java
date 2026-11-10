@@ -4,6 +4,7 @@ import com.cramit.domain.file.FileService;
 import com.cramit.domain.lecture.Lecture;
 import com.cramit.domain.lecture.LectureRepository;
 import com.cramit.domain.stt.SttRequestedEvent;
+import com.cramit.domain.week.dto.WeekAudioResponse;
 import com.cramit.domain.week.dto.WeekCreateRequest;
 import com.cramit.domain.week.dto.WeekCreateResponse;
 import com.cramit.domain.week.dto.WeekFirstSummaryResponse;
@@ -11,16 +12,21 @@ import com.cramit.domain.week.dto.WeekListResponse;
 import com.cramit.domain.week.dto.WeekPptResponse;
 import com.cramit.domain.week.dto.WeekReviewCountUpdateRequest;
 import com.cramit.domain.week.dto.WeekReviewCountUpdateResponse;
+import com.cramit.domain.week.dto.WeekScriptResponse;
 import com.cramit.domain.week.dto.WeekStatusUpdateRequest;
 import com.cramit.domain.week.dto.WeekStatusUpdateResponse;
 import com.cramit.domain.week.dto.WeekUpdateRequest;
 import com.cramit.domain.week.dto.WeekUpdateResponse;
 import com.cramit.domain.week.entity.LectureAudio;
 import com.cramit.domain.week.entity.LecturePpt;
+import com.cramit.domain.week.entity.Script;
+import com.cramit.domain.week.entity.ScriptDetail;
 import com.cramit.domain.week.entity.Week;
 import com.cramit.domain.week.enums.SttStatus;
 import com.cramit.domain.week.repository.LectureAudioRepository;
 import com.cramit.domain.week.repository.LecturePptRepository;
+import com.cramit.domain.week.repository.ScriptDetailRepository;
+import com.cramit.domain.week.repository.ScriptRepository;
 import com.cramit.domain.week.repository.WeekRepository;
 import com.cramit.global.exception.BusinessException;
 import com.cramit.global.exception.ErrorCode;
@@ -30,6 +36,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -39,6 +47,8 @@ public class WeekService {
     private final LectureRepository lectureRepository;
     private final LectureAudioRepository lectureAudioRepository;
     private final LecturePptRepository lecturePptRepository;
+    private final ScriptRepository scriptRepository;
+    private final ScriptDetailRepository scriptDetailRepository;
     private final FileService fileService;
     private final ApplicationEventPublisher eventPublisher;
 
@@ -216,6 +226,50 @@ public class WeekService {
                 .orElseThrow(() -> new BusinessException(ErrorCode.ENTITY_NOT_FOUND));
 
         return WeekPptResponse.from(ppt);
+    }
+
+    @Transactional(readOnly = true)
+    public WeekAudioResponse getAudio(Long weekId, Long memberId) {
+        Week week = weekRepository.findById(weekId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.ENTITY_NOT_FOUND));
+
+        Lecture lecture = lectureRepository.findById(week.getLectureId())
+                .orElseThrow(() -> new BusinessException(ErrorCode.ENTITY_NOT_FOUND));
+
+        if (!lecture.isOwnedBy(memberId)) {
+            throw new BusinessException(ErrorCode.LECTURE_ACCESS_DENIED);
+        }
+
+        LectureAudio audio = lectureAudioRepository.findByWeekId(weekId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.ENTITY_NOT_FOUND));
+
+        return WeekAudioResponse.from(audio);
+    }
+
+    @Transactional(readOnly = true)
+    public List<WeekScriptResponse> getScripts(Long weekId, Long memberId) {
+        Week week = weekRepository.findById(weekId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.ENTITY_NOT_FOUND));
+
+        Lecture lecture = lectureRepository.findById(week.getLectureId())
+                .orElseThrow(() -> new BusinessException(ErrorCode.ENTITY_NOT_FOUND));
+
+        if (!lecture.isOwnedBy(memberId)) {
+            throw new BusinessException(ErrorCode.LECTURE_ACCESS_DENIED);
+        }
+
+        lectureAudioRepository.findByWeekId(weekId)
+                .filter(audio -> audio.getSttStatus() == SttStatus.COMPLETED)
+                .orElseThrow(() -> new BusinessException(ErrorCode.SCRIPT_NOT_READY));
+
+        List<Script> scripts = scriptRepository.findByWeekIdOrderBySequenceAsc(weekId);
+        List<Long> scriptIds = scripts.stream().map(Script::getScriptId).toList();
+        Map<Long, List<ScriptDetail>> detailsByScriptId = scriptDetailRepository.findByScriptIdInOrderBySequenceAsc(scriptIds).stream()
+                .collect(Collectors.groupingBy(ScriptDetail::getScriptId));
+
+        return scripts.stream()
+                .map(script -> WeekScriptResponse.of(script, detailsByScriptId.getOrDefault(script.getScriptId(), List.of())))
+                .toList();
     }
 
 }

@@ -1,5 +1,6 @@
 package com.cramit.domain.week;
 
+import com.cramit.domain.week.dto.WeekAudioResponse;
 import com.cramit.domain.week.dto.WeekCreateRequest;
 import com.cramit.domain.week.dto.WeekCreateResponse;
 import com.cramit.domain.week.dto.WeekFirstSummaryResponse;
@@ -7,6 +8,7 @@ import com.cramit.domain.week.dto.WeekListResponse;
 import com.cramit.domain.week.dto.WeekPptResponse;
 import com.cramit.domain.week.dto.WeekReviewCountUpdateRequest;
 import com.cramit.domain.week.dto.WeekReviewCountUpdateResponse;
+import com.cramit.domain.week.dto.WeekScriptResponse;
 import com.cramit.domain.week.dto.WeekStatusUpdateRequest;
 import com.cramit.domain.week.dto.WeekStatusUpdateResponse;
 import com.cramit.domain.week.dto.WeekUpdateRequest;
@@ -167,5 +169,39 @@ public class WeekController {
             @Parameter(hidden = true) @AuthenticationPrincipal Long memberId
     ){
         return ResponseEntity.ok(ApiResponse.of(weekService.getPpt(weekId, memberId)));
+    }
+
+    @Operation(summary = "주차 음성 조회", description = "주차에 등록된 음성 파일 정보와 STT 처리 상태를 조회합니다.")
+    @ApiResponses({
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "조회 성공"),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "403", description = "접근 권한이 없는 강의 (LECTURE_ACCESS_DENIED)",
+                    content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE, schema = @Schema(implementation = ErrorResponse.class))),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "존재하지 않는 주차이거나 등록된 음성이 없음 (ENTITY_NOT_FOUND)",
+                    content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE, schema = @Schema(implementation = ErrorResponse.class)))
+    })
+    @GetMapping("/api/weeks/{weekId}/audio")
+    public ResponseEntity<ApiResponse<WeekAudioResponse>> getWeekAudio(
+            @PathVariable Long weekId,
+            @Parameter(hidden = true) @AuthenticationPrincipal Long memberId
+    ){
+        return ResponseEntity.ok(ApiResponse.of(weekService.getAudio(weekId, memberId)));
+    }
+
+    @Operation(summary = "스크립트 목록 조회", description = "주차의 STT 스크립트를 구간별 세부 문장과 함께 조회합니다.")
+    @ApiResponses({
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "조회 성공"),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "403", description = "접근 권한이 없는 강의 (LECTURE_ACCESS_DENIED)",
+                    content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE, schema = @Schema(implementation = ErrorResponse.class))),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "존재하지 않는 주차 (ENTITY_NOT_FOUND)",
+                    content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE, schema = @Schema(implementation = ErrorResponse.class))),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "422", description = "STT가 완료되지 않음 (SCRIPT_NOT_READY)",
+                    content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE, schema = @Schema(implementation = ErrorResponse.class)))
+    })
+    @GetMapping("/api/weeks/{weekId}/scripts")
+    public ResponseEntity<ApiResponse<List<WeekScriptResponse>>> getWeekScripts(
+            @PathVariable Long weekId,
+            @Parameter(hidden = true) @AuthenticationPrincipal Long memberId
+    ){
+        return ResponseEntity.ok(ApiResponse.of(weekService.getScripts(weekId, memberId)));
     }
 }
