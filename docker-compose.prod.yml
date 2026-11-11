@@ -1,18 +1,43 @@
 # 운영 서버 배포용. `.env`를 채운 뒤 `docker compose -f docker-compose.prod.yml up -d --build`.
-# DB(RDS)·Redis(ElastiCache 또는 운영 Redis)는 이미 외부에 떠 있다고 보고 app 컨테이너만 그 주소로 접속한다.
+# DB(RDS)는 이미 외부에 떠 있다고 보고 app 컨테이너만 그 주소로 접속한다. Redis는 이 compose 안에서
+# 컨테이너로 띄우고(내부 네트워크 전용, 외부 포트 없음) app이 REDIS_HOST=redis로 접속한다.
 # 여는 포트는 nginx 80(HTTPS로 리다이렉트)·443뿐이다. app은 밖에 포트를 열지 않는다.
 # 인증서: 처음 뜰 때 tls-init이 연습용(자체 서명)을 만들고, 서버에서는 docker/certbot/issue.sh로 Let's Encrypt로 바꾼다.
 
 name: cramit-prod
 
 services:
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    # refresh token만 저장하는 캐시라 유실돼도 재로그인이면 끝이지만, 재시작마다 전원 재로그인을
+    # 겪지 않도록 AOF를 켠다.
+    command: redis-server --appendonly yes --appendfsync always
+    volumes:
+      - redis-data:/data
+    networks:
+      - internal
+    healthcheck:
+      # -e: AOF 로딩 중처럼 LOADING 등 오류 응답이 와도 성공으로 치지 않고 실패로 처리한다.
+      test: ["CMD", "redis-cli", "-e", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+      start_period: 10s
+
   app:
     build: .
     restart: unless-stopped
     env_file: .env
     environment:
       SPRING_PROFILES_ACTIVE: prod
+      REDIS_HOST: redis
+      # .env에 예전 외부 Redis용 REDIS_PORT가 남아있어도 이 compose의 redis(6379)로 고정해서 쓴다
+      REDIS_PORT: "6379"
       # GOOGLE_STT_CREDENTIALS_PATH는 .env에서 /app/secrets/gcp-stt.json로 지정한다 (아래 volumes와 맞춰야 함)
+    depends_on:
+      redis:
+        condition: service_healthy
     volumes:
       # 서버의 실제 GCP STT 서비스 계정 키 파일을 읽기 전용으로 마운트한다. 이 파일은 저장소에 올리지 않는다.
       - ./secrets/gcp-stt.json:/app/secrets/gcp-stt.json:ro
@@ -88,3 +113,4 @@ volumes:
   tls:
   letsencrypt:
   acme-webroot:
+  redis-data:
