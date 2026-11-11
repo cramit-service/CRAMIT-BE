@@ -2,6 +2,7 @@ package com.cramit.domain.week.repository;
 
 import com.cramit.domain.week.entity.Script;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
 
 import java.util.List;
 
@@ -16,4 +17,8 @@ public interface ScriptRepository extends JpaRepository<Script, Long> {
     List<Script> findByWeekIdOrderBySequenceAsc(Long weekId);
 
     boolean existsByWeekId(Long weekId);
+
+    // 임베딩 백필 스케줄러가 스크립트가 있는 주차를 전부 훑을 때 쓴다.
+    @Query("select distinct s.weekId from Script s")
+    List<Long> findDistinctWeekIds();
 }

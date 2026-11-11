@@ -6,6 +6,7 @@ import com.cramit.domain.ai.GeminiChatBotClient;
 import com.cramit.domain.ai.dto.ChatAnswer;
 import com.cramit.domain.chat.repository.ChatBotRepository;
 import com.cramit.domain.chat.retrieval.KeywordChatContextRetriever;
+import com.cramit.domain.chat.retrieval.ScriptPageLoader;
 import com.cramit.domain.week.entity.Script;
 import com.cramit.domain.week.entity.ScriptDetail;
 import com.cramit.domain.week.repository.ScriptDetailRepository;
@@ -40,7 +41,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 @DataJpaTest
-@Import({ChatBotService.class, ChatBotSessionService.class, KeywordChatContextRetriever.class, JpaAuditingConfig.class})
+@Import({ChatBotService.class, ChatBotSessionService.class, ScriptPageLoader.class, KeywordChatContextRetriever.class, JpaAuditingConfig.class})
 @ActiveProfiles("test")
 class ChatBotServiceTest {
 

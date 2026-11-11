@@ -2,6 +2,7 @@ package com.cramit.domain.stt;
 
 import com.cramit.domain.stt.dto.GroqTranscriptionResponse;
 import com.cramit.domain.summary.SummaryService;
+import com.cramit.domain.week.PageEmbeddingService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.scheduling.annotation.Async;
@@ -17,6 +18,7 @@ public class SttEventListener {
     private final SttService sttService;
     private final GroqSttClient groqSttClient;
     private final SummaryService summaryService;
+    private final PageEmbeddingService pageEmbeddingService;
 
     @Async("taskExecutor")
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
@@ -39,6 +41,13 @@ public class SttEventListener {
             summaryService.requestSummaryAfterStt(weekId);
         } catch (Exception e) {
             log.error("STT 완료 후 요약 시작 실패: weekId={}", weekId, e);
+        }
+
+        // RAG 2단계: 새로 생긴 페이지의 임베딩을 생성한다. 실패해도 백필 스케줄러가 나중에 다시 채운다.
+        try {
+            pageEmbeddingService.generateMissingEmbeddings(weekId);
+        } catch (Exception e) {
+            log.error("STT 완료 후 임베딩 생성 실패: weekId={}", weekId, e);
         }
     }
 }

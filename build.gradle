@@ -38,6 +38,9 @@ dependencies {
 	implementation 'org.flywaydb:flyway-core'
 	implementation 'org.flywaydb:flyway-database-postgresql'
 
+	// pgvector: JDBC로 vector 컬럼에 float[]를 바인딩/파싱하기 위한 공식 헬퍼 (JPA 매핑 없이 JdbcTemplate로 직접 사용)
+	implementation 'com.pgvector:pgvector:0.1.6'
+
 	// Redis
 	implementation 'org.springframework.boot:spring-boot-starter-data-redis'
 

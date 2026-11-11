@@ -17,7 +17,7 @@ import org.springframework.transaction.annotation.Transactional;
 import static org.assertj.core.api.Assertions.assertThat;
 
 @SpringBootTest
-@Import({JpaAuditingConfig.class, KeywordChatContextRetriever.class})
+@Import({JpaAuditingConfig.class, ScriptPageLoader.class, KeywordChatContextRetriever.class})
 @ActiveProfiles("test")
 @Transactional
 class KeywordChatContextRetrieverTest {

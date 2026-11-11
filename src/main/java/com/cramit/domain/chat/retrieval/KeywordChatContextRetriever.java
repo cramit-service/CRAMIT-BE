@@ -1,23 +1,17 @@
 package com.cramit.domain.chat.retrieval;
 
-import com.cramit.domain.week.entity.Script;
-import com.cramit.domain.week.entity.ScriptDetail;
-import com.cramit.domain.week.repository.ScriptDetailRepository;
-import com.cramit.domain.week.repository.ScriptRepository;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Comparator;
-import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
-import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
 /**
- * Script/ScriptDetail(페이지별 스크립트)을 페이지 단위로 묶어 컨텍스트 후보를 만들고,
+ * {@link ScriptPageLoader}로 페이지 단위 컨텍스트 후보를 만들고,
  * 전체 분량이 예산을 넘으면 질문과 키워드가 겹치는 페이지 위주로 추려서 반환한다.
  */
 @Component
@@ -27,12 +21,11 @@ public class KeywordChatContextRetriever implements ChatContextRetriever {
     private static final int CONTEXT_BUDGET_CHARS = 20_000;
     private static final int MAX_PAGES = 5;
 
-    private final ScriptRepository scriptRepository;
-    private final ScriptDetailRepository scriptDetailRepository;
+    private final ScriptPageLoader scriptPageLoader;
 
     @Override
     public List<PageContext> retrieve(Long weekId, String question) {
-        List<PageContext> pages = loadPages(weekId);
+        List<PageContext> pages = scriptPageLoader.loadPages(weekId);
         if (pages.isEmpty()) {
             return List.of();
         }
@@ -174,34 +167,4 @@ public class KeywordChatContextRetriever implements ChatContextRetriever {
         return token;
     }
 
-    private List<PageContext> loadPages(Long weekId) {
-        List<Script> scripts = scriptRepository.findByWeekIdOrderByStartSecAsc(weekId);
-        if (scripts.isEmpty()) {
-            return List.of();
-        }
-
-        List<Long> scriptIds = scripts.stream().map(Script::getScriptId).toList();
-        Map<Long, List<ScriptDetail>> detailsByScriptId = scriptDetailRepository.findByScriptIdInOrderBySequenceAsc(scriptIds)
-                .stream()
-                .collect(Collectors.groupingBy(ScriptDetail::getScriptId));
-
-        // 한 페이지가 여러 구간(Script)으로 나뉘어 있을 수 있어 pageNumber로 다시 묶는다.
-        Map<Integer, List<String>> contentsByPage = new LinkedHashMap<>();
-        Map<Integer, String> titleByPage = new LinkedHashMap<>();
-        for (Script script : scripts) {
-            List<String> contents = detailsByScriptId.getOrDefault(script.getScriptId(), List.of()).stream()
-                    .map(ScriptDetail::getContent)
-                    .filter(content -> !content.isBlank())
-                    .toList();
-            if (contents.isEmpty()) {
-                continue;
-            }
-            contentsByPage.computeIfAbsent(script.getPageNumber(), key -> new ArrayList<>()).addAll(contents);
-            titleByPage.putIfAbsent(script.getPageNumber(), script.getTitle());
-        }
-
-        return contentsByPage.entrySet().stream()
-                .map(entry -> new PageContext(entry.getKey(), titleByPage.get(entry.getKey()), String.join("\n", entry.getValue())))
-                .toList();
-    }
 }
