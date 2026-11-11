@@ -14,6 +14,7 @@ import org.springframework.boot.test.mock.mockito.MockBean;
 import org.junit.jupiter.api.BeforeEach;
 
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.BDDMockito.given;
 
 import com.cramit.domain.chat.dto.ChatBotSessionCreateRequest;
@@ -38,6 +39,7 @@ import org.springframework.test.util.ReflectionTestUtils;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.Mockito.verify;
 
 @DataJpaTest
 @Import({ChatBotService.class, ChatBotSessionService.class, KeywordChatContextRetriever.class, JpaAuditingConfig.class})
@@ -94,6 +96,39 @@ class ChatBotServiceTest {
         assertThat(response.get(0).senderType()).isEqualTo(SenderType.USER);
         assertThat(response.get(0).message()).isEqualTo("메모이제이션이 뭐야?");
         assertThat(response.get(1).senderType()).isEqualTo(SenderType.AI);
+    }
+
+    @Test
+    @DisplayName("선택한 부분이 있으면 질문과 함께 AI에 보내고, 저장되는 질문은 사용자가 입력한 내용 그대로다.")
+    void sendMessageWithSelectedText() {
+        // given
+        Long weekId = saveWeek(MEMBER_ID);
+        Long sessionId = chatBotSessionService.createSession(
+                new ChatBotSessionCreateRequest(weekId, "DP 질문"), MEMBER_ID).chatBotSessionId();
+
+        // when
+        List<ChatMessageResponse> response = chatBotService.sendMessage(
+                sessionId, new ChatMessageRequest("이게 무슨 뜻이야?", "  메모이제이션은 계산 결과를 저장한다  "), MEMBER_ID);
+
+        // then
+        verify(geminiChatBotClient).ask(
+                eq("선택한 부분:\n메모이제이션은 계산 결과를 저장한다\n\n질문: 이게 무슨 뜻이야?"), anyString());
+        assertThat(response.get(0).message()).isEqualTo("이게 무슨 뜻이야?");
+    }
+
+    @Test
+    @DisplayName("선택한 부분이 비어 있으면 일반 질문으로 보낸다.")
+    void sendMessageWithBlankSelectedText() {
+        // given
+        Long weekId = saveWeek(MEMBER_ID);
+        Long sessionId = chatBotSessionService.createSession(
+                new ChatBotSessionCreateRequest(weekId, "DP 질문"), MEMBER_ID).chatBotSessionId();
+
+        // when
+        chatBotService.sendMessage(sessionId, new ChatMessageRequest("메모이제이션이 뭐야?", "   "), MEMBER_ID);
+
+        // then
+        verify(geminiChatBotClient).ask(eq("메모이제이션이 뭐야?"), anyString());
     }
 
     @Test

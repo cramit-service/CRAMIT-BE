@@ -65,11 +65,14 @@ public class ChatBotService {
         }
 
         // 질문과 관련된 페이지만 추려서 context로 쓰고, 후보가 없으면(스크립트 미존재 등) 1차 요약본으로 대체한다.
-        List<PageContext> pages = chatContextRetriever.retrieve(session.getWeekId(), request.message());
+        // 선택한 부분이 있으면 그 내용도 함께 써서 관련 페이지를 찾는다.
+        String searchText = request.hasSelectedText()
+                ? request.message() + " " + request.selectedText()
+                : request.message();
+        List<PageContext> pages = chatContextRetriever.retrieve(session.getWeekId(), searchText);
         String context = pages.isEmpty() ? week.getFirstSummaryMd() : buildContext(pages);
 
-        // AI 응답을 먼저 받고, 성공했을 때만 질문과 답변을 함께 저장한다.
-        ChatAnswer result = geminiChatBotClient.ask(request.message(), context);
+        ChatAnswer result = geminiChatBotClient.ask(buildQuestion(request), context);
 
         ChatMessage userMessage = ChatMessage.builder()
                 .memberId(memberId)
@@ -94,6 +97,13 @@ public class ChatBotService {
                 ChatMessageResponse.from(userMessage),
                 ChatMessageResponse.from(aiMessage)
         );
+    }
+
+    private String buildQuestion(ChatMessageRequest request) {
+        if (!request.hasSelectedText()) {
+            return request.message();
+        }
+        return "선택한 부분:\n" + request.selectedText().strip() + "\n\n질문: " + request.message();
     }
 
     private String buildContext(List<PageContext> pages) {
