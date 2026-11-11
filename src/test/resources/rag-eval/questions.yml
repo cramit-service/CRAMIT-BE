@@ -1,0 +1,9 @@
+# RAG 검색 품질 비교용 질문 세트 (RetrievalQualityComparisonTest에서 사용)
+#
+# 아래는 예시입니다. 실제 DB에 있는 주차(week_id)·실제 스크립트 내용을 보고
+# 질문과 "그 질문에 답하려면 꼭 포함돼야 하는 페이지 번호"를 채워주세요.
+# expectedPages는 하나라도 검색 결과에 포함되면 적중으로 처리합니다.
+questions:
+  - weekId: 1
+    question: "예시 질문입니다. 실제 질문으로 바꿔주세요."
+    expectedPages: [1]
