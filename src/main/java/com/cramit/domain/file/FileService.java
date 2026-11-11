@@ -77,6 +77,8 @@ public class FileService {
     public void validatePdfContent(String fileUrl) {
         validateFileUrl(fileUrl);
         String key = fileUrl.substring((stripTrailingSlash(storageProperties.s3().publicBaseUrl()) + "/").length());
+        // 로그에만 쓴다. key(= fileUrl 유래, 사용자 입력)에 CR/LF가 섞여 있으면 로그 라인을 위조할 수 있어서 이스케이프한다.
+        String logKey = key.replace("\\", "\\\\").replace("\r", "\\r").replace("\n", "\\n");
 
         HeadObjectResponse head;
         try {
@@ -89,11 +91,15 @@ public class FileService {
             throw new BusinessException(ErrorCode.FILE_INVALID_URL);
         } catch (S3Exception e) {
             // 키가 없는 게 아니라 저장소 쪽 장애(5xx 등)인 경우. 사용자 URL 문제가 아니므로 구분해서 기록한다.
-            log.error("PDF 검증 중 S3 headObject 실패. key={}", key, e);
+            log.error("PDF 검증 중 S3 headObject 실패. key={}", logKey, e);
             throw new BusinessException(ErrorCode.INTERNAL_SERVER_ERROR);
         }
         if (head.contentLength() != null && head.contentLength() > MAX_PDF_SIZE_BYTES) {
             throw new BusinessException(ErrorCode.FILE_TOO_LARGE);
+        }
+        // 시그니처 길이보다 작은 파일은 Range 조회가 416(InvalidRange)으로 실패하므로, 조회 전에 형식 오류로 걸러낸다.
+        if (head.contentLength() != null && head.contentLength() < PDF_MAGIC_BYTES.length) {
+            throw new BusinessException(ErrorCode.FILE_INVALID_TYPE);
         }
 
         byte[] header;
@@ -105,7 +111,7 @@ public class FileService {
             header = in.readNBytes(PDF_MAGIC_BYTES.length);
         } catch (IOException | S3Exception e) {
             // headObject로 존재를 이미 확인했으므로, 여기서 나는 오류는 파일 형식이 아니라 읽기/저장소 쪽 문제다.
-            log.error("PDF 검증 중 S3 getObject 실패. key={}", key, e);
+            log.error("PDF 검증 중 S3 getObject 실패. key={}", logKey, e);
             throw new BusinessException(ErrorCode.INTERNAL_SERVER_ERROR);
         }
         if (!Arrays.equals(header, PDF_MAGIC_BYTES)) {

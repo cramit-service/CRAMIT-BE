@@ -97,6 +97,17 @@ class FileServicePdfContentTest {
     }
 
     @Test
+    @DisplayName("시그니처 길이보다 작은 파일은 Range 조회 없이 바로 FILE_INVALID_TYPE")
+    void validatePdfContent_tooSmallToHaveSignature() {
+        when(s3Client.headObject(any(HeadObjectRequest.class)))
+                .thenReturn(HeadObjectResponse.builder().contentLength(3L).build());
+
+        assertThatThrownBy(() -> fileService.validatePdfContent(FILE_URL))
+                .isInstanceOf(BusinessException.class)
+                .extracting("errorCode").isEqualTo(ErrorCode.FILE_INVALID_TYPE);
+    }
+
+    @Test
     @DisplayName("S3 장애(5xx 등)로 조회에 실패하면 URL 문제가 아니라 INTERNAL_SERVER_ERROR")
     void validatePdfContent_s3ServiceFailure() {
         when(s3Client.headObject(any(HeadObjectRequest.class)))
