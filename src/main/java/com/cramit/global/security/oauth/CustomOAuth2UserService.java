@@ -2,6 +2,7 @@ package com.cramit.global.security.oauth;
 
 import com.cramit.domain.member.Member;
 import com.cramit.domain.member.MemberRepository;
+import com.cramit.domain.member.ProvisionalNickname;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
@@ -30,7 +31,7 @@ public class CustomOAuth2UserService extends DefaultOAuth2UserService {
 		Member member = memberRepository
 				.findBySocialProviderAndSocialId(oAuthAttributes.socialProvider(), oAuthAttributes.socialId())
 				.orElseGet(() -> memberRepository.save(Member.ofSocialSignup(
-						oAuthAttributes.nickname(),
+						ProvisionalNickname.generate(oAuthAttributes.socialProvider(), oAuthAttributes.socialId()),
 						oAuthAttributes.socialProvider(),
 						oAuthAttributes.socialId(),
 						oAuthAttributes.profileImageUrl())));
@@ -41,6 +42,7 @@ public class CustomOAuth2UserService extends DefaultOAuth2UserService {
 
 		return new CustomOAuth2User(
 				member.getId(),
+				!member.isOnboardingCompleted(),
 				oAuth2User.getAttributes(),
 				List.of(new SimpleGrantedAuthority("ROLE_USER")));
 	}

@@ -11,12 +11,12 @@ public record MyLectureItem(
         Integer weekCount,
         Integer colorIndex
 ) {
-    public static MyLectureItem from(Lecture lecture) {
+    public static MyLectureItem from(Lecture lecture, int weekCount) {
         return MyLectureItem.builder()
                 .lectureId(lecture.getLectureId())
                 .title(lecture.getTitle())
                 .professorName(lecture.getProfessorName())
-                .weekCount(0) // TODO: Week 완성되면 실제 개수로 교체
+                .weekCount(weekCount)
                 .colorIndex(lecture.getColorIndex())
                 .build();
     }

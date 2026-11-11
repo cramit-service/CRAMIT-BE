@@ -373,4 +373,24 @@ class TodoServiceTest {
                         tuple("복습하기", lectureId, "알고리즘"),
                         tuple("교재 구매", null, null));
     }
+
+    @Test
+    @DisplayName("AI가 만든 todo를 사용자가 수정하면 직접 만든 todo(USER)로 바뀐다.")
+    void updateAiTodoBecomesUserTodo() {
+        // given
+        Todo aiTodo = todoRepository.save(
+                Todo.builder()
+                        .memberId(MEMBER_ID)
+                        .content("AI 계획")
+                        .todoType(TodoType.AI)
+                        .build()
+        );
+        TodoUpdateRequest request = new TodoUpdateRequest(null, "내가 고친 계획", null, null);
+
+        // when
+        todoService.updateTodo(aiTodo.getTodoId(), request, MEMBER_ID);
+
+        // then
+        assertThat(todoRepository.findById(aiTodo.getTodoId()).orElseThrow().getTodoType()).isEqualTo(TodoType.USER);
+    }
 }

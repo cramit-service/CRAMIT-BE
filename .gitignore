@@ -52,11 +52,15 @@ out/
 Thumbs.db
 desktop.ini
 
-# 로컬 환경변수 (application-local.yml.example, .env.example은 커밋 대상)
+# 로컬 환경변수 (application-local.yml.example, .env.example, .env.prod.example은 커밋 대상)
 application-local.yml
 .env
 .env.*
 !.env.example
+!.env.prod.example
+
+# 운영 서버 전용 비밀 파일 (GCP STT 서비스 계정 키 등)
+secrets/
 
 # 암호키 및 인증서 관련 파일
 *.key

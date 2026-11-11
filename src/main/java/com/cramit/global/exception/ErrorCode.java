@@ -21,6 +21,13 @@ public enum ErrorCode {
 	AUTH_PROVIDER_UNAVAILABLE(HttpStatus.SERVICE_UNAVAILABLE, "로그인 서버에 일시적으로 연결할 수 없습니다."),
 	MEMBER_CREATE_FAILED(HttpStatus.INTERNAL_SERVER_ERROR, "일시적인 오류입니다. 잠시 후 다시 시도해주세요."),
 
+	// 온보딩
+	MEMBER_WITHDRAWN(HttpStatus.FORBIDDEN, "탈퇴한 회원입니다."),
+	NICKNAME_DUPLICATED(HttpStatus.CONFLICT, "이미 사용 중인 닉네임입니다."),
+	TERMS_NOT_AGREED(HttpStatus.BAD_REQUEST, "필수 약관에 모두 동의해야 합니다."),
+	PLAN_NOT_FOUND(HttpStatus.BAD_REQUEST, "존재하지 않는 요금제입니다."),
+	ONBOARDING_ALREADY_COMPLETED(HttpStatus.CONFLICT, "이미 온보딩을 완료한 회원입니다."),
+
 	// 강의 생성/공유 (Phase 1, 10)
 	LECTURE_INVALID_INPUT(HttpStatus.BAD_REQUEST, "제목을 입력해주세요."),
 	LECTURE_LIMIT_EXCEEDED(HttpStatus.FORBIDDEN, "생성 가능한 강의 수를 초과했습니다."),
@@ -38,6 +45,7 @@ public enum ErrorCode {
 	UPLOAD_INTERRUPTED(HttpStatus.REQUEST_TIMEOUT, "업로드가 중단되었습니다. 다시 시도해주세요."),
 	AUDIO_INVALID_FORMAT(HttpStatus.UNSUPPORTED_MEDIA_TYPE, "지원하지 않는 오디오 형식입니다."),
 	STT_TIMEOUT(HttpStatus.GATEWAY_TIMEOUT, "음성 변환이 지연되고 있습니다."),
+	SCRIPT_NOT_READY(HttpStatus.UNPROCESSABLE_ENTITY, "아직 스크립트가 생성되지 않았습니다."),
 
 	// AI 요약 (Phase 3)
 	CONTENT_TOO_LONG(HttpStatus.PAYLOAD_TOO_LARGE, "강의 분량이 많아 분할 처리 중입니다."),
@@ -63,6 +71,7 @@ public enum ErrorCode {
 
 	// AI 학습 TODO (Phase 9)
 	INVALID_DDAY(HttpStatus.UNPROCESSABLE_ENTITY, "시험 날짜가 이미 지났습니다."),
+	TODO_GENERATION_FAILED(HttpStatus.BAD_GATEWAY, "학습 계획 생성에 실패했습니다. 다시 시도해주세요."),
 
 	// 시험 일정
 	EXAM_NOT_FOUND(HttpStatus.NOT_FOUND, "시험 일정을 찾을 수 없습니다."),
