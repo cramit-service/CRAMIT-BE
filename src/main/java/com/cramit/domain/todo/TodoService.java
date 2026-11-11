@@ -19,6 +19,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -89,8 +90,11 @@ public class TodoService {
                 .toList();
         Map<Long, Long> lectureIdsByWeek = weekRepository.findAllById(weekIds).stream()
                 .collect(Collectors.toMap(Week::getWeekId, Week::getLectureId));
-        Map<Long, Lecture> lectures = lectureRepository.findByMemberId(memberId).stream()
-                .collect(Collectors.toMap(Lecture::getLectureId, Function.identity()));
+        List<Long> lectureIds = lectureIdsByWeek.values().stream().distinct().toList();
+        Map<Long, Lecture> lectures = lectureIds.isEmpty()
+                ? Collections.emptyMap()
+                : lectureRepository.findByMemberIdAndLectureIdIn(memberId, lectureIds).stream()
+                        .collect(Collectors.toMap(Lecture::getLectureId, Function.identity()));
 
         return todos.stream()
                 .map(todo -> TodoListResponse.of(todo, lectures.get(lectureIdsByWeek.get(todo.getWeekId()))))

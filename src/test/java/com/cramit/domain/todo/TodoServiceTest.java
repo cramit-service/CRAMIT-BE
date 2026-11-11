@@ -360,7 +360,23 @@ class TodoServiceTest {
         // given
         Long weekId = saveWeek();
         Long lectureId = weekRepository.findById(weekId).orElseThrow().getLectureId();
+        Long otherLectureId = lectureRepository.save(
+                Lecture.builder()
+                        .memberId(MEMBER_ID)
+                        .title("운영체제")
+                        .professorName("김교수")
+                        .colorIndex(2)
+                        .build()
+        ).getLectureId();
+        Long otherWeekId = weekRepository.save(
+                Week.builder()
+                        .lectureId(otherLectureId)
+                        .title("1주차")
+                        .weekDate(WEEK_DATE)
+                        .build()
+        ).getWeekId();
         todoService.createTodo(new TodoCreateRequest(weekId, "복습하기", null, null), MEMBER_ID);
+        todoService.createTodo(new TodoCreateRequest(otherWeekId, "과제 제출", null, null), MEMBER_ID);
         todoService.createTodo(new TodoCreateRequest(null, "교재 구매", null, null), MEMBER_ID);
 
         // when
@@ -371,6 +387,7 @@ class TodoServiceTest {
                 .extracting(TodoListResponse::content, TodoListResponse::lectureId, TodoListResponse::lectureName)
                 .containsExactlyInAnyOrder(
                         tuple("복습하기", lectureId, "알고리즘"),
+                        tuple("과제 제출", otherLectureId, "운영체제"),
                         tuple("교재 구매", null, null));
     }
 
