@@ -7,11 +7,21 @@ import com.cramit.global.exception.ErrorCode;
 import com.cramit.global.storage.StorageProperties;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import software.amazon.awssdk.core.ResponseInputStream;
+import software.amazon.awssdk.services.s3.S3Client;
+import software.amazon.awssdk.services.s3.model.GetObjectRequest;
+import software.amazon.awssdk.services.s3.model.GetObjectResponse;
+import software.amazon.awssdk.services.s3.model.HeadObjectRequest;
+import software.amazon.awssdk.services.s3.model.HeadObjectResponse;
 import software.amazon.awssdk.services.s3.model.PutObjectRequest;
+import software.amazon.awssdk.services.s3.model.S3Exception;
 import software.amazon.awssdk.services.s3.presigner.S3Presigner;
 import software.amazon.awssdk.services.s3.presigner.model.PutObjectPresignRequest;
 
+import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.time.Duration;
+import java.util.Arrays;
 import java.util.Locale;
 import java.util.UUID;
 
@@ -20,8 +30,12 @@ import java.util.UUID;
 public class FileService {
 
     private static final Duration UPLOAD_URL_EXPIRATION = Duration.ofMinutes(5);
+    private static final long MAX_PDF_SIZE_BYTES = 50L * 1024 * 1024;
+    // PDF 파일 시그니처("%PDF-"). 확장자만 .pdf로 바꾼 다른 형식의 파일을 걸러낸다.
+    private static final byte[] PDF_MAGIC_BYTES = "%PDF-".getBytes(StandardCharsets.US_ASCII);
 
     private final S3Presigner s3Presigner;
+    private final S3Client s3Client;
     private final StorageProperties storageProperties;
 
     public UploadUrlResponse createUploadUrl(UploadUrlRequest request) {
@@ -52,6 +66,41 @@ public class FileService {
         String allowedPrefix = stripTrailingSlash(storageProperties.s3().publicBaseUrl()) + "/files/";
         if (fileUrl == null || !fileUrl.startsWith(allowedPrefix)) {
             throw new BusinessException(ErrorCode.FILE_INVALID_URL);
+        }
+    }
+
+    // presigned URL로 직접 올라간 파일이라 서버가 업로드 시점엔 내용을 못 본다. 등록 시점에
+    // 실제 용량과 PDF 시그니처를 확인해, 확장자만 바꾼 파일이나 50MB를 넘는 파일을 걸러낸다.
+    public void validatePdfContent(String fileUrl) {
+        validateFileUrl(fileUrl);
+        String key = fileUrl.substring((stripTrailingSlash(storageProperties.s3().publicBaseUrl()) + "/").length());
+
+        HeadObjectResponse head;
+        try {
+            head = s3Client.headObject(HeadObjectRequest.builder()
+                    .bucket(storageProperties.s3().bucket())
+                    .key(key)
+                    .build());
+        } catch (S3Exception e) {
+            // 아직 업로드가 끝나지 않았거나 presigned URL을 쓰지 않고 가짜 fileUrl을 보낸 경우
+            throw new BusinessException(ErrorCode.FILE_INVALID_URL);
+        }
+        if (head.contentLength() != null && head.contentLength() > MAX_PDF_SIZE_BYTES) {
+            throw new BusinessException(ErrorCode.FILE_TOO_LARGE);
+        }
+
+        byte[] header;
+        try (ResponseInputStream<GetObjectResponse> in = s3Client.getObject(GetObjectRequest.builder()
+                .bucket(storageProperties.s3().bucket())
+                .key(key)
+                .range("bytes=0-4")
+                .build())) {
+            header = in.readNBytes(PDF_MAGIC_BYTES.length);
+        } catch (IOException | S3Exception e) {
+            throw new BusinessException(ErrorCode.FILE_INVALID_TYPE);
+        }
+        if (!Arrays.equals(header, PDF_MAGIC_BYTES)) {
+            throw new BusinessException(ErrorCode.FILE_INVALID_TYPE);
         }
     }
 

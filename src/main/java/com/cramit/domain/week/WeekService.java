@@ -70,7 +70,7 @@ public class WeekService {
 
         Long lecturePptId = null;
         if (request.ppt() != null) {
-            fileService.validateFileUrl(request.ppt().fileUrl());
+            fileService.validatePdfContent(request.ppt().fileUrl());
             LecturePpt ppt = LecturePpt.builder()
                     .weekId(week.getWeekId())
                     .fileName(request.ppt().fileName())

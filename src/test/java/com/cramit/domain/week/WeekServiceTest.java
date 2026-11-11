@@ -17,6 +17,7 @@ import com.cramit.domain.week.enums.WeekStatus;
 import com.cramit.domain.week.repository.LectureAudioRepository;
 import com.cramit.domain.week.repository.LecturePptRepository;
 import com.cramit.domain.week.repository.WeekRepository;
+import com.cramit.domain.file.FileService;
 import com.cramit.domain.stt.SttEventListener;
 import com.cramit.domain.week.dto.WeekReviewCountUpdateRequest;
 import com.cramit.domain.week.dto.WeekReviewCountUpdateResponse;
@@ -37,6 +38,7 @@ import java.time.LocalDate;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.Mockito.doThrow;
 
 @SpringBootTest
 @Import({WeekService.class, JpaAuditingConfig.class})
@@ -71,6 +73,10 @@ class WeekServiceTest {
     @MockBean
     private SttEventListener sttEventListener;
 
+    // 실제 S3로 내용을 검증하지 않도록 mock으로 대체한다 (기본은 통과, 개별 테스트에서 실패를 stub).
+    @MockBean
+    private FileService fileService;
+
     @Test
     @DisplayName("주차를 생성하면 PPT/음성과 함께 저장되고 목록에서 조회된다.")
     void createThenGetWeeks() {
@@ -92,6 +98,24 @@ class WeekServiceTest {
         assertThat(weeks).hasSize(1);
         assertThat(weeks.get(0).title()).isEqualTo("1주차");
         assertThat(weeks.get(0).status()).isEqualTo(WeekStatus.BEFORE);
+    }
+
+    @Test
+    @DisplayName("PPT 내용 검증에 실패하면(용량 초과·위조 확장자 등) 주차를 생성할 수 없다.")
+    void createWeek_invalidPptContent() {
+        Long lectureId = saveLecture(MEMBER_ID);
+        WeekCreateRequest request = new WeekCreateRequest(
+                "1주차",
+                WEEK_DATE,
+                new WeekCreateRequest.PptInfo("slide.pdf", "http://localhost:9000/test-bucket/files/ppt/slide.pdf", 1024L),
+                null
+        );
+        doThrow(new BusinessException(ErrorCode.FILE_TOO_LARGE))
+                .when(fileService).validatePdfContent(request.ppt().fileUrl());
+
+        assertThatThrownBy(() -> weekService.createWeek(lectureId, request, MEMBER_ID))
+                .isInstanceOf(BusinessException.class)
+                .extracting("errorCode").isEqualTo(ErrorCode.FILE_TOO_LARGE);
     }
 
     @Test
