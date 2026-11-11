@@ -6,6 +6,7 @@ import com.cramit.global.exception.BusinessException;
 import com.cramit.global.exception.ErrorCode;
 import com.cramit.global.storage.StorageProperties;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import software.amazon.awssdk.core.ResponseInputStream;
 import software.amazon.awssdk.services.s3.S3Client;
@@ -13,6 +14,7 @@ import software.amazon.awssdk.services.s3.model.GetObjectRequest;
 import software.amazon.awssdk.services.s3.model.GetObjectResponse;
 import software.amazon.awssdk.services.s3.model.HeadObjectRequest;
 import software.amazon.awssdk.services.s3.model.HeadObjectResponse;
+import software.amazon.awssdk.services.s3.model.NoSuchKeyException;
 import software.amazon.awssdk.services.s3.model.PutObjectRequest;
 import software.amazon.awssdk.services.s3.model.S3Exception;
 import software.amazon.awssdk.services.s3.presigner.S3Presigner;
@@ -25,6 +27,7 @@ import java.util.Arrays;
 import java.util.Locale;
 import java.util.UUID;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class FileService {
@@ -81,9 +84,13 @@ public class FileService {
                     .bucket(storageProperties.s3().bucket())
                     .key(key)
                     .build());
-        } catch (S3Exception e) {
+        } catch (NoSuchKeyException e) {
             // 아직 업로드가 끝나지 않았거나 presigned URL을 쓰지 않고 가짜 fileUrl을 보낸 경우
             throw new BusinessException(ErrorCode.FILE_INVALID_URL);
+        } catch (S3Exception e) {
+            // 키가 없는 게 아니라 저장소 쪽 장애(5xx 등)인 경우. 사용자 URL 문제가 아니므로 구분해서 기록한다.
+            log.error("PDF 검증 중 S3 headObject 실패. key={}", key, e);
+            throw new BusinessException(ErrorCode.INTERNAL_SERVER_ERROR);
         }
         if (head.contentLength() != null && head.contentLength() > MAX_PDF_SIZE_BYTES) {
             throw new BusinessException(ErrorCode.FILE_TOO_LARGE);
@@ -97,7 +104,9 @@ public class FileService {
                 .build())) {
             header = in.readNBytes(PDF_MAGIC_BYTES.length);
         } catch (IOException | S3Exception e) {
-            throw new BusinessException(ErrorCode.FILE_INVALID_TYPE);
+            // headObject로 존재를 이미 확인했으므로, 여기서 나는 오류는 파일 형식이 아니라 읽기/저장소 쪽 문제다.
+            log.error("PDF 검증 중 S3 getObject 실패. key={}", key, e);
+            throw new BusinessException(ErrorCode.INTERNAL_SERVER_ERROR);
         }
         if (!Arrays.equals(header, PDF_MAGIC_BYTES)) {
             throw new BusinessException(ErrorCode.FILE_INVALID_TYPE);

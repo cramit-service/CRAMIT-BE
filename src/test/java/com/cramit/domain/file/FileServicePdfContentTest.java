@@ -17,6 +17,7 @@ import software.amazon.awssdk.services.s3.model.GetObjectResponse;
 import software.amazon.awssdk.services.s3.model.HeadObjectRequest;
 import software.amazon.awssdk.services.s3.model.HeadObjectResponse;
 import software.amazon.awssdk.services.s3.model.NoSuchKeyException;
+import software.amazon.awssdk.services.s3.model.S3Exception;
 import software.amazon.awssdk.services.s3.presigner.S3Presigner;
 
 import java.io.ByteArrayInputStream;
@@ -93,6 +94,17 @@ class FileServicePdfContentTest {
         assertThatThrownBy(() -> fileService.validatePdfContent(FILE_URL))
                 .isInstanceOf(BusinessException.class)
                 .extracting("errorCode").isEqualTo(ErrorCode.FILE_INVALID_URL);
+    }
+
+    @Test
+    @DisplayName("S3 장애(5xx 등)로 조회에 실패하면 URL 문제가 아니라 INTERNAL_SERVER_ERROR")
+    void validatePdfContent_s3ServiceFailure() {
+        when(s3Client.headObject(any(HeadObjectRequest.class)))
+                .thenThrow(S3Exception.builder().message("service unavailable").statusCode(503).build());
+
+        assertThatThrownBy(() -> fileService.validatePdfContent(FILE_URL))
+                .isInstanceOf(BusinessException.class)
+                .extracting("errorCode").isEqualTo(ErrorCode.INTERNAL_SERVER_ERROR);
     }
 
     @Test
