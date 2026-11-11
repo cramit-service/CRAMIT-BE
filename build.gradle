@@ -66,6 +66,9 @@ dependencies {
 	// API Docs
 	implementation 'org.springdoc:springdoc-openapi-starter-webmvc-ui:2.6.0'
 
+	// PATCH 요청에서 "필드 생략(기존 값 유지)"과 "필드에 null 전송(값 해제)"을 구분하기 위한 래퍼 타입
+	implementation 'org.openapitools:jackson-databind-nullable:0.2.6'
+
 	// Lombok
 	compileOnly 'org.projectlombok:lombok'
 	annotationProcessor 'org.projectlombok:lombok'

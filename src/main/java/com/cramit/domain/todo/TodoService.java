@@ -106,11 +106,14 @@ public class TodoService {
             throw new BusinessException(ErrorCode.TODO_ACCESS_DENIED);
         }
 
-        if (request.weekId() != null){
-           validateWeekOwnership(request.weekId(), memberId);
+        Long weekId = request.weekId().isPresent() ? request.weekId().get() : todo.getWeekId();
+        if (request.weekId().isPresent() && weekId != null) {
+            validateWeekOwnership(weekId, memberId);
         }
+        String memo = request.memo().isPresent() ? request.memo().get() : todo.getMemo();
+        LocalDateTime dueDate = request.dueDate().isPresent() ? request.dueDate().get() : todo.getDueDate();
 
-        todo.update(request.weekId(), request.content(), request.memo(), request.dueDate());
+        todo.update(weekId, request.content(), memo, dueDate);
 
         return new TodoUpdateResponse(todo.getTodoId(), todo.getWeekId());
     }
