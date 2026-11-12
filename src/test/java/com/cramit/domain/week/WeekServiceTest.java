@@ -39,6 +39,7 @@ import java.time.LocalDate;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 @SpringBootTest
@@ -98,6 +99,10 @@ class WeekServiceTest {
         assertThat(created.lecturePptId()).isNotNull();
         assertThat(created.lectureAudioId()).isNotNull();
         assertThat(created.sttStatus()).isEqualTo(SttStatus.PENDING);
+        // 저장된 fileUrl은 클라이언트가 보낸 스테이징 주소가 아니라 finalizePdfUpload가 반환한 최종 주소여야 한다 (#93).
+        assertThat(weekService.getPpt(created.weekId(), MEMBER_ID).fileUrl())
+                .isEqualTo("http://localhost:9000/test-bucket/files/ppt/final.pdf");
+        verify(fileService).deleteStagingPdf(request.ppt().fileUrl());
         assertThat(weeks).hasSize(1);
         assertThat(weeks.get(0).title()).isEqualTo("1주차");
         assertThat(weeks.get(0).status()).isEqualTo(WeekStatus.BEFORE);

@@ -7,12 +7,14 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import software.amazon.awssdk.core.ResponseInputStream;
 import software.amazon.awssdk.http.AbortableInputStream;
 import software.amazon.awssdk.services.s3.S3Client;
 import software.amazon.awssdk.services.s3.model.CopyObjectRequest;
+import software.amazon.awssdk.services.s3.model.DeleteObjectRequest;
 import software.amazon.awssdk.services.s3.model.GetObjectRequest;
 import software.amazon.awssdk.services.s3.model.GetObjectResponse;
 import software.amazon.awssdk.services.s3.model.HeadObjectRequest;
@@ -26,6 +28,8 @@ import java.io.ByteArrayInputStream;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 // S3Presigner는 네트워크 없이 URL만 만들지만, 이 테스트가 다루는 메서드는 실제 S3Client 호출 결과를 흉내 내야
@@ -33,8 +37,11 @@ import static org.mockito.Mockito.when;
 @ExtendWith(MockitoExtension.class)
 class FileServicePdfContentTest {
 
-    private static final String FILE_URL = "http://localhost:9000/test-bucket/files/ppt/slide.pdf";
-    private static final String KEY = "files/ppt/slide.pdf";
+    // finalizePdfUpload/deleteStagingPdf는 스테이징 경로(files/ppt/staging/)만 입력으로 받는다 (#93).
+    private static final String FILE_URL = "http://localhost:9000/test-bucket/files/ppt/staging/slide.pdf";
+    private static final String KEY = "files/ppt/staging/slide.pdf";
+    // 이미 확정된(스테이징이 아닌) PPT 주소 - 이 메서드들의 입력으로 들어오면 거부돼야 한다.
+    private static final String FINAL_PPT_URL = "http://localhost:9000/test-bucket/files/ppt/already-final.pdf";
 
     @Mock
     private S3Presigner s3Presigner;
@@ -67,6 +74,13 @@ class FileServicePdfContentTest {
                 .startsWith("http://localhost:9000/test-bucket/files/ppt/")
                 .endsWith(".pdf")
                 .isNotEqualTo(FILE_URL);
+
+        ArgumentCaptor<CopyObjectRequest> copyRequest = ArgumentCaptor.forClass(CopyObjectRequest.class);
+        verify(s3Client).copyObject(copyRequest.capture());
+        assertThat(copyRequest.getValue().sourceKey()).isEqualTo(KEY);
+        assertThat(copyRequest.getValue().copySourceIfMatch()).isEqualTo("\"etag-1\"");
+        // 스테이징 원본 삭제는 DB 저장이 끝난 뒤 별도로 deleteStagingPdf를 호출해야 한다 (#93).
+        verify(s3Client, never()).deleteObject(any(DeleteObjectRequest.class));
     }
 
     @Test
@@ -81,6 +95,47 @@ class FileServicePdfContentTest {
         assertThatThrownBy(() -> fileService.finalizePdfUpload(FILE_URL))
                 .isInstanceOf(BusinessException.class)
                 .extracting("errorCode").isEqualTo(ErrorCode.FILE_UPLOAD_CONFLICT);
+    }
+
+    @Test
+    @DisplayName("시그니처 확인용 조회 시점에 이미 ETag가 바뀌었으면(TOCTOU) FILE_UPLOAD_CONFLICT")
+    void finalizePdfUpload_etagChangedBeforeSignatureCheck() {
+        when(s3Client.headObject(any(HeadObjectRequest.class)))
+                .thenReturn(HeadObjectResponse.builder().contentLength(1024L).eTag("\"etag-1\"").build());
+        when(s3Client.getObject(any(GetObjectRequest.class)))
+                .thenThrow(S3Exception.builder().message("precondition failed").statusCode(412).build());
+
+        assertThatThrownBy(() -> fileService.finalizePdfUpload(FILE_URL))
+                .isInstanceOf(BusinessException.class)
+                .extracting("errorCode").isEqualTo(ErrorCode.FILE_UPLOAD_CONFLICT);
+    }
+
+    @Test
+    @DisplayName("이미 확정된(스테이징이 아닌) fileUrl이면 S3를 조회하지 않고 바로 FILE_INVALID_URL")
+    void finalizePdfUpload_rejectsAlreadyFinalUrl() {
+        assertThatThrownBy(() -> fileService.finalizePdfUpload(FINAL_PPT_URL))
+                .isInstanceOf(BusinessException.class)
+                .extracting("errorCode").isEqualTo(ErrorCode.FILE_INVALID_URL);
+    }
+
+    @Test
+    @DisplayName("deleteStagingPdf는 스테이징 키를 삭제한다")
+    void deleteStagingPdf_deletesStagingKey() {
+        fileService.deleteStagingPdf(FILE_URL);
+
+        ArgumentCaptor<DeleteObjectRequest> deleteRequest = ArgumentCaptor.forClass(DeleteObjectRequest.class);
+        verify(s3Client).deleteObject(deleteRequest.capture());
+        assertThat(deleteRequest.getValue().key()).isEqualTo(KEY);
+    }
+
+    @Test
+    @DisplayName("deleteStagingPdf도 스테이징이 아닌 fileUrl이면 거부한다")
+    void deleteStagingPdf_rejectsAlreadyFinalUrl() {
+        assertThatThrownBy(() -> fileService.deleteStagingPdf(FINAL_PPT_URL))
+                .isInstanceOf(BusinessException.class)
+                .extracting("errorCode").isEqualTo(ErrorCode.FILE_INVALID_URL);
+
+        verify(s3Client, never()).deleteObject(any(DeleteObjectRequest.class));
     }
 
     @Test
