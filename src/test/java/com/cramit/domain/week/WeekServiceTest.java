@@ -39,6 +39,7 @@ import java.time.LocalDate;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.when;
 
 @SpringBootTest
 @Import({WeekService.class, JpaAuditingConfig.class})
@@ -87,6 +88,8 @@ class WeekServiceTest {
                 new WeekCreateRequest.PptInfo("slide.pdf", "http://localhost:9000/test-bucket/files/ppt/slide.pdf", 1024L),
                 new WeekCreateRequest.AudioInfo("audio.mp3", "http://localhost:9000/test-bucket/files/audio/audio.mp3", 3600L)
         );
+        when(fileService.finalizePdfUpload(request.ppt().fileUrl()))
+                .thenReturn("http://localhost:9000/test-bucket/files/ppt/final.pdf");
 
         WeekCreateResponse created = weekService.createWeek(lectureId, request, MEMBER_ID);
         var weeks = weekService.getWeeks(lectureId, MEMBER_ID);
@@ -111,7 +114,7 @@ class WeekServiceTest {
                 null
         );
         doThrow(new BusinessException(ErrorCode.FILE_TOO_LARGE))
-                .when(fileService).validatePdfContent(request.ppt().fileUrl());
+                .when(fileService).finalizePdfUpload(request.ppt().fileUrl());
 
         assertThatThrownBy(() -> weekService.createWeek(lectureId, request, MEMBER_ID))
                 .isInstanceOf(BusinessException.class)
@@ -154,6 +157,8 @@ class WeekServiceTest {
     @DisplayName("주차를 삭제하면 PPT/오디오와 함께 조회되지 않는다.")
     void deleteWeek() {
         Long lectureId = saveLecture(MEMBER_ID);
+        when(fileService.finalizePdfUpload("http://localhost:9000/test-bucket/files/ppt/slide.pdf"))
+                .thenReturn("http://localhost:9000/test-bucket/files/ppt/final.pdf");
         Long weekId = weekService.createWeek(
                 lectureId,
                 new WeekCreateRequest(
@@ -409,6 +414,8 @@ class WeekServiceTest {
                 new WeekCreateRequest.PptInfo("slide.pdf", "http://localhost:9000/test-bucket/files/ppt/slide.pdf", 1024L),
                 new WeekCreateRequest.AudioInfo("audio.mp3", "http://localhost:9000/test-bucket/files/audio/audio.mp3", 3600L)
         );
+        when(fileService.finalizePdfUpload(request.ppt().fileUrl()))
+                .thenReturn("http://localhost:9000/test-bucket/files/ppt/final.pdf");
         WeekCreateResponse createdWeek = weekService.createWeek(lectureId, request, MEMBER_ID);
 
         lectureService.deleteLecture(lectureId, MEMBER_ID);

@@ -3,7 +3,6 @@ package com.cramit.domain.week;
 import com.cramit.domain.file.FileService;
 import com.cramit.domain.lecture.Lecture;
 import com.cramit.domain.lecture.LectureRepository;
-import com.cramit.domain.stt.SttRequestedEvent;
 import com.cramit.domain.week.dto.WeekAudioResponse;
 import com.cramit.domain.week.dto.WeekCreateRequest;
 import com.cramit.domain.week.dto.WeekCreateResponse;
@@ -31,7 +30,6 @@ import com.cramit.domain.week.repository.WeekRepository;
 import com.cramit.global.exception.BusinessException;
 import com.cramit.global.exception.ErrorCode;
 import lombok.RequiredArgsConstructor;
-import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -50,9 +48,11 @@ public class WeekService {
     private final ScriptRepository scriptRepository;
     private final ScriptDetailRepository scriptDetailRepository;
     private final FileService fileService;
-    private final ApplicationEventPublisher eventPublisher;
+    private final WeekCreationWriter weekCreationWriter;
 
-    @Transactional
+    // S3 검증(finalizePdfUpload, 네트워크 I/O)을 DB 저장과 같은 트랜잭션에 묶으면 S3가 느려지는 동안
+    // DB 커넥션을 붙잡고 대기하게 된다. 그래서 검증을 먼저 끝내고, DB 저장은 WeekCreationWriter의
+    // 별도 트랜잭션으로 넘긴다(같은 클래스 메서드를 호출하면 self-invocation이라 @Transactional이 안 걸림).
     public WeekCreateResponse createWeek(Long lectureId, WeekCreateRequest request, Long memberId) {
         Lecture lecture = lectureRepository.findById(lectureId)
                 .orElseThrow(()-> new BusinessException(ErrorCode.ENTITY_NOT_FOUND));
@@ -61,43 +61,13 @@ public class WeekService {
             throw new BusinessException(ErrorCode.LECTURE_ACCESS_DENIED);
         }
 
-        Week week = Week.builder()
-                .lectureId(lectureId)
-                .title(request.title())
-                .weekDate(request.weekDate())
-                .build();
-        weekRepository.save(week);
-
-        Long lecturePptId = null;
-        if (request.ppt() != null) {
-            fileService.validatePdfContent(request.ppt().fileUrl());
-            LecturePpt ppt = LecturePpt.builder()
-                    .weekId(week.getWeekId())
-                    .fileName(request.ppt().fileName())
-                    .fileUrl(request.ppt().fileUrl())
-                    .fileSize(request.ppt().fileSize())
-                    .build();
-            lecturePptRepository.save(ppt);
-            lecturePptId = ppt.getLecturePptId();
-        }
-
-        Long lectureAudioId = null;
-        SttStatus sttStatus = null;
+        // 검증을 통과한 내용만 불변 키로 복사한 최종 fileUrl을 등록한다 (#93, TOCTOU 방지).
+        String finalPptFileUrl = request.ppt() != null ? fileService.finalizePdfUpload(request.ppt().fileUrl()) : null;
         if (request.audio() != null) {
             fileService.validateFileUrl(request.audio().fileUrl());
-            LectureAudio audio = LectureAudio.builder()
-                    .weekId(week.getWeekId())
-                    .fileName(request.audio().fileName())
-                    .fileUrl(request.audio().fileUrl())
-                    .durationSec(request.audio().durationSec())
-                    .build();
-            lectureAudioRepository.save(audio);
-            lectureAudioId = audio.getLectureAudioId();
-            sttStatus = audio.getSttStatus();
-            eventPublisher.publishEvent(new SttRequestedEvent(lectureAudioId));
         }
 
-        return WeekCreateResponse.of(week, lecturePptId, lectureAudioId, sttStatus);
+        return weekCreationWriter.write(lectureId, request, finalPptFileUrl);
     }
 
     // 한 강의당 주차 개수가 제한적(보통 학기 기준 15주 안팎)이라 페이지네이션 미적용

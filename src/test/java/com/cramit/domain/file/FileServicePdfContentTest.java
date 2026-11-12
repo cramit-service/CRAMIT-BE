@@ -12,6 +12,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import software.amazon.awssdk.core.ResponseInputStream;
 import software.amazon.awssdk.http.AbortableInputStream;
 import software.amazon.awssdk.services.s3.S3Client;
+import software.amazon.awssdk.services.s3.model.CopyObjectRequest;
 import software.amazon.awssdk.services.s3.model.GetObjectRequest;
 import software.amazon.awssdk.services.s3.model.GetObjectResponse;
 import software.amazon.awssdk.services.s3.model.HeadObjectRequest;
@@ -22,6 +23,7 @@ import software.amazon.awssdk.services.s3.presigner.S3Presigner;
 
 import java.io.ByteArrayInputStream;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.when;
@@ -53,75 +55,94 @@ class FileServicePdfContentTest {
     }
 
     @Test
-    @DisplayName("PDF 시그니처와 50MB 이하 용량이면 통과한다")
-    void validatePdfContent_valid() {
+    @DisplayName("PDF 시그니처와 50MB 이하 용량이면 검증된 ETag로 최종 키에 복사하고 그 fileUrl을 반환한다")
+    void finalizePdfUpload_valid() {
         when(s3Client.headObject(any(HeadObjectRequest.class)))
-                .thenReturn(HeadObjectResponse.builder().contentLength(1024L).build());
+                .thenReturn(HeadObjectResponse.builder().contentLength(1024L).eTag("\"etag-1\"").build());
         when(s3Client.getObject(any(GetObjectRequest.class))).thenReturn(pdfBodyStream());
 
-        fileService.validatePdfContent(FILE_URL);
+        String finalFileUrl = fileService.finalizePdfUpload(FILE_URL);
+
+        assertThat(finalFileUrl)
+                .startsWith("http://localhost:9000/test-bucket/files/ppt/")
+                .endsWith(".pdf")
+                .isNotEqualTo(FILE_URL);
+    }
+
+    @Test
+    @DisplayName("검증 시점의 ETag와 다르면(TOCTOU) 복사가 거부되어 FILE_UPLOAD_CONFLICT")
+    void finalizePdfUpload_etagChangedBeforeCopy() {
+        when(s3Client.headObject(any(HeadObjectRequest.class)))
+                .thenReturn(HeadObjectResponse.builder().contentLength(1024L).eTag("\"etag-1\"").build());
+        when(s3Client.getObject(any(GetObjectRequest.class))).thenReturn(pdfBodyStream());
+        when(s3Client.copyObject(any(CopyObjectRequest.class)))
+                .thenThrow(S3Exception.builder().message("precondition failed").statusCode(412).build());
+
+        assertThatThrownBy(() -> fileService.finalizePdfUpload(FILE_URL))
+                .isInstanceOf(BusinessException.class)
+                .extracting("errorCode").isEqualTo(ErrorCode.FILE_UPLOAD_CONFLICT);
     }
 
     @Test
     @DisplayName("50MB를 넘으면 FILE_TOO_LARGE")
-    void validatePdfContent_tooLarge() {
+    void finalizePdfUpload_tooLarge() {
         when(s3Client.headObject(any(HeadObjectRequest.class)))
                 .thenReturn(HeadObjectResponse.builder().contentLength(51L * 1024 * 1024).build());
 
-        assertThatThrownBy(() -> fileService.validatePdfContent(FILE_URL))
+        assertThatThrownBy(() -> fileService.finalizePdfUpload(FILE_URL))
                 .isInstanceOf(BusinessException.class)
                 .extracting("errorCode").isEqualTo(ErrorCode.FILE_TOO_LARGE);
     }
 
     @Test
     @DisplayName("PDF 시그니처가 아니면(확장자만 바꾼 파일) FILE_INVALID_TYPE")
-    void validatePdfContent_notPdf() {
+    void finalizePdfUpload_notPdf() {
         when(s3Client.headObject(any(HeadObjectRequest.class)))
                 .thenReturn(HeadObjectResponse.builder().contentLength(1024L).build());
         when(s3Client.getObject(any(GetObjectRequest.class))).thenReturn(bodyStream(new byte[]{'P', 'K', 3, 4, 0}));
 
-        assertThatThrownBy(() -> fileService.validatePdfContent(FILE_URL))
+        assertThatThrownBy(() -> fileService.finalizePdfUpload(FILE_URL))
                 .isInstanceOf(BusinessException.class)
                 .extracting("errorCode").isEqualTo(ErrorCode.FILE_INVALID_TYPE);
     }
 
     @Test
     @DisplayName("S3에 실제로 업로드되지 않은 키면 FILE_INVALID_URL")
-    void validatePdfContent_notUploaded() {
+    void finalizePdfUpload_notUploaded() {
         when(s3Client.headObject(any(HeadObjectRequest.class)))
                 .thenThrow(NoSuchKeyException.builder().message("no such key").build());
 
-        assertThatThrownBy(() -> fileService.validatePdfContent(FILE_URL))
+        assertThatThrownBy(() -> fileService.finalizePdfUpload(FILE_URL))
                 .isInstanceOf(BusinessException.class)
                 .extracting("errorCode").isEqualTo(ErrorCode.FILE_INVALID_URL);
     }
 
     @Test
     @DisplayName("시그니처 길이보다 작은 파일은 Range 조회 없이 바로 FILE_INVALID_TYPE")
-    void validatePdfContent_tooSmallToHaveSignature() {
+    void finalizePdfUpload_tooSmallToHaveSignature() {
         when(s3Client.headObject(any(HeadObjectRequest.class)))
                 .thenReturn(HeadObjectResponse.builder().contentLength(3L).build());
 
-        assertThatThrownBy(() -> fileService.validatePdfContent(FILE_URL))
+        assertThatThrownBy(() -> fileService.finalizePdfUpload(FILE_URL))
                 .isInstanceOf(BusinessException.class)
                 .extracting("errorCode").isEqualTo(ErrorCode.FILE_INVALID_TYPE);
     }
 
     @Test
     @DisplayName("S3 장애(5xx 등)로 조회에 실패하면 URL 문제가 아니라 INTERNAL_SERVER_ERROR")
-    void validatePdfContent_s3ServiceFailure() {
+    void finalizePdfUpload_s3ServiceFailure() {
         when(s3Client.headObject(any(HeadObjectRequest.class)))
                 .thenThrow(S3Exception.builder().message("service unavailable").statusCode(503).build());
 
-        assertThatThrownBy(() -> fileService.validatePdfContent(FILE_URL))
+        assertThatThrownBy(() -> fileService.finalizePdfUpload(FILE_URL))
                 .isInstanceOf(BusinessException.class)
                 .extracting("errorCode").isEqualTo(ErrorCode.INTERNAL_SERVER_ERROR);
     }
 
     @Test
     @DisplayName("저장소 업로드 경로가 아닌 fileUrl이면 S3를 조회하지 않고 바로 FILE_INVALID_URL")
-    void validatePdfContent_invalidUrl() {
-        assertThatThrownBy(() -> fileService.validatePdfContent("http://169.254.169.254/files/ppt/slide.pdf"))
+    void finalizePdfUpload_invalidUrl() {
+        assertThatThrownBy(() -> fileService.finalizePdfUpload("http://169.254.169.254/files/ppt/slide.pdf"))
                 .isInstanceOf(BusinessException.class)
                 .extracting("errorCode").isEqualTo(ErrorCode.FILE_INVALID_URL);
     }
