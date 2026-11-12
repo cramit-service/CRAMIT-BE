@@ -27,10 +27,10 @@ class GeminiTodoClientTest {
         // given
         RestClient.Builder builder = RestClient.builder();
         MockRestServiceServer server = MockRestServiceServer.bindTo(builder).build();
-        GeminiTodoClient client = new GeminiTodoClient(builder.build());
+        GeminiTodoClient client = new GeminiTodoClient(geminiClient(builder));
 
         String text = "{\\\"todos\\\": [{\\\"weekId\\\": 3, \\\"content\\\": \\\"정렬 정리\\\", \\\"dueDate\\\": \\\"2026-11-10\\\", \\\"memo\\\": \\\"복습\\\"}]}";
-        server.expect(requestToUriTemplate("/v1beta/models/{model}:generateContent", GeminiTodoClient.MODEL))
+        server.expect(requestToUriTemplate("/v1beta/models/{model}:generateContent", GeminiClient.MODEL))
                 .andExpect(method(HttpMethod.POST))
                 .andExpect(jsonPath("$.generationConfig.responseSchema.required[0]").value("todos"))
                 .andRespond(withSuccess(responseWithText(text), MediaType.APPLICATION_JSON));
@@ -49,9 +49,9 @@ class GeminiTodoClientTest {
         // given
         RestClient.Builder builder = RestClient.builder();
         MockRestServiceServer server = MockRestServiceServer.bindTo(builder).build();
-        GeminiTodoClient client = new GeminiTodoClient(builder.build());
+        GeminiTodoClient client = new GeminiTodoClient(geminiClient(builder));
 
-        server.expect(requestToUriTemplate("/v1beta/models/{model}:generateContent", GeminiTodoClient.MODEL))
+        server.expect(requestToUriTemplate("/v1beta/models/{model}:generateContent", GeminiClient.MODEL))
                 .andRespond(withSuccess(responseWithText("이건 JSON이 아닙니다"), MediaType.APPLICATION_JSON));
 
         // when & then
@@ -68,5 +68,10 @@ class GeminiTodoClientTest {
                   ]
                 }
                 """.formatted(text);
+    }
+
+    private GeminiClient geminiClient(RestClient.Builder builder) {
+        RestClient restClient = builder.build();
+        return new GeminiClient(restClient, restClient);
     }
 }
