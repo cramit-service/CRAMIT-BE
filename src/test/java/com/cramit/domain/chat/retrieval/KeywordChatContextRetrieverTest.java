@@ -17,15 +17,17 @@ import org.springframework.transaction.annotation.Transactional;
 import static org.assertj.core.api.Assertions.assertThat;
 
 @SpringBootTest
-@Import({JpaAuditingConfig.class, KeywordChatContextRetriever.class})
+@Import({JpaAuditingConfig.class, ScriptPageLoader.class, KeywordChatContextRetriever.class})
 @ActiveProfiles("test")
 @Transactional
 class KeywordChatContextRetrieverTest {
 
     private static final Long WEEK_ID = 1L;
 
+    // ChatContextRetriever 구현체가 PgVectorChatContextRetriever(@Primary)까지 두 개가 돼서,
+    // 이 테스트가 보려는 키워드 기반 구현을 명시하려고 구체 타입으로 주입받는다.
     @Autowired
-    private ChatContextRetriever chatContextRetriever;
+    private KeywordChatContextRetriever chatContextRetriever;
 
     @Autowired
     private ScriptRepository scriptRepository;

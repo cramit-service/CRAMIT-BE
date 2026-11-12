@@ -77,7 +77,10 @@ public enum ErrorCode {
 	EXAM_NOT_FOUND(HttpStatus.NOT_FOUND, "시험 일정을 찾을 수 없습니다."),
 
 	// TODO 관리
-	TODO_ACCESS_DENIED(HttpStatus.FORBIDDEN, "접근 권한이 없는 할 일입니다.");
+	TODO_ACCESS_DENIED(HttpStatus.FORBIDDEN, "접근 권한이 없는 할 일입니다."),
+
+	// 챗봇 RAG 2단계 (임베딩)
+	EMBEDDING_GENERATION_FAILED(HttpStatus.BAD_GATEWAY, "임베딩 생성에 실패했습니다. 잠시 후 다시 시도해주세요.");
 
 	private final HttpStatus status;
 	private final String message;
