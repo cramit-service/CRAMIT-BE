@@ -7,6 +7,8 @@ import com.cramit.domain.summary.dto.SummaryStatusResponse;
 import com.cramit.domain.summary.entity.Summary;
 import com.cramit.domain.summary.repository.SummaryRepository;
 import com.cramit.domain.week.entity.Week;
+import com.cramit.domain.week.repository.LectureAudioRepository;
+import com.cramit.domain.week.repository.LecturePptRepository;
 import com.cramit.domain.week.repository.ScriptRepository;
 import com.cramit.domain.week.repository.WeekRepository;
 import com.cramit.global.exception.BusinessException;
@@ -34,6 +36,8 @@ public class SummaryService {
     private final WeekRepository weekRepository;
     private final LectureRepository lectureRepository;
     private final ScriptRepository scriptRepository;
+    private final LectureAudioRepository lectureAudioRepository;
+    private final LecturePptRepository lecturePptRepository;
     private final SummaryGenerator summaryGenerator;
 
     /**
@@ -67,7 +71,10 @@ public class SummaryService {
     }
 
     private SummaryStatusResponse startGeneration(Long weekId, Long memberId) {
-        // TODO: PDF 텍스트 저장이 구현되면 PDF만 있는 경우도 요약 대상에 포함
+        if (!scriptRepository.existsByWeekId(weekId)) {
+            throw new BusinessException(noScriptReason(weekId));
+        }
+
         if (!scriptRepository.existsByWeekId(weekId)) {
             throw new BusinessException(ErrorCode.NO_CONTEXT);
         }
@@ -89,6 +96,17 @@ public class SummaryService {
         startGenerationAfterCommit(summary.getSummaryId());
 
         return SummaryStatusResponse.from(summary);
+    }
+
+    // 요약은 음성 스크립트가 있어야 만들 수 있다. 스크립트가 없을 때 프론트가 안내를 구분할 수 있도록 이유를 나눈다.
+    private ErrorCode noScriptReason(Long weekId) {
+        if (lectureAudioRepository.existsByWeekId(weekId)) {
+            return ErrorCode.SCRIPT_NOT_READY;       // 음성은 있지만 STT가 아직 끝나지 않음
+        }
+        if (lecturePptRepository.existsByWeekId(weekId)) {
+            return ErrorCode.SUMMARY_AUDIO_REQUIRED; // PDF만 있고 음성이 없음
+        }
+        return ErrorCode.NO_CONTEXT;                 // 자료가 하나도 없음
     }
 
     // 생성 요청 이력이 없으면 404 대신 NOT_STARTED를 돌려줘 프론트가 에러 처리 없이 폴링할 수 있게 한다.

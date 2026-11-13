@@ -6,8 +6,12 @@ import com.cramit.domain.summary.dto.SummaryResponse;
 import com.cramit.domain.summary.dto.SummaryStatusResponse;
 import com.cramit.domain.summary.entity.Summary;
 import com.cramit.domain.summary.repository.SummaryRepository;
+import com.cramit.domain.week.entity.LectureAudio;
+import com.cramit.domain.week.entity.LecturePpt;
 import com.cramit.domain.week.entity.Script;
 import com.cramit.domain.week.entity.Week;
+import com.cramit.domain.week.repository.LectureAudioRepository;
+import com.cramit.domain.week.repository.LecturePptRepository;
 import com.cramit.domain.week.repository.ScriptRepository;
 import com.cramit.domain.week.repository.WeekRepository;
 import com.cramit.global.async.AsyncJobStatus;
@@ -48,6 +52,12 @@ class SummaryServiceTest {
 
     @Autowired
     private ScriptRepository scriptRepository;
+
+    @Autowired
+    private LectureAudioRepository lectureAudioRepository;
+
+    @Autowired
+    private LecturePptRepository lecturePptRepository;
 
     @Autowired
     private WeekRepository weekRepository;
@@ -136,6 +146,45 @@ class SummaryServiceTest {
         assertThatThrownBy(() -> summaryService.requestSummary(weekId, MEMBER_ID))
                 .isInstanceOfSatisfying(BusinessException.class, ex ->
                         assertThat(ex.getErrorCode()).isEqualTo(ErrorCode.LECTURE_ACCESS_DENIED));
+    }
+
+    @Test
+    @DisplayName("PDF만 있고 음성이 없는 주차는 음성이 필요하다고 안내한다.")
+    void requestSummaryWithOnlyPdf() {
+        // given
+        Long weekId = saveWeek(MEMBER_ID);
+        lecturePptRepository.save(LecturePpt.builder()
+                .weekId(weekId)
+                .fileName("1주차.pdf")
+                .fileUrl("https://example.com/1주차.pdf")
+                .build());
+
+        // when & then
+        assertThatThrownBy(() -> summaryService.requestSummary(weekId, MEMBER_ID))
+                .isInstanceOfSatisfying(BusinessException.class, ex ->
+                        assertThat(ex.getErrorCode()).isEqualTo(ErrorCode.SUMMARY_AUDIO_REQUIRED));
+    }
+
+    @Test
+    @DisplayName("음성은 있지만 STT가 끝나지 않은 주차는 스크립트가 아직 없다고 안내한다.")
+    void requestSummaryBeforeSttCompleted() {
+        // given
+        Long weekId = saveWeek(MEMBER_ID);
+        lectureAudioRepository.save(LectureAudio.builder()
+                .weekId(weekId)
+                .fileName("1주차.m4a")
+                .fileUrl("https://example.com/1주차.m4a")
+                .build());
+        lecturePptRepository.save(LecturePpt.builder()
+                .weekId(weekId)
+                .fileName("1주차.pdf")
+                .fileUrl("https://example.com/1주차.pdf")
+                .build());
+
+        // when & then
+        assertThatThrownBy(() -> summaryService.requestSummary(weekId, MEMBER_ID))
+                .isInstanceOfSatisfying(BusinessException.class, ex ->
+                        assertThat(ex.getErrorCode()).isEqualTo(ErrorCode.SCRIPT_NOT_READY));
     }
 
     @Test

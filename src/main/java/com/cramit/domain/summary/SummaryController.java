@@ -40,6 +40,10 @@ public class SummaryController {
             @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "존재하지 않는 주차 (ENTITY_NOT_FOUND) 또는 요약할 스크립트 없음 (NO_CONTEXT)",
                     content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE, schema = @Schema(implementation = ErrorResponse.class))),
             @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "409", description = "이미 생성된 요약본이 있음 (SUMMARY_ALREADY_EXISTS)",
+                    content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE, schema = @Schema(implementation = ErrorResponse.class))),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "409", description = "이미 생성된 요약본이 있음 (SUMMARY_ALREADY_EXISTS)",
+                    content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE, schema = @Schema(implementation = ErrorResponse.class))),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "422", description = "음성은 있지만 STT가 끝나지 않음 (SCRIPT_NOT_READY) 또는 PDF만 있고 음성이 없음 (SUMMARY_AUDIO_REQUIRED)",
                     content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE, schema = @Schema(implementation = ErrorResponse.class)))
     })
     @PostMapping("/api/weeks/{weekId}/summary")
