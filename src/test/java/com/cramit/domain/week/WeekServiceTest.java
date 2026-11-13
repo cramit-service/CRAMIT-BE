@@ -20,6 +20,7 @@ import com.cramit.domain.week.repository.WeekRepository;
 import com.cramit.domain.stt.SttEventListener;
 import com.cramit.domain.week.dto.WeekReviewCountUpdateRequest;
 import com.cramit.domain.week.dto.WeekReviewCountUpdateResponse;
+import org.junit.jupiter.api.BeforeEach;
 import org.springframework.boot.test.mock.mockito.MockBean;
 import com.cramit.global.config.JpaAuditingConfig;
 import com.cramit.global.exception.BusinessException;
@@ -32,11 +33,16 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.context.annotation.Import;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.transaction.annotation.Transactional;
+import software.amazon.awssdk.services.s3.S3Client;
+import software.amazon.awssdk.services.s3.model.HeadObjectRequest;
+import software.amazon.awssdk.services.s3.model.HeadObjectResponse;
 
 import java.time.LocalDate;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.BDDMockito.given;
 
 @SpringBootTest
 @Import({WeekService.class, JpaAuditingConfig.class})
@@ -70,6 +76,16 @@ class WeekServiceTest {
 
     @MockBean
     private SttEventListener sttEventListener;
+
+    // 주차에 파일을 등록할 때 저장소에 업로드가 끝났는지 확인하므로, 업로드된 것으로 응답한다.
+    @MockBean
+    private S3Client s3Client;
+
+    @BeforeEach
+    void uploadedFilesExist() {
+        given(s3Client.headObject(any(HeadObjectRequest.class)))
+                .willReturn(HeadObjectResponse.builder().contentLength(1024L).build());
+    }
 
     @Test
     @DisplayName("주차를 생성하면 PPT/음성과 함께 저장되고 목록에서 조회된다.")

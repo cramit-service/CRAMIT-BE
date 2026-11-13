@@ -1,6 +1,7 @@
 package com.cramit.domain.week;
 
 import com.cramit.domain.file.FileService;
+import com.cramit.domain.file.enums.FileType;
 import com.cramit.domain.lecture.Lecture;
 import com.cramit.domain.lecture.LectureRepository;
 import com.cramit.domain.stt.SttRequestedEvent;
@@ -70,7 +71,7 @@ public class WeekService {
 
         Long lecturePptId = null;
         if (request.ppt() != null) {
-            fileService.validateFileUrl(request.ppt().fileUrl());
+            fileService.verifyUploaded(request.ppt().fileUrl(), FileType.PPT);
             LecturePpt ppt = LecturePpt.builder()
                     .weekId(week.getWeekId())
                     .fileName(request.ppt().fileName())
@@ -84,7 +85,7 @@ public class WeekService {
         Long lectureAudioId = null;
         SttStatus sttStatus = null;
         if (request.audio() != null) {
-            fileService.validateFileUrl(request.audio().fileUrl());
+            fileService.verifyUploaded(request.audio().fileUrl(), FileType.AUDIO);
             LectureAudio audio = LectureAudio.builder()
                     .weekId(week.getWeekId())
                     .fileName(request.audio().fileName())
@@ -108,7 +109,7 @@ public class WeekService {
 
         if (!lecture.isOwnedBy(memberId)) {
             throw new BusinessException(ErrorCode.LECTURE_ACCESS_DENIED);
-        } // TODO: MemberLecture 도메인 완성되면 공유받은 회원도 접근 가능하도록 조건 추가
+        }
 
         List<Week> weeks = weekRepository.findByLectureIdOrderByWeekDateDesc(lectureId);
 
