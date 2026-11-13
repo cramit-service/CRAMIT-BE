@@ -24,9 +24,9 @@ class GeminiSummaryClientTest {
         // given
         RestClient.Builder builder = RestClient.builder();
         MockRestServiceServer server = MockRestServiceServer.bindTo(builder).build();
-        GeminiSummaryClient client = new GeminiSummaryClient(builder.build());
+        GeminiSummaryClient client = new GeminiSummaryClient(geminiClient(builder));
 
-        server.expect(requestToUriTemplate("/v1beta/models/{model}:generateContent", GeminiSummaryClient.MODEL))
+        server.expect(requestToUriTemplate("/v1beta/models/{model}:generateContent", GeminiClient.MODEL))
                 .andExpect(method(HttpMethod.POST))
                 .andExpect(jsonPath("$.generationConfig.responseSchema.required[0]").value("summary"))
                 .andRespond(withSuccess(responseWithText("{\\\"summary\\\": \\\"## 정렬 (p.3)\\\"}"), MediaType.APPLICATION_JSON));
@@ -45,9 +45,9 @@ class GeminiSummaryClientTest {
         // given
         RestClient.Builder builder = RestClient.builder();
         MockRestServiceServer server = MockRestServiceServer.bindTo(builder).build();
-        GeminiSummaryClient client = new GeminiSummaryClient(builder.build());
+        GeminiSummaryClient client = new GeminiSummaryClient(geminiClient(builder));
 
-        server.expect(requestToUriTemplate("/v1beta/models/{model}:generateContent", GeminiSummaryClient.MODEL))
+        server.expect(requestToUriTemplate("/v1beta/models/{model}:generateContent", GeminiClient.MODEL))
                 .andRespond(withSuccess(responseWithText("이건 JSON이 아닙니다"), MediaType.APPLICATION_JSON));
 
         // when & then
@@ -64,5 +64,10 @@ class GeminiSummaryClientTest {
                   ]
                 }
                 """.formatted(text);
+    }
+
+    private GeminiClient geminiClient(RestClient.Builder builder) {
+        RestClient restClient = builder.build();
+        return new GeminiClient(restClient, restClient);
     }
 }

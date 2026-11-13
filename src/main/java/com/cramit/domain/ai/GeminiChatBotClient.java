@@ -5,26 +5,16 @@ import com.cramit.domain.ai.dto.GeminiRequest;
 import com.cramit.domain.ai.dto.GeminiResponse;
 import com.cramit.global.exception.BusinessException;
 import com.cramit.global.exception.ErrorCode;
-import io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker;
-import io.github.resilience4j.retry.annotation.Retry;
 import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
-import org.springframework.web.client.HttpClientErrorException;
-import org.springframework.web.client.ResourceAccessException;
-import org.springframework.web.client.RestClient;
 
-import java.net.SocketTimeoutException;
-import java.net.http.HttpTimeoutException;
+
 import java.util.List;
 import java.util.Map;
 
-@Slf4j
 @Component
 @RequiredArgsConstructor
 public class GeminiChatBotClient {
-
-    public static final String MODEL = "gemini-3.6-flash";
 
     private static final Map<String, Object> CHAT_SCHEMA = Map.of(
             "type", "OBJECT",
@@ -35,46 +25,19 @@ public class GeminiChatBotClient {
             "required", List.of("answer")
     );
 
-    private final RestClient geminiRestClient;
+    private final GeminiClient geminiClient;
 
-    @Retry(name = "gemini", fallbackMethod = "fallback")
-    @CircuitBreaker(name = "gemini")
     public ChatAnswer ask(String question, String context) {
         String userText = "context: " + context + "\n\nquestion: " + question;
         GeminiRequest request = GeminiRequest.of(SYSTEM_PROMPT, userText, CHAT_SCHEMA);
-
-        GeminiResponse response = geminiRestClient.post()
-                .uri("/v1beta/models/{model}:generateContent", MODEL)
-                .body(request)
-                .retrieve()
-                .body(GeminiResponse.class);
+        GeminiResponse response = geminiClient.generate(
+                request, GeminiClient.Timeout.DEFAULT, ErrorCode.CHATBOT_RESPONSE_ERROR);
 
         if (response == null) {
             throw new BusinessException(ErrorCode.CHATBOT_RESPONSE_ERROR);
         }
 
         return response.extractChatAnswer();
-    }
-
-    // CircuitBreaker가 open되거나 재시도 소진 시 호출되는 fallback
-    private ChatAnswer fallback(String question, String context, Throwable ex) {
-        log.warn("Gemini 호출 실패: {}", ex.getMessage(), ex);
-        throw new BusinessException(toErrorCode(ex), ex);
-    }
-
-    private ErrorCode toErrorCode(Throwable ex) {
-        if (ex instanceof BusinessException be) {
-            return be.getErrorCode();
-        }
-        if (ex instanceof HttpClientErrorException.TooManyRequests) {
-            return ErrorCode.AI_RATE_LIMITED;
-        }
-        if (ex instanceof ResourceAccessException
-                && (ex.getCause() instanceof HttpTimeoutException
-                || ex.getCause() instanceof SocketTimeoutException)) {
-            return ErrorCode.AI_TIMEOUT;
-        }
-        return ErrorCode.CHATBOT_RESPONSE_ERROR;
     }
 
     private static final String SYSTEM_PROMPT = """

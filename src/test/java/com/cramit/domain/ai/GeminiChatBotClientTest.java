@@ -25,7 +25,7 @@ class GeminiChatBotClientTest {
         // given
         RestClient.Builder builder = RestClient.builder();
         MockRestServiceServer server = MockRestServiceServer.bindTo(builder).build();
-        GeminiChatBotClient client = new GeminiChatBotClient(builder.build());
+        GeminiChatBotClient client = new GeminiChatBotClient(geminiClient(builder));
 
         String responseBody = """
                 {
@@ -41,7 +41,7 @@ class GeminiChatBotClientTest {
                 }
                 """;
 
-        server.expect(requestToUriTemplate("/v1beta/models/{model}:generateContent", GeminiChatBotClient.MODEL))
+        server.expect(requestToUriTemplate("/v1beta/models/{model}:generateContent", GeminiClient.MODEL))
                 .andExpect(method(HttpMethod.POST))
                 .andRespond(withSuccess(responseBody, MediaType.APPLICATION_JSON));
 
@@ -60,7 +60,7 @@ class GeminiChatBotClientTest {
         // given
         RestClient.Builder builder = RestClient.builder();
         MockRestServiceServer server = MockRestServiceServer.bindTo(builder).build();
-        GeminiChatBotClient client = new GeminiChatBotClient(builder.build());
+        GeminiChatBotClient client = new GeminiChatBotClient(geminiClient(builder));
 
         String malformedBody = """
                 {
@@ -76,7 +76,7 @@ class GeminiChatBotClientTest {
                 }
                 """;
 
-        server.expect(requestToUriTemplate("/v1beta/models/{model}:generateContent", GeminiChatBotClient.MODEL))
+        server.expect(requestToUriTemplate("/v1beta/models/{model}:generateContent", GeminiClient.MODEL))
                 .andExpect(method(HttpMethod.POST))
                 .andRespond(withSuccess(malformedBody, MediaType.APPLICATION_JSON));
 
@@ -84,5 +84,10 @@ class GeminiChatBotClientTest {
         assertThatThrownBy(() -> client.ask("질문", "context"))
                 .isInstanceOfSatisfying(BusinessException.class, ex ->
                         assertThat(ex.getErrorCode()).isEqualTo(ErrorCode.CHATBOT_RESPONSE_ERROR));
+    }
+
+    private GeminiClient geminiClient(RestClient.Builder builder) {
+        RestClient restClient = builder.build();
+        return new GeminiClient(restClient, restClient);
     }
 }
