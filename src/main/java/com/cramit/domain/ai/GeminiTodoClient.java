@@ -17,7 +17,7 @@ import java.util.Map;
 @RequiredArgsConstructor
 public class GeminiTodoClient {
 
-        private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper()
+    private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper()
             .configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
 
     private static final Map<String, Object> TODO_SCHEMA = Map.of(

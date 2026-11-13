@@ -50,8 +50,8 @@ public class GeminiClient {
                 .body(GeminiResponse.class);
 
         // 프롬프트에는 사용자 학습 자료가 들어 있어서 내용은 남기지 않고 크기와 소요 시간만 남긴다.
-        log.info("Gemini 호출 완료: {}, 입력 {}자, {}ms",
-                failureCode, inputLength(request), System.currentTimeMillis() - startedAt);
+        log.info("Gemini 호출 완료: model={}, timeout={}, 입력 {}자, {}ms",
+                MODEL, timeout, inputLength(request), System.currentTimeMillis() - startedAt);
         return response;
     }
 
