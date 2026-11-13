@@ -68,7 +68,7 @@ public class AiTodoService {
 
             todoRepository.deleteIncompleteAiTodos(memberId, examId);
             return todoRepository.saveAll(todos).stream()
-                    .map(TodoListResponse::from)
+                    .map(todo -> TodoListResponse.of(todo, context.lecture()))
                     .toList();
         });
     }
@@ -102,7 +102,7 @@ public class AiTodoService {
         }
 
         List<Todo> remainingTodos = todoRepository.findRemainingTodos(memberId, examId);
-        return new PlanContext(exam, summaryWeeks, remainingTodos);
+        return new PlanContext(exam, lecture, summaryWeeks, remainingTodos);
     }
 
     private List<Todo> toTodos(List<GeminiTodoItem> items, PlanContext context, Long memberId, LocalDate today) {
@@ -167,5 +167,5 @@ public class AiTodoService {
         return content.length() > MAX_CONTENT_LENGTH ? content.substring(0, MAX_CONTENT_LENGTH) : content;
     }
 
-    private record PlanContext(Exam exam, List<Week> summaryWeeks, List<Todo> remainingTodos) {}
+    private record PlanContext(Exam exam, Lecture lecture, List<Week> summaryWeeks, List<Todo> remainingTodos) {}
 }
