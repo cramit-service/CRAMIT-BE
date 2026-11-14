@@ -1,6 +1,8 @@
 package com.cramit.domain.stt;
 
 import com.cramit.domain.stt.dto.GroqTranscriptionResponse;
+import com.cramit.global.exception.BusinessException;
+import com.cramit.global.exception.ErrorCode;
 import lombok.RequiredArgsConstructor;
 import org.springframework.core.io.ByteArrayResource;
 import org.springframework.http.MediaType;
@@ -54,12 +56,12 @@ public class GroqSttClient {
                         throw new IllegalStateException("녹음 다운로드 실패: " + response.getStatusCode());
                     }
                     if (response.getHeaders().getContentLength() > MAX_AUDIO_BYTES) {
-                        throw new IllegalStateException("녹음 파일이 25MB를 넘습니다.");
+                        throw new BusinessException(ErrorCode.FILE_TOO_LARGE);
                     }
                     // Content-Length가 없을 수도 있어서 한도 + 1바이트까지만 읽고 넘으면 멈춘다.
                     byte[] audio = response.getBody().readNBytes(MAX_AUDIO_BYTES + 1);
                     if (audio.length > MAX_AUDIO_BYTES) {
-                        throw new IllegalStateException("녹음 파일이 25MB를 넘습니다.");
+                        throw new BusinessException(ErrorCode.FILE_TOO_LARGE);
                     }
                     return audio;
                 });

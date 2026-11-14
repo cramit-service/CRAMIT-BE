@@ -32,7 +32,7 @@ public class SttEventListener {
             log.info("STT 완료: lectureAudioId={}", lectureAudioId);
         } catch (Exception e) {
             log.error("STT 실패: lectureAudioId={}", lectureAudioId, e);
-            sttService.markFailed(lectureAudioId);
+            sttService.markFailed(lectureAudioId, e);
             return;
         }
 

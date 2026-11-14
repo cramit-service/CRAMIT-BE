@@ -48,14 +48,18 @@ public class FileService {
     private final StorageProperties storageProperties;
 
     public UploadUrlResponse createUploadUrl(UploadUrlRequest request) {
-        String extension = extractExtension(request.fileName());
-        if (!request.fileType().allows(extension)) {
-            throw new BusinessException(ErrorCode.FILE_INVALID_TYPE);
+        FileType fileType = request.fileType();
+        String extension = extractExtension(request.fileName(), fileType);
+        if (!fileType.allows(extension)) {
+            throw new BusinessException(fileType.getInvalidFormatError());
+        }
+        if (request.fileSize() != null && request.fileSize() > fileType.getMaxBytes()) {
+            throw new BusinessException(ErrorCode.FILE_TOO_LARGE);
         }
 
         // 원본 파일명은 등록 API가 따로 저장하므로 key에는 넣지 않는다 (한글·공백이 URL 인코딩 문제를 일으킴)
         // PDF(PPT)는 내용 검증 전까지 스테이징 경로에만 올린다 (#93) - 검증되지 않은 키를 바로 등록하지 않기 위함.
-        String directory = request.fileType() == FileType.PPT ? STAGING_PPT_DIRECTORY : request.fileType().getDirectory();
+        String directory = fileType == FileType.PPT ? STAGING_PPT_DIRECTORY : fileType.getDirectory();
         String key = "files/" + directory + "/" + UUID.randomUUID() + "." + extension;
 
         PutObjectPresignRequest presignRequest = PutObjectPresignRequest.builder()
@@ -67,14 +71,46 @@ public class FileService {
                 .build();
 
         String uploadUrl = s3Presigner.presignPutObject(presignRequest).url().toString();
-        String fileUrl = stripTrailingSlash(storageProperties.s3().publicBaseUrl()) + "/" + key;
+        String fileUrl = publicBaseUrl() + "/" + key;
 
         return new UploadUrlResponse(uploadUrl, fileUrl, UPLOAD_URL_EXPIRATION.toSeconds());
     }
 
+    /**
+     * 음성 파일이 업로드를 마쳤는지 확인한다. PPT는 finalizePdfUpload가 존재·용량 확인을
+     * 시그니처 검증·TOCTOU 방지까지 포함해 더 엄격하게 하므로, 이 메서드는 음성에만 쓴다.
+     */
+    public void verifyUploaded(String fileUrl, FileType fileType) {
+        validateFileUrl(fileUrl);
+
+        String key = fileUrl.substring(publicBaseUrl().length() + 1);
+        if (!key.startsWith("files/" + fileType.getDirectory() + "/")) {
+            throw new BusinessException(fileType.getInvalidFormatError());
+        }
+
+        HeadObjectResponse object;
+        try {
+            object = s3Client.headObject(HeadObjectRequest.builder()
+                    .bucket(storageProperties.s3().bucket())
+                    .key(key)
+                    .build());
+        } catch (NoSuchKeyException e) {
+            throw new BusinessException(ErrorCode.UPLOAD_INTERRUPTED);
+        } catch (S3Exception e) {
+            if (e.statusCode() == 404) {
+                throw new BusinessException(ErrorCode.UPLOAD_INTERRUPTED);
+            }
+            throw e;
+        }
+
+        if (object.contentLength() != null && object.contentLength() > fileType.getMaxBytes()) {
+            throw new BusinessException(ErrorCode.FILE_TOO_LARGE);
+        }
+    }
+
     // 클라이언트가 보낸 fileUrl이 우리 저장소의 업로드 경로인지 확인한다.
     public void validateFileUrl(String fileUrl) {
-        String allowedPrefix = stripTrailingSlash(storageProperties.s3().publicBaseUrl()) + "/files/";
+        String allowedPrefix = publicBaseUrl() + "/files/";
         if (fileUrl == null || !fileUrl.startsWith(allowedPrefix)) {
             throw new BusinessException(ErrorCode.FILE_INVALID_URL);
         }
@@ -157,7 +193,7 @@ public class FileService {
             throw new BusinessException(ErrorCode.INTERNAL_SERVER_ERROR);
         }
 
-        return stripTrailingSlash(storageProperties.s3().publicBaseUrl()) + "/" + finalKey;
+        return publicBaseUrl() + "/" + finalKey;
     }
 
     // finalizePdfUpload가 복사해간 스테이징 원본을 정리한다. DB 저장이 끝난 뒤에만 호출해야 한다 -
@@ -179,28 +215,32 @@ public class FileService {
     // finalizePdfUpload/deleteStagingPdf의 입력은 반드시 스테이징 경로여야 한다. 이미 확정된 PPT
     // fileUrl(다른 주차 것 포함)이나 다른 파일 유형의 경로가 들어오면 그 객체를 복사·삭제해버릴 수 있어 거부한다 (#93).
     private void validateStagingPptUrl(String fileUrl) {
-        String allowedPrefix = stripTrailingSlash(storageProperties.s3().publicBaseUrl()) + "/files/" + STAGING_PPT_DIRECTORY + "/";
+        String allowedPrefix = publicBaseUrl() + "/files/" + STAGING_PPT_DIRECTORY + "/";
         if (fileUrl == null || !fileUrl.startsWith(allowedPrefix)) {
             throw new BusinessException(ErrorCode.FILE_INVALID_URL);
         }
     }
 
     private String extractKey(String fileUrl) {
-        return fileUrl.substring((stripTrailingSlash(storageProperties.s3().publicBaseUrl()) + "/").length());
+        return fileUrl.substring((publicBaseUrl() + "/").length());
     }
 
     private String escapeForLog(String key) {
         return key.replace("\\", "\\\\").replace("\r", "\\r").replace("\n", "\\n");
     }
 
+    private String publicBaseUrl() {
+        return stripTrailingSlash(storageProperties.s3().publicBaseUrl());
+    }
+
     private String stripTrailingSlash(String url) {
         return url.endsWith("/") ? url.substring(0, url.length() - 1) : url;
     }
 
-    private String extractExtension(String fileName) {
+    private String extractExtension(String fileName, FileType fileType) {
         int dot = fileName.lastIndexOf('.');
         if (dot < 0 || dot == fileName.length() - 1) {
-            throw new BusinessException(ErrorCode.FILE_INVALID_TYPE);
+            throw new BusinessException(fileType.getInvalidFormatError());
         }
         return fileName.substring(dot + 1).toLowerCase(Locale.ROOT);
     }

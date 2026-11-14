@@ -10,5 +10,7 @@ public interface LecturePptRepository extends JpaRepository<LecturePpt, Long> {
 
     Optional<LecturePpt> findByWeekId(Long weekId);
 
+    boolean existsByWeekId(Long weekId);
+
     void deleteAllByWeekIdIn(List<Long> weekIds);
 }

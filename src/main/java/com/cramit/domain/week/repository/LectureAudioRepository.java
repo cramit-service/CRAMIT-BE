@@ -10,5 +10,7 @@ public interface LectureAudioRepository extends JpaRepository<LectureAudio, Long
 
     Optional<LectureAudio> findByWeekId(Long weekId);
 
+    boolean existsByWeekId(Long weekId);
+
     void deleteAllByWeekIdIn(List<Long> weekIds);
 }

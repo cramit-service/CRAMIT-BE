@@ -65,8 +65,8 @@ public class SttService {
     }
 
     @Transactional
-    public void markFailed(Long lectureAudioId) {
-        findAudio(lectureAudioId).updateSttStatus(SttStatus.FAILED);
+    public void markFailed(Long lectureAudioId, Throwable cause) {
+        findAudio(lectureAudioId).failStt(SttFailureReason.of(cause));
     }
 
     private LectureAudio findAudio(Long lectureAudioId) {
