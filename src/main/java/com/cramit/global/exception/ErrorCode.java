@@ -59,6 +59,7 @@ public enum ErrorCode {
 
 	// 학습 포인트 / 메모 / 학습 내용 적용 (Phase 5, 6, 7)
 	HIGHLIGHT_INVALID_POSITION(HttpStatus.BAD_REQUEST, "학습포인트 위치를 저장하지 못했습니다."),
+	LEARNING_POINT_ACCESS_DENIED(HttpStatus.FORBIDDEN, "접근 권한이 없는 요약본입니다."),
 	APPLY_NO_DATA(HttpStatus.BAD_REQUEST, "적용할 학습 데이터가 없습니다."),
 
 	// AI 챗봇 (Phase 8)
