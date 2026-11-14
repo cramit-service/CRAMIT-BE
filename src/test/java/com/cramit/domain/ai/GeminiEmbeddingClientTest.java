@@ -27,8 +27,8 @@ class GeminiEmbeddingClientTest {
 
         server.expect(requestToUriTemplate("/v1beta/models/{model}:embedContent", GeminiEmbeddingClient.MODEL))
                 .andExpect(method(HttpMethod.POST))
-                .andExpect(jsonPath("$.embedContentConfig.taskType").value("RETRIEVAL_DOCUMENT"))
-                .andExpect(jsonPath("$.embedContentConfig.title").value("1주차"))
+                .andExpect(jsonPath("$.taskType").value("RETRIEVAL_DOCUMENT"))
+                .andExpect(jsonPath("$.title").value("1주차"))
                 .andExpect(jsonPath("$.content.parts[0].text").value("재귀는 함수가 자기 자신을 호출하는 것입니다."))
                 .andRespond(withSuccess(embeddingResponse(0.1, 0.2, 0.3), MediaType.APPLICATION_JSON));
 
@@ -46,7 +46,7 @@ class GeminiEmbeddingClientTest {
         GeminiEmbeddingClient client = new GeminiEmbeddingClient(builder.build());
 
         server.expect(requestToUriTemplate("/v1beta/models/{model}:embedContent", GeminiEmbeddingClient.MODEL))
-                .andExpect(jsonPath("$.embedContentConfig.taskType").value("RETRIEVAL_QUERY"))
+                .andExpect(jsonPath("$.taskType").value("RETRIEVAL_QUERY"))
                 .andRespond(withSuccess(embeddingResponse(0.5, 0.6), MediaType.APPLICATION_JSON));
 
         float[] embedding = client.embedQuery("재귀가 뭐야?");
