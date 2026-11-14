@@ -1,5 +1,7 @@
 package com.cramit.domain.stt;
 
+import com.cramit.global.exception.BusinessException;
+import com.cramit.global.exception.ErrorCode;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestClient;
@@ -20,12 +22,12 @@ public class StorageFileDownloader {
                         throw new IllegalStateException("파일 다운로드 실패: " + response.getStatusCode());
                     }
                     if (response.getHeaders().getContentLength() > maxBytes) {
-                        throw new IllegalStateException("파일이 " + maxBytes + "바이트를 넘습니다.");
+                        throw new BusinessException(ErrorCode.FILE_TOO_LARGE);
                     }
                     // Content-Length가 없을 수도 있어서 한도 + 1바이트까지만 읽고 넘으면 멈춘다.
                     byte[] file = response.getBody().readNBytes(maxBytes + 1);
                     if (file.length > maxBytes) {
-                        throw new IllegalStateException("파일이 " + maxBytes + "바이트를 넘습니다.");
+                        throw new BusinessException(ErrorCode.FILE_TOO_LARGE);
                     }
                     return file;
                 });
