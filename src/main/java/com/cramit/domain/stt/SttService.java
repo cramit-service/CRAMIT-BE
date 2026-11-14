@@ -76,7 +76,8 @@ public class SttService {
     // 최소 보정만 한다: 시작 순 정렬, 첫 구간 0초, 각 구간 끝 = 다음 구간 시작, 마지막 끝 = 녹음 길이.
     private List<Script> toScripts(Long weekId, List<GeminiPageSection> sections, int durationSec, int maxPage) {
         List<GeminiPageSection> valid = sections.stream()
-                .filter(section -> section.page() != null && section.startSec() != null)
+                .filter(section -> section.page() != null && section.startSec() != null && section.endSec() != null)
+                .filter(section -> section.endSec() > section.startSec())
                 .filter(section -> section.page() >= 1 && section.page() <= maxPage)
                 .sorted(Comparator.comparing(GeminiPageSection::startSec))
                 .toList();
@@ -112,7 +113,7 @@ public class SttService {
     }
 
     private int toSec(double sec, int durationSec) {
-        return Math.min((int) Math.floor(sec), durationSec);
+        return Math.max(0, Math.min((int) Math.floor(sec), durationSec));
     }
 
     // 구간은 0초부터 빈틈없이 이어지므로 시작 시각이 timeSec 이하인 마지막 구간이 그 문장의 구간이다.
