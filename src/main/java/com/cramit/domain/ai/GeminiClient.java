@@ -42,16 +42,26 @@ public class GeminiClient {
     @Retry(name = "gemini", fallbackMethod = "fallback")
     @CircuitBreaker(name = "gemini")
     public GeminiResponse generate(GeminiRequest request, Timeout timeout, ErrorCode failureCode) {
+        return call(MODEL, request, timeout);
+    }
+
+    @Retry(name = "gemini", fallbackMethod = "fallback")
+    @CircuitBreaker(name = "gemini")
+    public GeminiResponse generate(String model, GeminiRequest request, Timeout timeout, ErrorCode failureCode) {
+        return call(model, request, timeout);
+    }
+
+    private GeminiResponse call(String model, GeminiRequest request, Timeout timeout) {
         long startedAt = System.currentTimeMillis();
         GeminiResponse response = restClient(timeout).post()
-                .uri("/v1beta/models/{model}:generateContent", MODEL)
+                .uri("/v1beta/models/{model}:generateContent", model)
                 .body(request)
                 .retrieve()
                 .body(GeminiResponse.class);
 
         // 프롬프트에는 사용자 학습 자료가 들어 있어서 내용은 남기지 않고 크기와 소요 시간만 남긴다.
         log.info("Gemini 호출 완료: model={}, timeout={}, 입력 {}자, {}ms",
-                MODEL, timeout, inputLength(request), System.currentTimeMillis() - startedAt);
+                model, timeout, inputLength(request), System.currentTimeMillis() - startedAt);
         return response;
     }
 
@@ -59,6 +69,11 @@ public class GeminiClient {
     private GeminiResponse fallback(GeminiRequest request, Timeout timeout, ErrorCode failureCode, Throwable ex) {
         log.warn("Gemini 호출 실패: {}, {}", failureCode, ex.getMessage(), ex);
         throw new BusinessException(toErrorCode(ex, failureCode), ex);
+    }
+
+    private GeminiResponse fallback(String model, GeminiRequest request, Timeout timeout, ErrorCode failureCode,
+                                    Throwable ex) {
+        return fallback(request, timeout, failureCode, ex);
     }
 
     static ErrorCode toErrorCode(Throwable ex, ErrorCode failureCode) {
