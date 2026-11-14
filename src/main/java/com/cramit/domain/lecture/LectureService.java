@@ -102,9 +102,13 @@ public class LectureService {
             throw new BusinessException(ErrorCode.LECTURE_ACCESS_DENIED);
         }
 
-        String professorName = request.professorName() != null
-                ? request.professorName()
-                : lecture.getProfessorName();
+        // JsonNullable: 필드 자체가 없으면 기존 값 유지, null을 명시하면 지움(professorName은 선택 항목)
+        String professorName = request.professorName() == null || !request.professorName().isPresent()
+                ? lecture.getProfessorName()
+                : request.professorName().get();
+        if (professorName != null && professorName.length() > 100) {
+            throw new BusinessException(ErrorCode.VALIDATION_ERROR);
+        }
 
         lecture.update(request.title(), professorName, request.colorIndex());
 

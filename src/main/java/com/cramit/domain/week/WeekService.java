@@ -110,7 +110,7 @@ public class WeekService {
             throw new BusinessException(ErrorCode.LECTURE_ACCESS_DENIED);
         }
 
-        week.update(request.title(), request.weekDate(), request.professorName());
+        week.update(request.title(), request.weekDate());
 
         return  new WeekUpdateResponse(
                 week.getWeekId(),
