@@ -38,7 +38,8 @@ class FileServiceTest {
     void createUploadUrl() {
         UploadUrlResponse response = fileService.createUploadUrl(new UploadUrlRequest("알고리즘 5주차.PDF", FileType.PPT));
 
-        assertThat(response.fileUrl()).matches("http://localhost:9000/test-bucket/files/ppt/[0-9a-f-]{36}\\.pdf");
+        // PDF는 내용 검증 전까지 스테이징 경로에만 올라간다 (#93) - 검증 통과 후에만 files/ppt/로 복사된다.
+        assertThat(response.fileUrl()).matches("http://localhost:9000/test-bucket/files/ppt/staging/[0-9a-f-]{36}\\.pdf");
         String key = response.fileUrl().substring("http://localhost:9000/test-bucket/".length());
         assertThat(response.uploadUrl()).startsWith("http://localhost:9000/test-bucket/" + key + "?");
         assertThat(response.uploadUrl()).contains("X-Amz-Signature=");

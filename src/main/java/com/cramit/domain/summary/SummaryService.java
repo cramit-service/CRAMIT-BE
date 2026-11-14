@@ -75,10 +75,6 @@ public class SummaryService {
             throw new BusinessException(noScriptReason(weekId));
         }
 
-        if (!scriptRepository.existsByWeekId(weekId)) {
-            throw new BusinessException(ErrorCode.NO_CONTEXT);
-        }
-
         Summary summary = summaryRepository.findByWeekIdAndMemberId(weekId, memberId)
                 .orElseGet(() -> Summary.builder().memberId(memberId).weekId(weekId).build());
 

@@ -24,6 +24,14 @@ class SttFailureReasonTest {
     }
 
     @Test
+    @DisplayName("IOException을 한 번 더 거쳐서 타임아웃 예외에 도달해도 STT_TIMEOUT")
+    void timeoutWrappedInIOException() {
+        IOException wrapped = new IOException("wrapped", new HttpTimeoutException("timeout"));
+        assertThat(SttFailureReason.of(new ResourceAccessException("timeout", wrapped)))
+                .isEqualTo(ErrorCode.STT_TIMEOUT);
+    }
+
+    @Test
     @DisplayName("업무 예외는 그 오류 코드를 그대로 쓴다. (예: 녹음이 25MB를 넘으면 FILE_TOO_LARGE)")
     void businessException() {
         assertThat(SttFailureReason.of(new BusinessException(ErrorCode.FILE_TOO_LARGE)))

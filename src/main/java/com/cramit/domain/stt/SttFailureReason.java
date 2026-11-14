@@ -17,11 +17,19 @@ final class SttFailureReason {
         if (ex instanceof BusinessException be) {
             return be.getErrorCode();
         }
-        if (ex instanceof ResourceAccessException
-                && (ex.getCause() instanceof HttpTimeoutException
-                || ex.getCause() instanceof SocketTimeoutException)) {
+        if (ex instanceof ResourceAccessException && hasTimeoutCause(ex.getCause())) {
             return ErrorCode.STT_TIMEOUT;
         }
         return null;
+    }
+
+    // IOException 등을 한 번 더 거쳐서 타임아웃 예외에 도달하는 경우도 있어, 원인 체인 전체를 확인한다.
+    private static boolean hasTimeoutCause(Throwable cause) {
+        for (Throwable t = cause; t != null; t = t.getCause()) {
+            if (t instanceof HttpTimeoutException || t instanceof SocketTimeoutException) {
+                return true;
+            }
+        }
+        return false;
     }
 }
