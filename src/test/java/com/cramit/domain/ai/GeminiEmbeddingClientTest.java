@@ -29,6 +29,7 @@ class GeminiEmbeddingClientTest {
                 .andExpect(method(HttpMethod.POST))
                 .andExpect(jsonPath("$.taskType").value("RETRIEVAL_DOCUMENT"))
                 .andExpect(jsonPath("$.title").value("1주차"))
+                .andExpect(jsonPath("$.outputDimensionality").value(768))
                 .andExpect(jsonPath("$.content.parts[0].text").value("재귀는 함수가 자기 자신을 호출하는 것입니다."))
                 .andRespond(withSuccess(embeddingResponse(0.1, 0.2, 0.3), MediaType.APPLICATION_JSON));
 
