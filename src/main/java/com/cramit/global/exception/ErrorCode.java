@@ -41,6 +41,7 @@ public enum ErrorCode {
 	FILE_INVALID_TYPE(HttpStatus.UNSUPPORTED_MEDIA_TYPE, "지원하지 않는 파일 형식입니다."),
 	FILE_TOO_LARGE(HttpStatus.PAYLOAD_TOO_LARGE, "파일 용량이 너무 큽니다."),
 	FILE_INVALID_URL(HttpStatus.BAD_REQUEST, "올바르지 않은 파일 주소입니다."),
+	FILE_UPLOAD_CONFLICT(HttpStatus.CONFLICT, "검증 후 파일이 변경되었습니다. 다시 업로드해주세요."),
 	PDF_UNREADABLE(HttpStatus.UNPROCESSABLE_ENTITY, "텍스트를 추출할 수 없는 PDF입니다."),
 	UPLOAD_INTERRUPTED(HttpStatus.REQUEST_TIMEOUT, "업로드가 중단되었습니다. 다시 시도해주세요."),
 	AUDIO_INVALID_FORMAT(HttpStatus.UNSUPPORTED_MEDIA_TYPE, "지원하지 않는 오디오 형식입니다."),

@@ -17,10 +17,10 @@ import com.cramit.domain.week.enums.WeekStatus;
 import com.cramit.domain.week.repository.LectureAudioRepository;
 import com.cramit.domain.week.repository.LecturePptRepository;
 import com.cramit.domain.week.repository.WeekRepository;
+import com.cramit.domain.file.FileService;
 import com.cramit.domain.stt.SttEventListener;
 import com.cramit.domain.week.dto.WeekReviewCountUpdateRequest;
 import com.cramit.domain.week.dto.WeekReviewCountUpdateResponse;
-import org.junit.jupiter.api.BeforeEach;
 import org.springframework.boot.test.mock.mockito.MockBean;
 import com.cramit.global.config.JpaAuditingConfig;
 import com.cramit.global.exception.BusinessException;
@@ -33,16 +33,14 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.context.annotation.Import;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.transaction.annotation.Transactional;
-import software.amazon.awssdk.services.s3.S3Client;
-import software.amazon.awssdk.services.s3.model.HeadObjectRequest;
-import software.amazon.awssdk.services.s3.model.HeadObjectResponse;
 
 import java.time.LocalDate;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.BDDMockito.given;
+import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 @SpringBootTest
 @Import({WeekService.class, JpaAuditingConfig.class})
@@ -77,15 +75,9 @@ class WeekServiceTest {
     @MockBean
     private SttEventListener sttEventListener;
 
-    // 주차에 파일을 등록할 때 저장소에 업로드가 끝났는지 확인하므로, 업로드된 것으로 응답한다.
+    // 실제 S3로 내용을 검증하지 않도록 mock으로 대체한다 (기본은 통과, 개별 테스트에서 실패를 stub).
     @MockBean
-    private S3Client s3Client;
-
-    @BeforeEach
-    void uploadedFilesExist() {
-        given(s3Client.headObject(any(HeadObjectRequest.class)))
-                .willReturn(HeadObjectResponse.builder().contentLength(1024L).build());
-    }
+    private FileService fileService;
 
     @Test
     @DisplayName("주차를 생성하면 PPT/음성과 함께 저장되고 목록에서 조회된다.")
@@ -97,6 +89,8 @@ class WeekServiceTest {
                 new WeekCreateRequest.PptInfo("slide.pdf", "http://localhost:9000/test-bucket/files/ppt/slide.pdf", 1024L),
                 new WeekCreateRequest.AudioInfo("audio.mp3", "http://localhost:9000/test-bucket/files/audio/audio.mp3", 3600L)
         );
+        when(fileService.finalizePdfUpload(request.ppt().fileUrl()))
+                .thenReturn("http://localhost:9000/test-bucket/files/ppt/final.pdf");
 
         WeekCreateResponse created = weekService.createWeek(lectureId, request, MEMBER_ID);
         var weeks = weekService.getWeeks(lectureId, MEMBER_ID);
@@ -105,9 +99,31 @@ class WeekServiceTest {
         assertThat(created.lecturePptId()).isNotNull();
         assertThat(created.lectureAudioId()).isNotNull();
         assertThat(created.sttStatus()).isEqualTo(SttStatus.PENDING);
+        // 저장된 fileUrl은 클라이언트가 보낸 스테이징 주소가 아니라 finalizePdfUpload가 반환한 최종 주소여야 한다 (#93).
+        assertThat(weekService.getPpt(created.weekId(), MEMBER_ID).fileUrl())
+                .isEqualTo("http://localhost:9000/test-bucket/files/ppt/final.pdf");
+        verify(fileService).deleteStagingPdf(request.ppt().fileUrl());
         assertThat(weeks).hasSize(1);
         assertThat(weeks.get(0).title()).isEqualTo("1주차");
         assertThat(weeks.get(0).status()).isEqualTo(WeekStatus.BEFORE);
+    }
+
+    @Test
+    @DisplayName("PPT 내용 검증에 실패하면(용량 초과·위조 확장자 등) 주차를 생성할 수 없다.")
+    void createWeek_invalidPptContent() {
+        Long lectureId = saveLecture(MEMBER_ID);
+        WeekCreateRequest request = new WeekCreateRequest(
+                "1주차",
+                WEEK_DATE,
+                new WeekCreateRequest.PptInfo("slide.pdf", "http://localhost:9000/test-bucket/files/ppt/slide.pdf", 1024L),
+                null
+        );
+        doThrow(new BusinessException(ErrorCode.FILE_TOO_LARGE))
+                .when(fileService).finalizePdfUpload(request.ppt().fileUrl());
+
+        assertThatThrownBy(() -> weekService.createWeek(lectureId, request, MEMBER_ID))
+                .isInstanceOf(BusinessException.class)
+                .extracting("errorCode").isEqualTo(ErrorCode.FILE_TOO_LARGE);
     }
 
     @Test
@@ -146,6 +162,8 @@ class WeekServiceTest {
     @DisplayName("주차를 삭제하면 PPT/오디오와 함께 조회되지 않는다.")
     void deleteWeek() {
         Long lectureId = saveLecture(MEMBER_ID);
+        when(fileService.finalizePdfUpload("http://localhost:9000/test-bucket/files/ppt/slide.pdf"))
+                .thenReturn("http://localhost:9000/test-bucket/files/ppt/final.pdf");
         Long weekId = weekService.createWeek(
                 lectureId,
                 new WeekCreateRequest(
@@ -401,6 +419,8 @@ class WeekServiceTest {
                 new WeekCreateRequest.PptInfo("slide.pdf", "http://localhost:9000/test-bucket/files/ppt/slide.pdf", 1024L),
                 new WeekCreateRequest.AudioInfo("audio.mp3", "http://localhost:9000/test-bucket/files/audio/audio.mp3", 3600L)
         );
+        when(fileService.finalizePdfUpload(request.ppt().fileUrl()))
+                .thenReturn("http://localhost:9000/test-bucket/files/ppt/final.pdf");
         WeekCreateResponse createdWeek = weekService.createWeek(lectureId, request, MEMBER_ID);
 
         lectureService.deleteLecture(lectureId, MEMBER_ID);
