@@ -4,17 +4,15 @@ import com.cramit.domain.ai.dto.GeminiEmbedRequest;
 import com.cramit.domain.ai.dto.GeminiEmbedResponse;
 import com.cramit.global.exception.BusinessException;
 import com.cramit.global.exception.ErrorCode;
+import com.cramit.global.external.ExternalTimeouts;
 import io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker;
 import io.github.resilience4j.retry.annotation.Retry;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.HttpClientErrorException;
-import org.springframework.web.client.ResourceAccessException;
 import org.springframework.web.client.RestClient;
 
-import java.net.SocketTimeoutException;
-import java.net.http.HttpTimeoutException;
 
 /**
  * RAG 2단계용 텍스트 임베딩 클라이언트.
@@ -80,9 +78,7 @@ public class GeminiEmbeddingClient {
         if (ex instanceof HttpClientErrorException.TooManyRequests) {
             return ErrorCode.AI_RATE_LIMITED;
         }
-        if (ex instanceof ResourceAccessException
-                && (ex.getCause() instanceof HttpTimeoutException
-                || ex.getCause() instanceof SocketTimeoutException)) {
+        if (ExternalTimeouts.isTimeout(ex)) {
             return ErrorCode.AI_TIMEOUT;
         }
         return ErrorCode.EMBEDDING_GENERATION_FAILED;

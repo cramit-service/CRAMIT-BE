@@ -9,6 +9,7 @@ import org.springframework.web.client.ResourceAccessException;
 import java.io.IOException;
 import java.net.SocketTimeoutException;
 import java.net.http.HttpTimeoutException;
+import java.util.concurrent.TimeoutException;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -20,6 +21,10 @@ class SttFailureReasonTest {
         assertThat(SttFailureReason.of(new ResourceAccessException("timeout", new HttpTimeoutException("timeout"))))
                 .isEqualTo(ErrorCode.STT_TIMEOUT);
         assertThat(SttFailureReason.of(new ResourceAccessException("timeout", new SocketTimeoutException("timeout"))))
+                .isEqualTo(ErrorCode.STT_TIMEOUT);
+        // 실제 읽기 제한 시간이 지나면 Spring이 TimeoutException을 IOException으로 한 번 더 감싸서 던진다.
+        assertThat(SttFailureReason.of(new ResourceAccessException("timeout",
+                new IOException("Request timed out", new TimeoutException("timeout")))))
                 .isEqualTo(ErrorCode.STT_TIMEOUT);
     }
 
