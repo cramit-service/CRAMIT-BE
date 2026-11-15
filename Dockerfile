@@ -16,6 +16,11 @@ WORKDIR /app
 
 ENV TZ=Asia/Seoul
 
+# STT 교정 단계가 녹음을 배치 구간으로 자른다.
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends ffmpeg \
+    && rm -rf /var/lib/apt/lists/*
+
 RUN addgroup --system spring && adduser --system --ingroup spring spring
 USER spring:spring
 
