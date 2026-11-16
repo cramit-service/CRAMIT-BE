@@ -70,6 +70,10 @@ public class Summary extends BaseEntity {
         this.status = AsyncJobStatus.FAILED;
     }
 
+    public void updateContent(String content) {
+        this.content = content;
+    }
+
     public boolean isInProgress(LocalDateTime staleBefore) {
         boolean running = status == AsyncJobStatus.PENDING || status == AsyncJobStatus.PROCESSING;
         return running && getUpdatedAt() != null && getUpdatedAt().isAfter(staleBefore);

@@ -4,6 +4,7 @@ import com.cramit.domain.lecture.Lecture;
 import com.cramit.domain.lecture.LectureRepository;
 import com.cramit.domain.summary.dto.SummaryResponse;
 import com.cramit.domain.summary.dto.SummaryStatusResponse;
+import com.cramit.domain.summary.dto.SummaryUpdateRequest;
 import com.cramit.domain.summary.entity.Summary;
 import com.cramit.domain.summary.repository.SummaryRepository;
 import com.cramit.domain.week.entity.Week;
@@ -138,6 +139,27 @@ public class SummaryService {
                 }
             }
         });
+    }
+
+    /**
+     * 완료된 요약본의 본문을 통째로 교체한다. 학습포인트는 본문 안에 <lp>…</lp> 태그로 함께 저장된다.
+     * 요약본은 summary와 주차(1차 요약본) 두 곳에 저장되고 챗봇·AI TODO는 주차 쪽을 읽으므로, 두 곳을 함께 바꾼다.
+     */
+    @Transactional
+    public SummaryResponse updateSummary(Long summaryId, SummaryUpdateRequest request, Long memberId) {
+        Summary summary = summaryRepository.findById(summaryId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.ENTITY_NOT_FOUND));
+        validateWeekOwnership(summary.getWeekId(), memberId);
+        
+        if (summary.getStatus() != AsyncJobStatus.COMPLETED) {
+            throw new BusinessException(ErrorCode.SUMMARY_NOT_EDITABLE);
+        }
+
+        summary.updateContent(request.content());
+        weekRepository.findById(summary.getWeekId()).ifPresent(week -> week.updateFirstSummary(request.content()));
+        summaryRepository.saveAndFlush(summary);
+
+        return SummaryResponse.from(summary);
     }
 
     private Summary findOwnedSummary(Long weekId, Long memberId) {
