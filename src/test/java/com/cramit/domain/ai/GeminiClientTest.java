@@ -21,8 +21,9 @@ import org.springframework.test.web.client.ExpectedCount;
 import org.springframework.test.web.client.MockRestServiceServer;
 import org.springframework.web.client.RestClient;
 
-import java.net.http.HttpTimeoutException;
+import java.io.IOException;
 import java.util.Map;
+import java.util.concurrent.TimeoutException;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -59,7 +60,7 @@ class GeminiClientTest {
     void timeoutRetriesThenFails() {
         // given
         defaultServer.expect(ExpectedCount.times(3), requestToUriTemplate(URI, GeminiClient.MODEL))
-                .andRespond(withException(new HttpTimeoutException("timeout")));
+                .andRespond(withException(new IOException("Request timed out", new TimeoutException("timeout"))));
 
         // when & then
         assertThatThrownBy(() -> geminiClient.generate(REQUEST, GeminiClient.Timeout.DEFAULT, ErrorCode.CHATBOT_RESPONSE_ERROR))

@@ -2,6 +2,7 @@ package com.cramit.domain.week.entity;
 
 import com.cramit.domain.week.enums.SttStatus;
 import com.cramit.global.common.BaseEntity;
+import com.cramit.global.exception.ErrorCode;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
@@ -38,6 +39,11 @@ public class LectureAudio extends BaseEntity {
     @Column(nullable = false, length = 20)
     private SttStatus sttStatus;
 
+    // STT가 실패한 원인. 실패가 아니면 null
+    @Enumerated(EnumType.STRING)
+    @Column(length = 50)
+    private ErrorCode sttErrorCode;
+
     @Builder
     public LectureAudio(Long weekId, String fileName, String fileUrl, Long durationSec) {
         this.weekId = weekId;
@@ -52,14 +58,22 @@ public class LectureAudio extends BaseEntity {
         this.fileUrl = fileUrl;
         this.durationSec = durationSec;
         this.sttStatus = SttStatus.PENDING; // 새 파일이면 STT 다시 돌려야 하니 PENDING으로 리셋
+        this.sttErrorCode = null;
     }
 
     public void updateSttStatus(SttStatus sttStatus) {
         this.sttStatus = sttStatus;
+        this.sttErrorCode = null;
+    }
+
+    public void failStt(ErrorCode reason) {
+        this.sttStatus = SttStatus.FAILED;
+        this.sttErrorCode = reason;
     }
 
     public void completeStt(Long durationSec) {
         this.durationSec = durationSec;
         this.sttStatus = SttStatus.COMPLETED;
+        this.sttErrorCode = null;
     }
 }

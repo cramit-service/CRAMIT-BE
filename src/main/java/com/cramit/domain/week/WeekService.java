@@ -1,6 +1,7 @@
 package com.cramit.domain.week;
 
 import com.cramit.domain.file.FileService;
+import com.cramit.domain.file.enums.FileType;
 import com.cramit.domain.lecture.Lecture;
 import com.cramit.domain.lecture.LectureRepository;
 import com.cramit.domain.week.dto.WeekAudioResponse;
@@ -63,8 +64,9 @@ public class WeekService {
 
         // 되돌릴 수 없는 PPT 확정(S3 복사, #93)보다 먼저 가벼운 검증을 전부 끝낸다 - audio URL이
         // 잘못됐을 뿐인데 PPT만 S3에 복사되고 주차 생성 자체는 실패하는 상황을 피한다.
+        // PPT는 finalizePdfUpload가 더 엄격하게 검증하므로, 여기서는 음성만 검증한다 (#105).
         if (request.audio() != null) {
-            fileService.validateFileUrl(request.audio().fileUrl());
+            fileService.verifyUploaded(request.audio().fileUrl(), FileType.AUDIO);
         }
 
         // 검증을 통과한 내용만 불변 키로 복사한 최종 fileUrl을 등록한다 (#93, TOCTOU 방지).
@@ -89,7 +91,7 @@ public class WeekService {
 
         if (!lecture.isOwnedBy(memberId)) {
             throw new BusinessException(ErrorCode.LECTURE_ACCESS_DENIED);
-        } // TODO: MemberLecture 도메인 완성되면 공유받은 회원도 접근 가능하도록 조건 추가
+        }
 
         List<Week> weeks = weekRepository.findByLectureIdOrderByWeekDateDesc(lectureId);
 

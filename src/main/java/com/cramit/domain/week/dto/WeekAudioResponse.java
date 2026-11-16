@@ -2,6 +2,7 @@ package com.cramit.domain.week.dto;
 
 import com.cramit.domain.week.entity.LectureAudio;
 import com.cramit.domain.week.enums.SttStatus;
+import com.cramit.global.exception.ErrorCode;
 
 import java.time.LocalDateTime;
 
@@ -11,6 +12,7 @@ public record WeekAudioResponse(
         String fileUrl,
         Long durationSec,
         SttStatus sttStatus,
+        ErrorCode sttErrorCode,
         LocalDateTime uploadedAt
 ) {
     public static WeekAudioResponse from(LectureAudio audio) {
@@ -20,6 +22,7 @@ public record WeekAudioResponse(
                 audio.getFileUrl(),
                 audio.getDurationSec(),
                 audio.getSttStatus(),
+                audio.getSttErrorCode(),
                 audio.getCreatedAt()
         );
     }
