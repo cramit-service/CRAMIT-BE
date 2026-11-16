@@ -58,9 +58,13 @@ public class Summary extends BaseEntity {
         return true;
     }
 
-    public void complete(String content) {
+    public boolean complete(String content) {
+        if (this.status == AsyncJobStatus.COMPLETED) {
+            return false;
+        }
         this.content = content;
         this.status = AsyncJobStatus.COMPLETED;
+        return true;
     }
 
     public void fail() {

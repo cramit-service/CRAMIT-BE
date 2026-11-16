@@ -95,7 +95,7 @@ public class SummaryController {
 
     @Operation(summary = "요약본 수정",
             description = "생성이 끝난 요약본의 본문을 통째로 교체합니다. 학습포인트는 본문 안에 <lp>…</lp> 태그로 함께 저장합니다. "
-                    + "챗봇과 AI 학습 계획도 수정된 요약본을 기준으로 동작합니다.")
+                    + "AI 학습 계획은 수정된 요약본을 기준으로 만들고, 챗봇은 스크립트 검색 결과가 없을 때 수정된 요약본을 참고합니다.")
     @ApiResponses({
             @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "수정 성공"),
             @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "400", description = "content 누락 또는 너무 김 (VALIDATION_ERROR)",
