@@ -146,8 +146,7 @@ class WeekServiceTest {
         Long weekId = weekService.createWeek(lectureId, createRequest("1주차", WEEK_DATE), MEMBER_ID).weekId();
         WeekUpdateRequest request = new WeekUpdateRequest(
                 "1주차(수정)",
-                WEEK_DATE.plusDays(1),
-                "박지훈"
+                WEEK_DATE.plusDays(1)
         );
 
         WeekUpdateResponse response = weekService.updateWeek(weekId, request, MEMBER_ID);
@@ -155,7 +154,7 @@ class WeekServiceTest {
         Week updated = weekRepository.findById(weekId).orElseThrow();
         assertThat(response.weekId()).isEqualTo(weekId);
         assertThat(updated.getTitle()).isEqualTo("1주차(수정)");
-        assertThat(updated.getProfessorName()).isEqualTo("박지훈");
+        assertThat(updated.getWeekDate()).isEqualTo(WEEK_DATE.plusDays(1));
     }
 
     @Test
@@ -332,7 +331,7 @@ class WeekServiceTest {
     @Test
     @DisplayName("존재하지 않는 주차를 수정하면 예외가 발생한다.")
     void updateWeekNotFound() {
-        WeekUpdateRequest request = new WeekUpdateRequest("1주차(수정)", WEEK_DATE, null);
+        WeekUpdateRequest request = new WeekUpdateRequest("1주차(수정)", WEEK_DATE);
 
         assertThatThrownBy(() -> weekService.updateWeek(999L, request, MEMBER_ID))
                 .isInstanceOfSatisfying(BusinessException.class, ex ->
@@ -368,7 +367,7 @@ class WeekServiceTest {
                         .weekDate(WEEK_DATE)
                         .build()
         ).getWeekId();
-        WeekUpdateRequest request = new WeekUpdateRequest("1주차(수정)", WEEK_DATE, null);
+        WeekUpdateRequest request = new WeekUpdateRequest("1주차(수정)", WEEK_DATE);
 
         assertThatThrownBy(() -> weekService.updateWeek(weekId, request, MEMBER_ID))
                 .isInstanceOfSatisfying(BusinessException.class, ex ->

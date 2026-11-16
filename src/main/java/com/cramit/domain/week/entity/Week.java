@@ -34,8 +34,6 @@ public class Week extends BaseEntity {
     @Column(nullable = false)
     private LocalDate weekDate;
 
-    private String professorName;
-
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     private WeekStatus status;
@@ -47,20 +45,18 @@ public class Week extends BaseEntity {
     private Integer reviewCount;
 
     @Builder
-    public Week(Long lectureId, String title, LocalDate weekDate, String professorName) {
+    public Week(Long lectureId, String title, LocalDate weekDate) {
         this.lectureId = lectureId;
         this.title = title;
         this.weekDate = weekDate;
-        this.professorName = professorName;
         this.status = WeekStatus.BEFORE;
         this.reviewCount = 0;
     }
 
     //수정
-    public void update(String title, LocalDate weekDate, String professorName) {
+    public void update(String title, LocalDate weekDate) {
         this.title = title;
         this.weekDate = weekDate;
-        this.professorName = professorName;
     }
 
     public void updateStatus(WeekStatus status) {

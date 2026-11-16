@@ -17,6 +17,7 @@ import com.cramit.global.exception.BusinessException;
 import com.cramit.global.exception.ErrorCode;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.openapitools.jackson.nullable.JsonNullable;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
 import org.springframework.context.annotation.Import;
@@ -125,12 +126,12 @@ class LectureServiceTest {
     }
 
     @Test
-    @DisplayName("강의 제목을 수정하고, 교수명을 생략하면 기존 교수명을 유지한다.")
-    void updateLectureKeepsProfessorNameWhenNull() {
+    @DisplayName("강의 제목을 수정하고, professorName 필드를 아예 보내지 않으면 기존 교수명을 유지한다.")
+    void updateLectureKeepsProfessorNameWhenFieldOmitted() {
         // given
         Long lectureId = lectureService.createLecture(
                 new LectureCreateRequest("알고리즘", "박지훈", 1), MEMBER_ID).lectureId();
-        LectureUpdateRequest request = new LectureUpdateRequest("알고리즘(수정됨)", null, 1);
+        LectureUpdateRequest request = new LectureUpdateRequest("알고리즘(수정됨)", JsonNullable.undefined(), 1);
 
         // when
         LectureUpdateResponse response = lectureService.updateLecture(request, lectureId, MEMBER_ID);
@@ -140,6 +141,22 @@ class LectureServiceTest {
         Lecture updated = lectureRepository.findById(lectureId).orElseThrow();
         assertThat(updated.getTitle()).isEqualTo("알고리즘(수정됨)");
         assertThat(updated.getProfessorName()).isEqualTo("박지훈");
+    }
+
+    @Test
+    @DisplayName("professorName에 null을 명시해서 보내면 교수명을 지운다.")
+    void updateLectureClearsProfessorNameWhenExplicitNull() {
+        // given
+        Long lectureId = lectureService.createLecture(
+                new LectureCreateRequest("알고리즘", "박지훈", 1), MEMBER_ID).lectureId();
+        LectureUpdateRequest request = new LectureUpdateRequest("알고리즘(수정됨)", JsonNullable.of(null), 1);
+
+        // when
+        lectureService.updateLecture(request, lectureId, MEMBER_ID);
+
+        // then
+        Lecture updated = lectureRepository.findById(lectureId).orElseThrow();
+        assertThat(updated.getProfessorName()).isNull();
     }
 
     @Test
@@ -159,7 +176,7 @@ class LectureServiceTest {
     @Test
     @DisplayName("존재하지 않는 강의를 수정하면 예외가 발생한다.")
     void updateLectureNotFound() {
-        LectureUpdateRequest request = new LectureUpdateRequest("알고리즘(수정됨)", "박지훈", 1);
+        LectureUpdateRequest request = new LectureUpdateRequest("알고리즘(수정됨)", JsonNullable.of("박지훈"), 1);
 
         assertThatThrownBy(() -> lectureService.updateLecture(request, 999L, MEMBER_ID))
                 .isInstanceOfSatisfying(BusinessException.class, ex ->
@@ -186,7 +203,7 @@ class LectureServiceTest {
                         .colorIndex(1)
                         .build()
         ).getLectureId();
-        LectureUpdateRequest request = new LectureUpdateRequest("알고리즘(수정됨)", "박지훈", 1);
+        LectureUpdateRequest request = new LectureUpdateRequest("알고리즘(수정됨)", JsonNullable.of("박지훈"), 1);
 
         // when & then
         assertThatThrownBy(() -> lectureService.updateLecture(request, lectureId, MEMBER_ID))

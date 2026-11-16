@@ -16,6 +16,7 @@ import com.cramit.global.exception.BusinessException;
 import com.cramit.global.exception.ErrorCode;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.openapitools.jackson.nullable.JsonNullable;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
 import org.springframework.context.annotation.Import;
@@ -145,7 +146,8 @@ class TodoServiceTest {
         // given
         TodoCreateResponse created = todoService.createTodo(
                 new TodoCreateRequest(null, "원래 제목", null, null), MEMBER_ID);
-        TodoUpdateRequest request = new TodoUpdateRequest(null, "수정된 제목", "새 메모", null);
+        TodoUpdateRequest request = new TodoUpdateRequest(
+                JsonNullable.undefined(), "수정된 제목", JsonNullable.of("새 메모"), JsonNullable.undefined());
 
         // when
         TodoUpdateResponse response = todoService.updateTodo(created.todoId(), request, MEMBER_ID);
@@ -167,7 +169,8 @@ class TodoServiceTest {
                         .content("남의 할일")
                         .build()
         );
-        TodoUpdateRequest request = new TodoUpdateRequest(null, "수정 시도", null, null);
+        TodoUpdateRequest request = new TodoUpdateRequest(
+                JsonNullable.undefined(), "수정 시도", JsonNullable.undefined(), JsonNullable.undefined());
 
         // when & then
         assertThatThrownBy(() -> todoService.updateTodo(todo.getTodoId(), request, MEMBER_ID))
@@ -297,7 +300,8 @@ class TodoServiceTest {
                         .build()
         ).getWeekId();
 
-        TodoUpdateRequest request = new TodoUpdateRequest(weekId, "수정 시도", null, null);
+        TodoUpdateRequest request = new TodoUpdateRequest(
+                JsonNullable.of(weekId), "수정 시도", JsonNullable.undefined(), JsonNullable.undefined());
 
         assertThatThrownBy(() -> todoService.updateTodo(created.todoId(), request, MEMBER_ID))
                 .isInstanceOfSatisfying(BusinessException.class, ex ->
@@ -402,7 +406,8 @@ class TodoServiceTest {
                         .todoType(TodoType.AI)
                         .build()
         );
-        TodoUpdateRequest request = new TodoUpdateRequest(null, "내가 고친 계획", null, null);
+        TodoUpdateRequest request = new TodoUpdateRequest(
+                JsonNullable.undefined(), "내가 고친 계획", JsonNullable.undefined(), JsonNullable.undefined());
 
         // when
         todoService.updateTodo(aiTodo.getTodoId(), request, MEMBER_ID);

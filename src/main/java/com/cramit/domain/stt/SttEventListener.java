@@ -17,6 +17,7 @@ public class SttEventListener {
 
     private final SttService sttService;
     private final GroqSttClient groqSttClient;
+    private final PageMappingService pageMappingService;
     private final SummaryService summaryService;
     private final PageEmbeddingService pageEmbeddingService;
 
@@ -27,8 +28,10 @@ public class SttEventListener {
         Long weekId;
         try {
             String fileUrl = sttService.markProcessing(lectureAudioId);
-            GroqTranscriptionResponse transcription = groqSttClient.transcribe(fileUrl);
-            weekId = sttService.saveResult(lectureAudioId, transcription);
+            byte[] audio = groqSttClient.download(fileUrl);
+            GroqTranscriptionResponse transcription = groqSttClient.transcribe(fileUrl, audio);
+            PageMappingService.Result mapped = pageMappingService.map(lectureAudioId, transcription, audio);
+            weekId = sttService.saveResult(lectureAudioId, mapped.transcription(), mapped.sections());
             log.info("STT 완료: lectureAudioId={}", lectureAudioId);
         } catch (Exception e) {
             log.error("STT 실패: lectureAudioId={}", lectureAudioId, e);

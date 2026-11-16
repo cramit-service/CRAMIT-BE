@@ -12,7 +12,6 @@ public record WeekListResponse(
         Long weekId,
         String title,
         LocalDate weekDate,
-        String professorName,
         WeekStatus status,
         Integer reviewCount,
         LocalDateTime createdAt
@@ -22,7 +21,6 @@ public record WeekListResponse(
                 .weekId(week.getWeekId())
                 .title(week.getTitle())
                 .weekDate(week.getWeekDate())
-                .professorName(week.getProfessorName())
                 .status(week.getStatus())
                 .reviewCount(week.getReviewCount())
                 .createdAt(week.getCreatedAt())

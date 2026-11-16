@@ -12,9 +12,6 @@ public record WeekUpdateRequest(
         String title,
 
         @NotNull
-        LocalDate weekDate,
-
-        @Size(max = 100)
-        String professorName
+        LocalDate weekDate
 ) {
 }
