@@ -4,6 +4,7 @@ import com.cramit.domain.lecture.Lecture;
 import com.cramit.domain.lecture.LectureRepository;
 import com.cramit.domain.summary.dto.SummaryResponse;
 import com.cramit.domain.summary.dto.SummaryStatusResponse;
+import com.cramit.domain.summary.dto.SummaryUpdateRequest;
 import com.cramit.domain.summary.entity.Summary;
 import com.cramit.domain.summary.repository.SummaryRepository;
 import com.cramit.domain.week.entity.LectureAudio;
@@ -213,6 +214,57 @@ class SummaryServiceTest {
         assertThatThrownBy(() -> summaryService.getSummary(weekId, MEMBER_ID))
                 .isInstanceOfSatisfying(BusinessException.class, ex ->
                         assertThat(ex.getErrorCode()).isEqualTo(ErrorCode.SUMMARY_NOT_READY));
+    }
+
+    @Test
+    @DisplayName("완료된 요약본을 수정하면 요약본과 주차의 1차 요약본이 함께 바뀐다.")
+    void updateSummary() {
+        // given
+        Long weekId = saveWeekWithScript(MEMBER_ID);
+        Long summaryId = saveCompletedSummary(weekId, "## 정렬 (p.3)").getSummaryId();
+        String edited = "## 정렬 (p.3)\n- <lp>퀵 정렬은 평균 O(n log n)</lp>";
+
+        // when
+        SummaryResponse response = summaryService.updateSummary(summaryId, new SummaryUpdateRequest(edited), MEMBER_ID);
+
+        // then
+        assertThat(response.content()).isEqualTo(edited);
+        assertThat(summaryService.getSummary(weekId, MEMBER_ID).content()).isEqualTo(edited);
+        assertThat(weekRepository.findById(weekId).orElseThrow().getFirstSummaryMd()).isEqualTo(edited);
+    }
+
+    @Test
+    @DisplayName("생성이 끝나지 않은 요약본은 수정할 수 없다.")
+    void updateSummaryNotCompleted() {
+        // given
+        Long weekId = saveWeekWithScript(MEMBER_ID);
+        Long summaryId = summaryService.requestSummary(weekId, MEMBER_ID).summaryId();
+
+        // when & then
+        assertThatThrownBy(() -> summaryService.updateSummary(summaryId, new SummaryUpdateRequest("수정"), MEMBER_ID))
+                .isInstanceOfSatisfying(BusinessException.class, ex ->
+                        assertThat(ex.getErrorCode()).isEqualTo(ErrorCode.SUMMARY_NOT_EDITABLE));
+    }
+
+    @Test
+    @DisplayName("본인 강의가 아닌 주차의 요약본은 수정할 수 없다.")
+    void updateSummaryForbidden() {
+        // given
+        Long weekId = saveWeekWithScript(OTHER_MEMBER_ID);
+        Long summaryId = saveCompletedSummary(weekId, "## 정렬").getSummaryId();
+
+        // when & then
+        assertThatThrownBy(() -> summaryService.updateSummary(summaryId, new SummaryUpdateRequest("수정"), MEMBER_ID))
+                .isInstanceOfSatisfying(BusinessException.class, ex ->
+                        assertThat(ex.getErrorCode()).isEqualTo(ErrorCode.LECTURE_ACCESS_DENIED));
+    }
+
+    @Test
+    @DisplayName("없는 요약본은 수정할 수 없다.")
+    void updateSummaryNotFound() {
+        assertThatThrownBy(() -> summaryService.updateSummary(999L, new SummaryUpdateRequest("수정"), MEMBER_ID))
+                .isInstanceOfSatisfying(BusinessException.class, ex ->
+                        assertThat(ex.getErrorCode()).isEqualTo(ErrorCode.ENTITY_NOT_FOUND));
     }
 
     @Test

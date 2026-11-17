@@ -58,9 +58,13 @@ public class Summary extends BaseEntity {
         return true;
     }
 
-    public void complete(String content) {
+    public boolean complete(String content) {
+        if (this.status == AsyncJobStatus.COMPLETED) {
+            return false;
+        }
         this.content = content;
         this.status = AsyncJobStatus.COMPLETED;
+        return true;
     }
 
     public void fail() {
@@ -68,6 +72,10 @@ public class Summary extends BaseEntity {
             return;
         }
         this.status = AsyncJobStatus.FAILED;
+    }
+
+    public void updateContent(String content) {
+        this.content = content;
     }
 
     public boolean isInProgress(LocalDateTime staleBefore) {

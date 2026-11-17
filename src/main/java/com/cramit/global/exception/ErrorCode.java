@@ -58,6 +58,7 @@ public enum ErrorCode {
 	SUMMARY_GENERATION_FAILED(HttpStatus.BAD_GATEWAY, "요약 생성에 실패했습니다. 다시 시도해주세요."),
 	SUMMARY_ALREADY_EXISTS(HttpStatus.CONFLICT, "이미 생성된 요약본이 있습니다."),
 	SUMMARY_AUDIO_REQUIRED(HttpStatus.UNPROCESSABLE_ENTITY, "강의 음성을 올려야 요약을 만들 수 있습니다."),
+	SUMMARY_NOT_EDITABLE(HttpStatus.CONFLICT, "요약본 생성이 끝난 뒤에 수정할 수 있습니다."),
 
 	// 학습 포인트 / 메모 / 학습 내용 적용 (Phase 5, 6, 7)
 	HIGHLIGHT_INVALID_POSITION(HttpStatus.BAD_REQUEST, "학습포인트 위치를 저장하지 못했습니다."),

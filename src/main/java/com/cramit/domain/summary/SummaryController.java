@@ -2,6 +2,7 @@ package com.cramit.domain.summary;
 
 import com.cramit.domain.summary.dto.SummaryResponse;
 import com.cramit.domain.summary.dto.SummaryStatusResponse;
+import com.cramit.domain.summary.dto.SummaryUpdateRequest;
 import com.cramit.global.common.ApiResponse;
 import com.cramit.global.exception.ErrorResponse;
 import io.swagger.v3.oas.annotations.Operation;
@@ -11,17 +12,20 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RestController;
 
-@Tag(name = "AI 요약", description = "주차별 AI 요약본 생성/상태 조회/조회 API")
+@Tag(name = "AI 요약", description = "주차별 AI 요약본 생성/상태 조회/조회/수정 API")
 @SecurityRequirement(name = "bearerAuth")
 @RestController
 @RequiredArgsConstructor
@@ -87,5 +91,28 @@ public class SummaryController {
             @PathVariable Long weekId
     ) {
         return ResponseEntity.ok(ApiResponse.of(summaryService.getSummary(weekId, memberId)));
+    }
+
+    @Operation(summary = "요약본 수정",
+            description = "생성이 끝난 요약본의 본문을 통째로 교체합니다. 학습포인트는 본문 안에 <lp>…</lp> 태그로 함께 저장합니다. "
+                    + "AI 학습 계획은 수정된 요약본을 기준으로 만들고, 챗봇은 스크립트 검색 결과가 없을 때 수정된 요약본을 참고합니다.")
+    @ApiResponses({
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "수정 성공"),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "400", description = "content 누락 또는 너무 김 (VALIDATION_ERROR)",
+                    content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE, schema = @Schema(implementation = ErrorResponse.class))),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "403", description = "접근 권한이 없는 강의 (LECTURE_ACCESS_DENIED)",
+                    content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE, schema = @Schema(implementation = ErrorResponse.class))),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "존재하지 않는 요약본 (ENTITY_NOT_FOUND)",
+                    content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE, schema = @Schema(implementation = ErrorResponse.class))),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "409", description = "생성이 끝나지 않은 요약본 (SUMMARY_NOT_EDITABLE)",
+                    content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE, schema = @Schema(implementation = ErrorResponse.class)))
+    })
+    @PatchMapping("/api/summaries/{summaryId}")
+    public ResponseEntity<ApiResponse<SummaryResponse>> updateSummary(
+            @Parameter(hidden = true) @AuthenticationPrincipal Long memberId,
+            @PathVariable Long summaryId,
+            @Valid @RequestBody SummaryUpdateRequest request
+    ) {
+        return ResponseEntity.ok(ApiResponse.of(summaryService.updateSummary(summaryId, request, memberId)));
     }
 }

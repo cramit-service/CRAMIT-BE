@@ -83,8 +83,9 @@ public class SummaryGenerator {
             String content = summarize(summaryId, segments);
 
             transactionTemplate.executeWithoutResult(status -> {
-                findSummary(summaryId).complete(content);
-                weekRepository.findById(weekId).ifPresent(week -> week.updateFirstSummary(content));
+                if (findSummary(summaryId).complete(content)) {
+                    weekRepository.findById(weekId).ifPresent(week -> week.updateFirstSummary(content));
+                }
             });
         } catch (Exception e) {
             log.warn("요약본 생성 실패 summaryId={}, weekId={}: {}", summaryId, weekId, e.getMessage(), e);
