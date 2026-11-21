@@ -54,7 +54,7 @@
 
 <br>
 
-## ⚙️ 기술 스택
+## 기술 스택
 
 | 구분 | 기술 | 용도 |
 | --- | --- | --- |
@@ -73,6 +73,46 @@
 | Testing | ![JUnit5](https://img.shields.io/badge/JUnit5-25A162?style=for-the-badge&logo=junit5&logoColor=white) ![Mockito](https://img.shields.io/badge/Mockito-78A641?style=for-the-badge) | Unit & Integration Test |
 | Build & Deploy | ![Gradle](https://img.shields.io/badge/Gradle-02303A?style=for-the-badge&logo=gradle&logoColor=white) ![Docker](https://img.shields.io/badge/Docker-2496ED?style=for-the-badge&logo=docker&logoColor=white) ![AWS EC2](https://img.shields.io/badge/AWS%20EC2-FF9900?style=for-the-badge&logo=amazonec2&logoColor=white) | Build & Deployment |
 
+<br>
+
+## Overall layers
+
+```mermaid
+flowchart TB
+    subgraph FE["Frontend (별도 레포, React/Next.js)"]
+        UI["강의 업로드 · 학습 화면 · 챗봇 UI"]
+    end
+
+    FE -->|HTTPS REST| API
+
+    subgraph BE["CRAMIT-BE (Spring Boot 3.x)"]
+        direction TB
+        API["Controller Layer<br/>REST API · Swagger<br/>Spring Security(JWT) 인증·인가"]
+
+        subgraph DOMAIN["Domain Layer"]
+            direction LR
+            D1["Lecture / Week<br/>(강의·주차·PPT·음성)"]
+            D2["Chat / Summary / Todo<br/>(AI 챗봇·요약·학습계획)"]
+            D3["Member / Subscription<br/>(회원·구독·약관)"]
+        end
+
+        API --> DOMAIN
+
+        ASYNC["비동기 처리<br/>STT 완료 이벤트 → 요약 생성 트리거<br/>pgvector 임베딩 백필 스케줄러"]
+        DOMAIN -.이벤트.-> ASYNC
+
+        RESILIENCE["Resilience4j<br/>Circuit Breaker · Retry<br/>(외부 API 장애 격리)"]
+        DOMAIN --> RESILIENCE
+    end
+
+    RESILIENCE --> KAKAO["Kakao / Google OAuth2"]
+    RESILIENCE --> GEMINI["Google Gemini API<br/>(챗봇·요약·Todo·임베딩)"]
+    RESILIENCE --> GROQ["Groq Whisper<br/>(STT)"]
+
+    DOMAIN --> DB[("PostgreSQL + pgvector<br/>(Flyway 마이그레이션)")]
+    DOMAIN --> REDIS[("Redis<br/>(세션/캐시)")]
+    DOMAIN --> S3[("AWS S3 / Cloudflare R2<br/>(PPT·음성 파일)")]
+```
 <br>
 
 ## ⚙️ 실행 환경
