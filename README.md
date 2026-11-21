@@ -118,8 +118,6 @@ flowchart TB
 
 ## 핵심 처리 흐름
 
-업로드부터 STT·AI 요약·챗봇 응답까지 이어지는 흐름입니다.
-
 ```mermaid
 sequenceDiagram
     actor U as 사용자 (FE)
