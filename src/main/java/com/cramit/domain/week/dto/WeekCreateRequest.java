@@ -17,9 +17,12 @@ public record WeekCreateRequest(
         @NotNull
         LocalDate weekDate,
 
+        // 둘을 올리는 순간 요약 생성이 시작되고 등록 뒤에는 파일을 바꿀 수 없어서, 둘 다 받아야만 만든다.
+        @NotNull(message = "강의 자료(PDF)를 올려주세요.")
         @Valid
         PptInfo ppt,
 
+        @NotNull(message = "녹음 파일을 올려주세요.")
         @Valid
         AudioInfo audio
 ) {
