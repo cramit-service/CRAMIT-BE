@@ -1,5 +1,6 @@
 package com.cramit.domain.stt;
 
+import com.cramit.domain.file.enums.FileType;
 import com.cramit.domain.stt.dto.AzureTranscriptionResponse;
 import com.cramit.domain.stt.dto.Transcription;
 import lombok.RequiredArgsConstructor;
@@ -16,13 +17,12 @@ public class AzureSttClient {
 
     private static final String API_VERSION = "2025-10-15";
     private static final String DEFINITION = "{\"locales\":[\"ko-KR\"],\"profanityFilterMode\":\"None\"}";
-    private static final int MAX_AUDIO_BYTES = 25 * 1024 * 1024; // FileType.AUDIO 업로드 한도
 
     private final RestClient azureSpeechRestClient;
     private final StorageFileDownloader storageFileDownloader;
 
     public byte[] download(String fileUrl) {
-        return storageFileDownloader.download(fileUrl, MAX_AUDIO_BYTES);
+        return storageFileDownloader.download(fileUrl, Math.toIntExact(FileType.AUDIO.getMaxBytes()));
     }
 
     public Transcription transcribe(String fileUrl, byte[] audio) {
