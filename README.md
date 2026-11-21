@@ -115,6 +115,57 @@ flowchart TB
 ```
 <br>
 
+
+## 핵심 처리 흐름
+
+업로드부터 STT·AI 요약·챗봇 응답까지 이어지는 흐름입니다.
+
+```mermaid
+sequenceDiagram
+    actor U as 사용자 (FE)
+    participant API as CRAMIT-BE
+    participant S3 as S3/R2
+    participant DB as PostgreSQL(+pgvector)
+    participant STT as Groq Whisper
+    participant AI as Gemini API
+
+    Note over U,API: 1. 강의자료 업로드
+    U->>API: POST /api/files/presigned-url (PPT/음성)
+    API->>S3: presigned PUT URL 발급
+    API-->>U: uploadUrl, fileUrl
+    U->>S3: 파일 직접 PUT 업로드
+
+    U->>API: POST /lectures/{id}/weeks (ppt·audio fileUrl)
+    API->>S3: PPT 매직바이트·용량 검증 후<br/>불변 키로 서버사이드 복사
+    API->>DB: Week/LecturePpt/LectureAudio 저장<br/>(sttStatus=PENDING)
+    API-->>U: 201 Created
+
+    Note over API,STT: 2. STT 비동기 처리 (커밋 후 트리거)
+    API->>STT: 음성 파일 전사 요청
+    STT-->>API: 전사 텍스트
+    API->>DB: Script/ScriptDetail 저장<br/>(sttStatus=COMPLETED)
+
+    Note over API,AI: 3. STT 완료 후 자동 연계
+    API->>AI: 1차 요약본 생성 요청
+    AI-->>API: 요약 결과
+    API->>DB: Summary 저장
+
+    Note over API,DB: 4. 주기적 임베딩 백필 (10분 간격)
+    API->>AI: 페이지 텍스트 임베딩 요청
+    AI-->>API: 임베딩 벡터(768차원)
+    API->>DB: script_embedding 저장
+
+    Note over U,AI: 5. AI 챗봇 질의 (RAG)
+    U->>API: POST /chat (질문)
+    API->>DB: pgvector 유사도 검색 + 키워드 검색
+    DB-->>API: 관련 페이지 컨텍스트
+    API->>AI: 컨텍스트 + 질문으로 답변 생성 요청
+    AI-->>API: 답변 + 근거 페이지
+    API-->>U: 답변 반환
+```
+
+<br>
+
 ## ⚙️ 실행 환경
 
 - **JDK 버전**: `17`
