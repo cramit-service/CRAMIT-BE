@@ -1,7 +1,7 @@
 package com.cramit.domain.stt;
 
 import com.cramit.domain.ai.dto.GeminiPageSection;
-import com.cramit.domain.stt.dto.GroqTranscriptionResponse;
+import com.cramit.domain.stt.dto.Transcription;
 import com.cramit.domain.week.entity.LectureAudio;
 import com.cramit.domain.week.entity.LecturePpt;
 import com.cramit.domain.week.entity.Script;
@@ -43,7 +43,7 @@ public class SttService {
 
     // 매핑된 구간이 없거나 다 버려지면 녹음 전체를 구간 하나로 저장한다.
     @Transactional
-    public Long saveResult(Long lectureAudioId, GroqTranscriptionResponse transcription,
+    public Long saveResult(Long lectureAudioId, Transcription transcription,
                            List<GeminiPageSection> sections) {
         LectureAudio audio = findAudio(lectureAudioId);
         int durationSec = (int) Math.ceil(transcription.duration());
@@ -57,7 +57,7 @@ public class SttService {
 
         List<ScriptDetail> details = new ArrayList<>();
         Map<Long, Integer> sequenceByScript = new HashMap<>();
-        for (GroqTranscriptionResponse.Segment segment : transcription.segments()) {
+        for (Transcription.Segment segment : transcription.segments()) {
             int timeSec = (int) Math.floor(segment.start());
             Script script = scriptAt(scripts, timeSec);
             details.add(ScriptDetail.builder()

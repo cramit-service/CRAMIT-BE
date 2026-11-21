@@ -47,7 +47,7 @@ class FileServiceTest {
     }
 
     @Test
-    @DisplayName("AUDIO는 Groq가 받는 확장자로 발급한다")
+    @DisplayName("AUDIO는 녹음 확장자로 발급한다")
     void createUploadUrl_audio() {
         UploadUrlResponse response = fileService.createUploadUrl(new UploadUrlRequest("5주차 녹음.m4a", FileType.AUDIO));
 

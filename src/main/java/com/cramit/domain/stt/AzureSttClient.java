@@ -1,6 +1,7 @@
 package com.cramit.domain.stt;
 
-import com.cramit.domain.stt.dto.GroqTranscriptionResponse;
+import com.cramit.domain.stt.dto.AzureTranscriptionResponse;
+import com.cramit.domain.stt.dto.Transcription;
 import lombok.RequiredArgsConstructor;
 import org.springframework.core.io.ByteArrayResource;
 import org.springframework.http.MediaType;
@@ -11,37 +12,36 @@ import org.springframework.web.client.RestClient;
 
 @Component
 @RequiredArgsConstructor
-public class GroqSttClient {
+public class AzureSttClient {
 
-    public static final String MODEL = "whisper-large-v3-turbo";
-    private static final int MAX_AUDIO_BYTES = 25 * 1024 * 1024; // Groq 업로드 한도
+    private static final String API_VERSION = "2025-10-15";
+    private static final String DEFINITION = "{\"locales\":[\"ko-KR\"]}";
+    private static final int MAX_AUDIO_BYTES = 25 * 1024 * 1024; // FileType.AUDIO 업로드 한도
 
-    private final RestClient groqRestClient;
+    private final RestClient azureSpeechRestClient;
     private final StorageFileDownloader storageFileDownloader;
 
     public byte[] download(String fileUrl) {
         return storageFileDownloader.download(fileUrl, MAX_AUDIO_BYTES);
     }
 
-    public GroqTranscriptionResponse transcribe(String fileUrl, byte[] audio) {
-        // Groq는 파일명 확장자로 오디오 형식을 판별한다.
+    public Transcription transcribe(String fileUrl, byte[] audio) {
         String fileName = fileUrl.substring(fileUrl.lastIndexOf('/') + 1);
         MultiValueMap<String, Object> form = new LinkedMultiValueMap<>();
-        form.add("file", new ByteArrayResource(audio) {
+        form.add("audio", new ByteArrayResource(audio) {
             @Override
             public String getFilename() {
                 return fileName;
             }
         });
-        form.add("model", MODEL);
-        form.add("language", "ko");
-        form.add("response_format", "verbose_json");
+        form.add("definition", DEFINITION);
 
-        return groqRestClient.post()
-                .uri("/audio/transcriptions")
+        AzureTranscriptionResponse response = azureSpeechRestClient.post()
+                .uri("/speechtotext/transcriptions:transcribe?api-version={version}", API_VERSION)
                 .contentType(MediaType.MULTIPART_FORM_DATA)
                 .body(form)
                 .retrieve()
-                .body(GroqTranscriptionResponse.class);
+                .body(AzureTranscriptionResponse.class);
+        return response.toTranscription();
     }
 }
