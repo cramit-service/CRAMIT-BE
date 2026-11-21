@@ -36,15 +36,20 @@ public class ScriptEmbeddingRepository {
                 "SELECT page_number FROM script_embedding WHERE week_id = ?", Integer.class, weekId));
     }
 
-    // 같은 주차 안에서만 의미 유사도로 가까운 페이지 번호를 가져온다 (다른 주차 내용이 섞이지 않도록 weekId로 한정).
-    public List<Integer> findNearestPageNumbers(Long weekId, float[] queryEmbedding, int limit) {
+    // 같은 주차 안에서만 의미 유사도로 가까운 페이지를, 거리(코사인 거리, 0=완전 일치~2=정반대)와 함께 가져온다
+    // (다른 주차 내용이 섞이지 않도록 weekId로 한정). 거리는 질문이 이 주차 내용과 얼마나 무관한지 판단하는 데도 쓴다.
+    public List<NearestPage> findNearest(Long weekId, float[] queryEmbedding, int limit) {
         return jdbcTemplate.query(
-                "SELECT page_number FROM script_embedding WHERE week_id = ? ORDER BY embedding <=> ? LIMIT ?",
+                "SELECT page_number, embedding <=> ? AS distance FROM script_embedding "
+                        + "WHERE week_id = ? ORDER BY distance LIMIT ?",
                 ps -> {
-                    ps.setLong(1, weekId);
-                    ps.setObject(2, new PGvector(queryEmbedding));
+                    ps.setObject(1, new PGvector(queryEmbedding));
+                    ps.setLong(2, weekId);
                     ps.setInt(3, limit);
                 },
-                (rs, rowNum) -> rs.getInt("page_number"));
+                (rs, rowNum) -> new NearestPage(rs.getInt("page_number"), rs.getDouble("distance")));
+    }
+
+    public record NearestPage(int pageNumber, double distance) {
     }
 }

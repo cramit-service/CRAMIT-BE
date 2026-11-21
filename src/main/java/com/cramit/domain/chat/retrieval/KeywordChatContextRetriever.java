@@ -24,18 +24,18 @@ public class KeywordChatContextRetriever implements ChatContextRetriever {
     private final ScriptPageLoader scriptPageLoader;
 
     @Override
-    public List<PageContext> retrieve(Long weekId, String question) {
+    public RetrievalResult retrieve(Long weekId, String question) {
         List<PageContext> pages = scriptPageLoader.loadPages(weekId);
         if (pages.isEmpty()) {
-            return List.of();
+            return RetrievalResult.of(List.of());
         }
 
         int totalChars = totalFormattedChars(pages);
         if (totalChars <= CONTEXT_BUDGET_CHARS) {
-            return pages;
+            return RetrievalResult.of(pages);
         }
 
-        return selectRelevantPages(pages, question);
+        return RetrievalResult.of(selectRelevantPages(pages, question));
     }
 
     // ChatBotService가 실제로 모델에 보내는 문자열([p.N] 제목·줄바꿈·페이지 구분자 포함) 기준으로 예산을 계산한다.

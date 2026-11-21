@@ -2,9 +2,11 @@ package com.cramit.domain.chat.retrieval;
 
 import com.cramit.domain.ai.GeminiEmbeddingClient;
 import com.cramit.domain.week.repository.ScriptEmbeddingRepository;
+import com.cramit.domain.week.repository.ScriptEmbeddingRepository.NearestPage;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Set;
+import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.annotation.Primary;
@@ -25,28 +27,38 @@ public class PgVectorChatContextRetriever implements ChatContextRetriever {
     private static final int CONTEXT_BUDGET_CHARS = 20_000;
     private static final int MAX_PAGES = 5;
 
+    // 코사인 거리(0=완전 일치~2=정반대) 기준 임계값. 가장 가까운 페이지조차 이보다 멀면
+    // 질문이 이 주차 내용과 무관하다고 보고 Gemini 채팅 생성 호출 자체를 건너뛴다.
+    // 실제 운영 데이터 없이 정한 1차 추정치라, 모니터링하면서 조정이 필요할 수 있다.
+    private static final double OFF_TOPIC_DISTANCE_THRESHOLD = 0.8;
+
     private final GeminiEmbeddingClient geminiEmbeddingClient;
     private final ScriptEmbeddingRepository scriptEmbeddingRepository;
     private final ScriptPageLoader scriptPageLoader;
     private final KeywordChatContextRetriever fallback;
 
     @Override
-    public List<PageContext> retrieve(Long weekId, String question) {
-        List<Integer> nearestPageNumbers;
+    public RetrievalResult retrieve(Long weekId, String question) {
+        List<NearestPage> nearestPages;
         try {
             float[] queryEmbedding = geminiEmbeddingClient.embedQuery(question);
-            nearestPageNumbers = scriptEmbeddingRepository.findNearestPageNumbers(weekId, queryEmbedding, MAX_PAGES);
+            nearestPages = scriptEmbeddingRepository.findNearest(weekId, queryEmbedding, MAX_PAGES);
         } catch (Exception e) {
             log.warn("임베딩 기반 검색 실패, 키워드 검색으로 대체. weekId={}", weekId, e);
             return fallback.retrieve(weekId, question);
         }
 
-        if (nearestPageNumbers.isEmpty()) {
+        if (nearestPages.isEmpty()) {
             // 아직 이 주차의 임베딩이 하나도 없는 경우 (백필 전이거나 생성이 계속 실패한 경우)
             return fallback.retrieve(weekId, question);
         }
 
-        Set<Integer> nearestSet = Set.copyOf(nearestPageNumbers);
+        // findNearest는 거리 오름차순으로 정렬해서 주므로, 첫 번째가 가장 가까운(가장 관련 있는) 페이지다.
+        if (nearestPages.get(0).distance() > OFF_TOPIC_DISTANCE_THRESHOLD) {
+            return RetrievalResult.ofOffTopic();
+        }
+
+        Set<Integer> nearestSet = nearestPages.stream().map(NearestPage::pageNumber).collect(Collectors.toSet());
         List<PageContext> candidates = scriptPageLoader.loadPages(weekId).stream()
                 .filter(page -> nearestSet.contains(page.pageNumber()))
                 .sorted(Comparator.comparing(PageContext::pageNumber))
@@ -56,7 +68,7 @@ public class PgVectorChatContextRetriever implements ChatContextRetriever {
             // 후보가 예산을 넘으면, 정교하게 자르는 대신 이미 그 처리를 갖춘 키워드 검색에 맡긴다.
             return fallback.retrieve(weekId, question);
         }
-        return candidates;
+        return RetrievalResult.of(candidates);
     }
 
     private int totalFormattedChars(List<PageContext> pages) {
