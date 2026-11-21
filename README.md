@@ -75,7 +75,7 @@
 | Build & Deploy | ![Gradle](https://img.shields.io/badge/Gradle-02303A?style=for-the-badge&logo=gradle&logoColor=white) ![Docker](https://img.shields.io/badge/Docker-2496ED?style=for-the-badge&logo=docker&logoColor=white) ![AWS EC2](https://img.shields.io/badge/AWS%20EC2-FF9900?style=for-the-badge&logo=amazonec2&logoColor=white) | Build & Deployment |
 <br>
 
-## Overall layers
+## 아키텍처
 
 ```mermaid
 flowchart TB
