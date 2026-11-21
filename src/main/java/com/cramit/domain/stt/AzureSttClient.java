@@ -15,7 +15,7 @@ import org.springframework.web.client.RestClient;
 public class AzureSttClient {
 
     private static final String API_VERSION = "2025-10-15";
-    private static final String DEFINITION = "{\"locales\":[\"ko-KR\"]}";
+    private static final String DEFINITION = "{\"locales\":[\"ko-KR\"],\"profanityFilterMode\":\"None\"}";
     private static final int MAX_AUDIO_BYTES = 25 * 1024 * 1024; // FileType.AUDIO 업로드 한도
 
     private final RestClient azureSpeechRestClient;
