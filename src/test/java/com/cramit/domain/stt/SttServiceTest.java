@@ -1,8 +1,8 @@
 package com.cramit.domain.stt;
 
 import com.cramit.domain.ai.dto.GeminiPageSection;
-import com.cramit.domain.stt.dto.GroqTranscriptionResponse;
-import com.cramit.domain.stt.dto.GroqTranscriptionResponse.Segment;
+import com.cramit.domain.stt.dto.Transcription;
+import com.cramit.domain.stt.dto.Transcription.Segment;
 import com.cramit.domain.week.entity.LectureAudio;
 import com.cramit.domain.week.entity.Script;
 import com.cramit.domain.week.entity.ScriptDetail;
@@ -38,7 +38,7 @@ class SttServiceTest {
     private final LectureAudio audio = LectureAudio.builder()
             .weekId(7L).fileName("a.mp3").fileUrl("https://files/a.mp3").build();
 
-    private final GroqTranscriptionResponse transcription = new GroqTranscriptionResponse(95.4, List.of(
+    private final Transcription transcription = new Transcription(95.4, List.of(
             new Segment(2.0, 8.0, " 오늘은 정렬 "),
             new Segment(31.5, 40.0, "병합 정렬"),
             new Segment(70.2, 90.0, "퀵 정렬")));

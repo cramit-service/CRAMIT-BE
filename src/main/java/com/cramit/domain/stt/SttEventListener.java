@@ -1,6 +1,6 @@
 package com.cramit.domain.stt;
 
-import com.cramit.domain.stt.dto.GroqTranscriptionResponse;
+import com.cramit.domain.stt.dto.Transcription;
 import com.cramit.domain.summary.SummaryService;
 import com.cramit.domain.week.PageEmbeddingService;
 import lombok.RequiredArgsConstructor;
@@ -16,7 +16,7 @@ import org.springframework.transaction.event.TransactionalEventListener;
 public class SttEventListener {
 
     private final SttService sttService;
-    private final GroqSttClient groqSttClient;
+    private final AzureSttClient azureSttClient;
     private final PageMappingService pageMappingService;
     private final SummaryService summaryService;
     private final PageEmbeddingService pageEmbeddingService;
@@ -28,8 +28,8 @@ public class SttEventListener {
         Long weekId;
         try {
             String fileUrl = sttService.markProcessing(lectureAudioId);
-            byte[] audio = groqSttClient.download(fileUrl);
-            GroqTranscriptionResponse transcription = groqSttClient.transcribe(fileUrl, audio);
+            byte[] audio = azureSttClient.download(fileUrl);
+            Transcription transcription = azureSttClient.transcribe(fileUrl, audio);
             PageMappingService.Result mapped = pageMappingService.map(lectureAudioId, transcription, audio);
             weekId = sttService.saveResult(lectureAudioId, mapped.transcription(), mapped.sections());
             log.info("STT 완료: lectureAudioId={}", lectureAudioId);

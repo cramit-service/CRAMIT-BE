@@ -59,7 +59,8 @@ aws:
     public-base-url: http://localhost:9000/test-bucket
 
 stt:
-  groq:
-    api-key: test-groq-api-key
+  azure:
+    endpoint: http://localhost:9999
+    api-key: test-azure-speech-key
   download:
     allowed-url-prefix: http://localhost:9000/test-bucket
