@@ -218,6 +218,8 @@ flowchart TB
 | 삭제 (DELETE) | 204 No Content | 삭제 성공, 반환 데이터 없음 |
 <div>
 
+<br>
+
 ## 📂 프로젝트 구조
 
 ```
