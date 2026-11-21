@@ -53,13 +53,20 @@ public class PgVectorChatContextRetriever implements ChatContextRetriever {
             return fallback.retrieve(weekId, question);
         }
 
+        List<PageContext> allPages = scriptPageLoader.loadPages(weekId);
+
         // findNearest는 거리 오름차순으로 정렬해서 주므로, 첫 번째가 가장 가까운(가장 관련 있는) 페이지다.
         if (nearestPages.get(0).distance() > OFF_TOPIC_DISTANCE_THRESHOLD) {
-            return RetrievalResult.ofOffTopic();
+            if (isFullyEmbedded(weekId, allPages)) {
+                return RetrievalResult.ofOffTopic();
+            }
+            // 아직 일부 페이지만 임베딩된 상태라면, 못 찾은 임베딩되지 않은 페이지에 진짜 관련 내용이
+            // 있을 수 있어 이 결과만으로 무관하다고 단정할 수 없다 - 모든 페이지를 보는 키워드 검색에 맡긴다.
+            return fallback.retrieve(weekId, question);
         }
 
         Set<Integer> nearestSet = nearestPages.stream().map(NearestPage::pageNumber).collect(Collectors.toSet());
-        List<PageContext> candidates = scriptPageLoader.loadPages(weekId).stream()
+        List<PageContext> candidates = allPages.stream()
                 .filter(page -> nearestSet.contains(page.pageNumber()))
                 .sorted(Comparator.comparing(PageContext::pageNumber))
                 .toList();
@@ -69,6 +76,13 @@ public class PgVectorChatContextRetriever implements ChatContextRetriever {
             return fallback.retrieve(weekId, question);
         }
         return RetrievalResult.of(candidates);
+    }
+
+    // 이 주차의 모든 페이지가 임베딩됐는지 확인한다. 일부만 임베딩된 상태에서는 가까운 결과가
+    // 멀어도 그 무관함을 신뢰할 수 없다(아직 못 본 페이지에 정답이 있을 수 있으므로).
+    private boolean isFullyEmbedded(Long weekId, List<PageContext> allPages) {
+        Set<Integer> embedded = scriptEmbeddingRepository.findEmbeddedPageNumbers(weekId);
+        return allPages.stream().map(PageContext::pageNumber).allMatch(embedded::contains);
     }
 
     private int totalFormattedChars(List<PageContext> pages) {
