@@ -53,24 +53,26 @@ class ScriptEmbeddingRepositoryTest {
 
     @Test
     @SuppressWarnings("unchecked")
-    void findNearestPageNumbers는_weekId로_한정해서_상위_limit개를_조회한다() throws Exception {
+    void findNearest는_weekId로_한정해서_거리순으로_상위_limit개를_조회한다() throws Exception {
         ArgumentCaptor<String> sqlCaptor = ArgumentCaptor.forClass(String.class);
         ArgumentCaptor<PreparedStatementSetter> setterCaptor = ArgumentCaptor.forClass(PreparedStatementSetter.class);
         when(jdbcTemplate.query(sqlCaptor.capture(), setterCaptor.capture(), any(RowMapper.class)))
-                .thenReturn(List.of(5, 7));
+                .thenReturn(List.of(new ScriptEmbeddingRepository.NearestPage(5, 0.1), new ScriptEmbeddingRepository.NearestPage(7, 0.3)));
 
-        List<Integer> result = repository.findNearestPageNumbers(1L, new float[]{0.1f}, 5);
+        List<ScriptEmbeddingRepository.NearestPage> result = repository.findNearest(1L, new float[]{0.1f}, 5);
 
-        assertThat(result).containsExactly(5, 7);
+        assertThat(result).containsExactly(
+                new ScriptEmbeddingRepository.NearestPage(5, 0.1),
+                new ScriptEmbeddingRepository.NearestPage(7, 0.3));
         assertThat(sqlCaptor.getValue())
                 .contains("WHERE week_id = ?")
-                .contains("ORDER BY embedding <=> ?")
+                .contains("ORDER BY distance")
                 .contains("LIMIT ?");
 
         PreparedStatement ps = mock(PreparedStatement.class);
         setterCaptor.getValue().setValues(ps);
-        verify(ps).setLong(1, 1L);
-        verify(ps).setObject(eq(2), any(PGvector.class));
+        verify(ps).setObject(eq(1), any(PGvector.class));
+        verify(ps).setLong(2, 1L);
         verify(ps).setInt(3, 5);
     }
 }

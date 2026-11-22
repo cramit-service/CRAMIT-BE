@@ -11,6 +11,7 @@ import com.cramit.domain.chat.repository.ChatBotRepository;
 import com.cramit.domain.chat.repository.ChatBotSessionRepository;
 import com.cramit.domain.chat.retrieval.ChatContextRetriever;
 import com.cramit.domain.chat.retrieval.PageContext;
+import com.cramit.domain.chat.retrieval.RetrievalResult;
 import com.cramit.domain.week.entity.Week;
 import com.cramit.domain.week.repository.WeekRepository;
 import com.cramit.global.exception.BusinessException;
@@ -25,6 +26,9 @@ import java.util.stream.Collectors;
 @Service
 @RequiredArgsConstructor
 public class ChatBotService {
+
+    // 강의 내용과 무관하다고 판단된 질문에 Gemini 호출 없이 바로 돌려주는 고정 안내 문구.
+    static final String OFF_TOPIC_MESSAGE = "이 질문은 강의 내용과 관련이 없어 보여요. 강의 주제에 맞는 질문을 해주시면 답변해 드릴게요!";
 
     private final ChatBotRepository chatBotRepository;
     private final ChatBotSessionRepository chatBotSessionRepository;
@@ -65,27 +69,38 @@ public class ChatBotService {
         }
 
         // 질문과 관련된 페이지만 추려서 context로 쓰고, 후보가 없으면(스크립트 미존재 등) 1차 요약본으로 대체한다.
-        List<PageContext> pages = chatContextRetriever.retrieve(session.getWeekId(), request.message());
+        RetrievalResult retrieval = chatContextRetriever.retrieve(session.getWeekId(), request.message());
+        if (retrieval.offTopic()) {
+            return saveExchange(memberId, session.getWeekId(), sessionId, request.message(), OFF_TOPIC_MESSAGE, null);
+        }
+
+        List<PageContext> pages = retrieval.pages();
         String context = pages.isEmpty() ? week.getFirstSummaryMd() : buildContext(pages);
 
         // AI 응답을 먼저 받고, 성공했을 때만 질문과 답변을 함께 저장한다.
         ChatAnswer result = geminiChatBotClient.ask(request.message(), context);
 
+        return saveExchange(memberId, session.getWeekId(), sessionId, request.message(), result.answer(),
+                validateReferencedPage(result.referencedPage(), pages));
+    }
+
+    private List<ChatMessageResponse> saveExchange(Long memberId, Long weekId, Long sessionId,
+                                                    String question, String answer, Integer referencedPage) {
         ChatMessage userMessage = ChatMessage.builder()
                 .memberId(memberId)
-                .weekId(session.getWeekId())
+                .weekId(weekId)
                 .chatBotSessionId(sessionId)
                 .senderType(SenderType.USER)
-                .message(request.message())
+                .message(question)
                 .build();
 
         ChatMessage aiMessage = ChatMessage.builder()
                 .memberId(memberId)
-                .weekId(session.getWeekId())
+                .weekId(weekId)
                 .chatBotSessionId(sessionId)
                 .senderType(SenderType.AI)
-                .message(result.answer())
-                .referencedPage(validateReferencedPage(result.referencedPage(), pages))
+                .message(answer)
+                .referencedPage(referencedPage)
                 .build();
 
         chatBotRepository.saveAll(List.of(userMessage, aiMessage));

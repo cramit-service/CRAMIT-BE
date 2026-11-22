@@ -38,7 +38,7 @@ class KeywordChatContextRetrieverTest {
     @Test
     @DisplayName("스크립트가 없는 주차는 빈 목록을 반환한다.")
     void noScripts() {
-        List<PageContext> pages = chatContextRetriever.retrieve(WEEK_ID, "질문");
+        List<PageContext> pages = chatContextRetriever.retrieve(WEEK_ID, "질문").pages();
 
         assertThat(pages).isEmpty();
     }
@@ -50,7 +50,7 @@ class KeywordChatContextRetrieverTest {
         saveScriptWithDetail(3, 2, "재귀", "메모이제이션으로 중복 계산을 줄일 수 있습니다.");
         saveScriptWithDetail(4, 3, "트리", "트리는 계층 구조를 표현합니다.");
 
-        List<PageContext> pages = chatContextRetriever.retrieve(WEEK_ID, "질문");
+        List<PageContext> pages = chatContextRetriever.retrieve(WEEK_ID, "질문").pages();
 
         assertThat(pages).hasSize(2);
         PageContext page3 = pages.stream().filter(p -> p.pageNumber().equals(3)).findFirst().orElseThrow();
@@ -65,7 +65,7 @@ class KeywordChatContextRetrieverTest {
         saveScriptWithDetail(1, 1, "서론", "짧은 내용입니다.");
         saveScriptWithDetail(2, 2, "본론", "역시 짧은 내용입니다.");
 
-        List<PageContext> pages = chatContextRetriever.retrieve(WEEK_ID, "아무 질문");
+        List<PageContext> pages = chatContextRetriever.retrieve(WEEK_ID, "아무 질문").pages();
 
         assertThat(pages).hasSize(2);
     }
@@ -80,7 +80,7 @@ class KeywordChatContextRetrieverTest {
             saveScriptWithDetail(page, page, "페이지" + page, content);
         }
 
-        List<PageContext> pages = chatContextRetriever.retrieve(WEEK_ID, "양자역학이 뭐야?");
+        List<PageContext> pages = chatContextRetriever.retrieve(WEEK_ID, "양자역학이 뭐야?").pages();
 
         assertThat(pages).hasSizeLessThan(6);
         assertThat(pages).extracting(PageContext::pageNumber).contains(4);
@@ -97,7 +97,7 @@ class KeywordChatContextRetrieverTest {
         saveScriptWithDetail(20, 2, "보조", bigFiller + " 핵심 설명"); // 키워드 1개 일치 -> A 다음 순위지만 용량 초과로 건너뜀
         saveScriptWithDetail(30, 3, "참고", "참고용 보충 자료입니다."); // 키워드 불일치지만 용량이 작아 들어갈 수 있음
 
-        List<PageContext> pages = chatContextRetriever.retrieve(WEEK_ID, "핵심 개념이 뭐야?");
+        List<PageContext> pages = chatContextRetriever.retrieve(WEEK_ID, "핵심 개념이 뭐야?").pages();
 
         assertThat(pages).extracting(PageContext::pageNumber).containsExactly(10, 30);
     }
@@ -109,7 +109,7 @@ class KeywordChatContextRetrieverTest {
         String hugeContent = "학습 내용을 설명하는 문장입니다. ".repeat(2000); // 약 38,000자, 예산(20,000)을 훌쩍 넘음
         saveScriptWithDetail(1, 1, "전체 녹음", hugeContent);
 
-        List<PageContext> pages = chatContextRetriever.retrieve(WEEK_ID, "질문");
+        List<PageContext> pages = chatContextRetriever.retrieve(WEEK_ID, "질문").pages();
 
         assertThat(pages).hasSize(1);
         assertThat(pages.get(0).pageNumber()).isEqualTo(1);
@@ -126,7 +126,7 @@ class KeywordChatContextRetrieverTest {
         String relevantTail = "강의 후반부에서 다루는 양자역학은 미시세계를 설명하는 이론입니다.";
         saveScriptWithDetail(1, 1, "전체 녹음", irrelevantFiller + relevantTail);
 
-        List<PageContext> pages = chatContextRetriever.retrieve(WEEK_ID, "양자역학이 뭐야?");
+        List<PageContext> pages = chatContextRetriever.retrieve(WEEK_ID, "양자역학이 뭐야?").pages();
 
         assertThat(pages).hasSize(1);
         assertThat(pages.get(0).content()).contains("양자역학은 미시세계를 설명하는 이론입니다.");
@@ -141,7 +141,7 @@ class KeywordChatContextRetrieverTest {
         saveScriptWithDetail(2, 2, "다른 주제", filler);
 
         // "경제에서는"은 단순 접미사 제거 한 번으로는 "경제"까지 못 벗겨진다(조사가 겹쳐 붙음).
-        List<PageContext> pages = chatContextRetriever.retrieve(WEEK_ID, "경제에서는 무엇을 다루나요?");
+        List<PageContext> pages = chatContextRetriever.retrieve(WEEK_ID, "경제에서는 무엇을 다루나요?").pages();
 
         assertThat(pages).extracting(PageContext::pageNumber).contains(1);
     }

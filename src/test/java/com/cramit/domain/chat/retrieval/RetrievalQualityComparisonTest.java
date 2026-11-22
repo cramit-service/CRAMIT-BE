@@ -51,8 +51,8 @@ class RetrievalQualityComparisonTest {
 			@SuppressWarnings("unchecked")
 			List<Integer> expectedPages = (List<Integer>) q.get("expectedPages");
 
-			boolean keywordHit = hit(keywordRetriever.retrieve(weekId, question), expectedPages);
-			boolean pgVectorHit = hit(pgVectorRetriever.retrieve(weekId, question), expectedPages);
+			boolean keywordHit = hit(keywordRetriever.retrieve(weekId, question).pages(), expectedPages);
+			boolean pgVectorHit = hit(pgVectorRetriever.retrieve(weekId, question).pages(), expectedPages);
 			keywordHits += keywordHit ? 1 : 0;
 			pgVectorHits += pgVectorHit ? 1 : 0;
 
