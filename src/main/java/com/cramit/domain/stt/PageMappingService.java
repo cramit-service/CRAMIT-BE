@@ -2,8 +2,8 @@ package com.cramit.domain.stt;
 
 import com.cramit.domain.ai.GeminiPageMappingClient;
 import com.cramit.domain.ai.dto.GeminiPageSection;
-import com.cramit.domain.stt.dto.GroqTranscriptionResponse;
-import com.cramit.domain.stt.dto.GroqTranscriptionResponse.Segment;
+import com.cramit.domain.stt.dto.Transcription;
+import com.cramit.domain.stt.dto.Transcription.Segment;
 import com.cramit.domain.week.entity.LecturePpt;
 import com.cramit.domain.week.repository.LectureAudioRepository;
 import com.cramit.domain.week.repository.LecturePptRepository;
@@ -41,15 +41,15 @@ public class PageMappingService {
     private final GeminiPageMappingClient geminiPageMappingClient;
     private final AudioClipper audioClipper;
 
-    public record Result(GroqTranscriptionResponse transcription, List<GeminiPageSection> sections) {}
+    public record Result(Transcription transcription, List<GeminiPageSection> sections) {}
 
-    public Result map(Long lectureAudioId, GroqTranscriptionResponse transcription, byte[] audio) {
+    public Result map(Long lectureAudioId, Transcription transcription, byte[] audio) {
         Optional<byte[]> pdf = findPdf(lectureAudioId);
         if (pdf.isEmpty()) {
             return new Result(transcription, List.of());
         }
         List<String> terms = extractTerms(pdf.get());
-        GroqTranscriptionResponse corrected = correct(transcription, audio, terms);
+        Transcription corrected = correct(transcription, audio, terms);
         List<GeminiPageSection> sections = mapSections(pdf.get(), corrected.segments());
         log.info("페이지 매핑 완료: lectureAudioId={}, 용어 {}개, 구간 {}개", lectureAudioId, terms.size(), sections.size());
         return new Result(corrected, sections);
@@ -76,7 +76,7 @@ public class PageMappingService {
         }
     }
 
-    private GroqTranscriptionResponse correct(GroqTranscriptionResponse transcription, byte[] audio,
+    private Transcription correct(Transcription transcription, byte[] audio,
                                               List<String> terms) {
         List<Segment> segments = transcription.segments();
         List<String> texts = new ArrayList<>(segments.stream().map(Segment::text).toList());
@@ -107,7 +107,7 @@ public class PageMappingService {
             Segment segment = segments.get(i);
             corrected.add(new Segment(segment.start(), segment.end(), texts.get(i)));
         }
-        return new GroqTranscriptionResponse(transcription.duration(), corrected);
+        return new Transcription(transcription.duration(), corrected);
     }
 
     private Map<Integer, String> correctBatch(Path source, List<Segment> segments, int from, int to,

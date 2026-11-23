@@ -34,13 +34,9 @@ services:
       REDIS_HOST: redis
       # .env에 예전 외부 Redis용 REDIS_PORT가 남아있어도 이 compose의 redis(6379)로 고정해서 쓴다
       REDIS_PORT: "6379"
-      # GOOGLE_STT_CREDENTIALS_PATH는 .env에서 /app/secrets/gcp-stt.json로 지정한다 (아래 volumes와 맞춰야 함)
     depends_on:
       redis:
         condition: service_healthy
-    volumes:
-      # 서버의 실제 GCP STT 서비스 계정 키 파일을 읽기 전용으로 마운트한다. 이 파일은 저장소에 올리지 않는다.
-      - ./secrets/gcp-stt.json:/app/secrets/gcp-stt.json:ro
     networks:
       - internal
     healthcheck:

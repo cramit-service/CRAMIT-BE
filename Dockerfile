@@ -27,4 +27,5 @@ USER spring:spring
 COPY --from=build /app/build/libs/*.jar app.jar
 
 EXPOSE 8080
-ENTRYPOINT ["java", "-jar", "/app/app.jar"]
+# 전사 중 녹음(최대 200MB)과 m4a faststart 사본을 메모리에 같이 들고 있어서, 기본값(메모리의 1/4)보다 힙을 넓힌다.
+ENTRYPOINT ["java", "-XX:MaxRAMPercentage=75", "-jar", "/app/app.jar"]

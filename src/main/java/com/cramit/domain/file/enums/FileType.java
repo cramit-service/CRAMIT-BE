@@ -12,9 +12,9 @@ public enum FileType {
 
     // Gemini가 PDF를 직접 읽는 한도에 맞춘다.
     PPT("ppt", Set.of("pdf"), 50L * 1024 * 1024, ErrorCode.FILE_INVALID_TYPE),
-    // Groq Whisper가 받는 형식과 업로드 한도(25MB)
+    // STT로 보내는 녹음 형식과 업로드 한도(200MB, FE 업로드 한도와 같음)
     AUDIO("audio", Set.of("flac", "mp3", "mp4", "mpeg", "mpga", "m4a", "ogg", "wav", "webm"),
-            25L * 1024 * 1024, ErrorCode.AUDIO_INVALID_FORMAT);
+            200L * 1024 * 1024, ErrorCode.AUDIO_INVALID_FORMAT);
 
     private final String directory;
     private final Set<String> allowedExtensions;
