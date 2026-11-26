@@ -60,6 +60,7 @@ resilience4j:
         max-attempts: 3
         wait-duration: 5s
         enable-exponential-backoff: true
+        exponential-backoff-multiplier: 2
         retry-exceptions:
           - org.springframework.web.client.HttpClientErrorException$TooManyRequests
           - org.springframework.web.client.HttpServerErrorException
