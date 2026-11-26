@@ -11,12 +11,31 @@ on:
 
 permissions:
   contents: read
+  id-token: write
 
 jobs:
   deploy:
     if: github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success'
     runs-on: ubuntu-latest
     steps:
+      - name: AWS 자격 증명 설정 (OIDC, 장기 액세스 키 없이 역할만 임시로 빌림)
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_DEPLOY_ROLE_ARN }}
+          aws-region: ap-northeast-2
+
+      - name: 이 러너의 공인 IP를 보안그룹에 임시 허용
+        # GitHub 호스팅 러너는 매 실행마다 IP가 바뀌어서, 평소엔 관리자 IP만 허용된 22번 포트를
+        # 이번 배포에 한해서만 열어준다. 배포 성공/실패와 무관하게 마지막 스텝에서 반드시 제거한다.
+        id: allow-ip
+        run: |
+          set -euo pipefail
+          RUNNER_IP="$(curl -sf https://checkip.amazonaws.com)"
+          echo "runner_ip=${RUNNER_IP}" >> "$GITHUB_OUTPUT"
+          aws ec2 authorize-security-group-ingress \
+            --group-id "${{ secrets.EC2_SECURITY_GROUP_ID }}" \
+            --protocol tcp --port 22 --cidr "${RUNNER_IP}/32"
+
       - name: SSH 키 준비
         run: |
           set -euo pipefail
@@ -56,3 +75,10 @@ jobs:
       - name: SSH 키 정리
         if: always()
         run: rm -f ~/.ssh/deploy_key
+
+      - name: 러너 IP를 보안그룹에서 제거
+        if: always() && steps.allow-ip.outputs.runner_ip != ''
+        run: |
+          aws ec2 revoke-security-group-ingress \
+            --group-id "${{ secrets.EC2_SECURITY_GROUP_ID }}" \
+            --protocol tcp --port 22 --cidr "${{ steps.allow-ip.outputs.runner_ip }}/32"
