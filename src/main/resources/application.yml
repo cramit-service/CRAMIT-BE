@@ -55,6 +55,16 @@ resilience4j:
         max-attempts: 3
         wait-duration: 500ms
         enable-exponential-backoff: true
+      # 전사 한 번이 수 분 걸려서 타임아웃은 다시 보내지 않는다. 429는 분당 한도라 간격을 넉넉히 둔다.
+      azure-stt:
+        max-attempts: 3
+        wait-duration: 5s
+        enable-exponential-backoff: true
+        exponential-backoff-multiplier: 2
+        retry-exceptions:
+          - org.springframework.web.client.HttpClientErrorException$TooManyRequests
+          - org.springframework.web.client.HttpServerErrorException$ServiceUnavailable
+          - org.springframework.web.client.HttpServerErrorException$BadGateway
       gemini:
         max-attempts: 3
         wait-duration: 500ms
@@ -76,12 +86,14 @@ resilience4j:
         failure-rate-threshold: 100
         wait-duration-in-open-state: 60s
         permitted-number-of-calls-in-half-open-state: 1
+      # 여러 강의의 교정·매핑이 동시에 돌면 Gemini가 잠깐 503만 내도 5번은 금방 채워져, 서버 전체 Gemini 호출이
+      # 1분간 막혔다. 재시도도 한 번씩 세므로 창을 20번으로 늘리고, 열려 있는 시간은 30초로 줄인다.
       gemini:
-        sliding-window-size: 5
-        minimum-number-of-calls: 5
+        sliding-window-size: 20
+        minimum-number-of-calls: 20
         failure-rate-threshold: 100
-        wait-duration-in-open-state: 60s
-        permitted-number-of-calls-in-half-open-state: 1
+        wait-duration-in-open-state: 30s
+        permitted-number-of-calls-in-half-open-state: 3
         # 응답 형식 오류(BusinessException)는 Gemini 장애가 아니므로 집계하지 않는다. 5xx·타임아웃은 계속 집계한다.
         ignore-exceptions:
             - org.springframework.web.client.HttpClientErrorException

@@ -35,4 +35,20 @@ public class AsyncConfig implements AsyncConfigurer {
 		return executor;
 	}
 
+	// STT 한 건은 전사·교정·매핑으로 수 분간 스레드를 잡아서, 공용 풀에 두면 요약·TODO 생성까지 밀린다.
+	// 대부분 외부 API 응답 대기라 동시 사용자 수만큼 스레드를 둔다. 큐가 차기 전에는 core를 넘겨 늘리지 않으므로 core = max.
+	@Bean(name = "sttExecutor")
+	public Executor sttExecutor() {
+		ThreadPoolTaskExecutor executor = new ThreadPoolTaskExecutor();
+		executor.setCorePoolSize(10);
+		executor.setMaxPoolSize(10);
+		executor.setQueueCapacity(100);
+		executor.setThreadNamePrefix("stt-");
+		executor.setTaskDecorator(new MdcTaskDecorator());
+		executor.setWaitForTasksToCompleteOnShutdown(true);
+		executor.setAwaitTerminationSeconds(30);
+		executor.initialize();
+		return executor;
+	}
+
 }

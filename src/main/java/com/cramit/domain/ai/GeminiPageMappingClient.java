@@ -8,6 +8,7 @@ import com.cramit.global.exception.ErrorCode;
 import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
 import java.util.List;
@@ -18,12 +19,15 @@ import java.util.stream.Collectors;
  * 페이지 매핑용 Gemini 호출(용어 추출, 오디오 근거 교정, 페이지 구간 판정).
  * 세 호출 모두 CRAMIT-TEST에서 잰 모델과 사고 수준을 쓴다. 사고 수준을 정하지 않으면 사고 토큰이 호출마다 크게 튄다.
  */
+@Slf4j
 @Component
 @RequiredArgsConstructor
 public class GeminiPageMappingClient {
 
     public static final String MODEL = "gemini-3.8-flash";
     private static final String THINKING_LEVEL = "low";
+    private static final int RATE_LIMIT_ATTEMPTS = 4;
+    private static final long RATE_LIMIT_WAIT_SEC = 10;
 
     private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper()
             .configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
@@ -100,12 +104,33 @@ public class GeminiPageMappingClient {
         return sections.sections() != null ? sections.sections() : List.of();
     }
 
+    // 공용 GeminiClient는 사용자가 기다리는 챗봇 때문에 429를 바로 실패시킨다. 매핑은 백그라운드라 기다렸다 다시 보내고,
+    // 그러지 않으면 여러 강의가 한꺼번에 돌 때 교정·매핑이 조용히 원문·기본 구간으로 떨어진다.
     private GeminiResponse call(GeminiRequest request, GeminiClient.Timeout timeout) {
-        GeminiResponse response = geminiClient.generate(MODEL, request, timeout, ErrorCode.INTERNAL_SERVER_ERROR);
-        if (response == null) {
-            throw new BusinessException(ErrorCode.AI_RESPONSE_PARSE_ERROR);
+        for (int attempt = 1; ; attempt++) {
+            try {
+                GeminiResponse response = geminiClient.generate(MODEL, request, timeout, ErrorCode.INTERNAL_SERVER_ERROR);
+                if (response == null) {
+                    throw new BusinessException(ErrorCode.AI_RESPONSE_PARSE_ERROR);
+                }
+                return response;
+            } catch (BusinessException e) {
+                if (e.getErrorCode() != ErrorCode.AI_RATE_LIMITED || attempt >= RATE_LIMIT_ATTEMPTS) {
+                    throw e;
+                }
+                log.warn("Gemini 429, {}초 뒤 다시 보냅니다. ({}/{})", attempt * RATE_LIMIT_WAIT_SEC, attempt, RATE_LIMIT_ATTEMPTS);
+                sleep(attempt * RATE_LIMIT_WAIT_SEC);
+            }
         }
-        return response;
+    }
+
+    private static void sleep(long seconds) {
+        try {
+            Thread.sleep(seconds * 1000);
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            throw new BusinessException(ErrorCode.AI_RATE_LIMITED);
+        }
     }
 
     private <T> T parse(GeminiResponse response, Class<T> type) {

@@ -11,7 +11,6 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
-import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
@@ -43,7 +42,7 @@ public class PageMappingService {
 
     public record Result(Transcription transcription, List<GeminiPageSection> sections) {}
 
-    public Result map(Long lectureAudioId, Transcription transcription, byte[] audio) {
+    public Result map(Long lectureAudioId, Transcription transcription, Path audio) {
         Optional<byte[]> pdf = findPdf(lectureAudioId);
         if (pdf.isEmpty()) {
             return new Result(transcription, List.of());
@@ -76,30 +75,20 @@ public class PageMappingService {
         }
     }
 
-    private Transcription correct(Transcription transcription, byte[] audio,
-                                              List<String> terms) {
+    private Transcription correct(Transcription transcription, Path audio, List<String> terms) {
         List<Segment> segments = transcription.segments();
         List<String> texts = new ArrayList<>(segments.stream().map(Segment::text).toList());
         String termLines = terms.isEmpty() ? "(없음)" : terms.stream()
                 .map(term -> "- " + term)
                 .collect(Collectors.joining("\n"));
 
-        Path source = null;
-        try {
-            source = Files.createTempFile("stt-audio-", ".tmp");
-            Files.write(source, audio);
-            for (int from = 0; from < segments.size(); from += CORRECTION_BATCH) {
-                int to = Math.min(from + CORRECTION_BATCH, segments.size());
-                try {
-                    applyCorrections(texts, correctBatch(source, segments, from, to, termLines), from, to);
-                } catch (Exception e) {
-                    log.warn("교정 배치 실패, 원문 유지: 구간 {}~{}", from, to - 1, e);
-                }
+        for (int from = 0; from < segments.size(); from += CORRECTION_BATCH) {
+            int to = Math.min(from + CORRECTION_BATCH, segments.size());
+            try {
+                applyCorrections(texts, correctBatch(audio, segments, from, to, termLines), from, to);
+            } catch (Exception e) {
+                log.warn("교정 배치 실패, 원문 유지: 구간 {}~{}", from, to - 1, e);
             }
-        } catch (Exception e) {
-            log.warn("교정용 임시 파일을 만들지 못해 교정을 건너뜀", e);
-        } finally {
-            deleteQuietly(source);
         }
 
         List<Segment> corrected = new ArrayList<>();
@@ -162,16 +151,5 @@ public class PageMappingService {
             lines.add("[" + Math.round(windowStart) + "] " + buffer);
         }
         return String.join("\n", lines);
-    }
-
-    private void deleteQuietly(Path path) {
-        if (path == null) {
-            return;
-        }
-        try {
-            Files.deleteIfExists(path);
-        } catch (Exception e) {
-            log.warn("임시 파일 삭제 실패: {}", path, e);
-        }
     }
 }
