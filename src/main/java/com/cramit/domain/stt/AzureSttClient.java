@@ -3,8 +3,9 @@ package com.cramit.domain.stt;
 import com.cramit.domain.file.enums.FileType;
 import com.cramit.domain.stt.dto.AzureTranscriptionResponse;
 import com.cramit.domain.stt.dto.Transcription;
+import io.github.resilience4j.retry.annotation.Retry;
 import lombok.RequiredArgsConstructor;
-import org.springframework.core.io.ByteArrayResource;
+import org.springframework.core.io.FileSystemResource;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Component;
 import org.springframework.util.LinkedMultiValueMap;
@@ -15,6 +16,7 @@ import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.StandardCopyOption;
 import java.util.Locale;
 import java.util.Set;
 
@@ -29,15 +31,27 @@ public class AzureSttClient {
     private final RestClient azureSpeechRestClient;
     private final StorageFileDownloader storageFileDownloader;
 
-    public byte[] download(String fileUrl) {
-        return storageFileDownloader.download(fileUrl, Math.toIntExact(FileType.AUDIO.getMaxBytes()));
+    /** 녹음을 임시 파일로 받아 전사할 수 있는 모양으로 만든다. 다 쓰면 호출한 쪽이 지운다. */
+    public Path download(String fileUrl) {
+        Path audio = createTempFile("stt-audio-", ".tmp");
+        try {
+            storageFileDownloader.downloadTo(fileUrl, FileType.AUDIO.getMaxBytes(), audio);
+            if (isMp4(fileName(fileUrl))) {
+                moveIndexToFront(audio);
+            }
+            return audio;
+        } catch (RuntimeException e) {
+            deleteQuietly(audio);
+            throw e;
+        }
     }
 
-    public Transcription transcribe(String fileUrl, byte[] audio) {
-        String fileName = fileUrl.substring(fileUrl.lastIndexOf('/') + 1);
-        byte[] body = isMp4(fileName) ? moveIndexToFront(audio) : audio;
+    // 스케일업하는 동안에는 한도 안에서도 429가 날 수 있어서 재시도한다.
+    @Retry(name = "azure-stt")
+    public Transcription transcribe(String fileUrl, Path audio) {
+        String fileName = fileName(fileUrl);
         MultiValueMap<String, Object> form = new LinkedMultiValueMap<>();
-        form.add("audio", new ByteArrayResource(body) {
+        form.add("audio", new FileSystemResource(audio) {
             @Override
             public String getFilename() {
                 return fileName;
@@ -54,6 +68,10 @@ public class AzureSttClient {
         return response.toTranscription();
     }
 
+    private static String fileName(String fileUrl) {
+        return fileUrl.substring(fileUrl.lastIndexOf('/') + 1);
+    }
+
     private static boolean isMp4(String fileName) {
         String extension = fileName.substring(fileName.lastIndexOf('.') + 1).toLowerCase(Locale.ROOT);
         return MP4_EXTENSIONS.contains(extension);
@@ -61,16 +79,12 @@ public class AzureSttClient {
 
     // 녹음 앱은 moov(색인)를 파일 끝에 두는 경우가 많은데, Azure는 그런 파일을 422 InvalidAudioFormat으로 거절한다.
     // 다시 인코딩하지 않고 색인만 앞으로 옮긴다. faststart는 출력 파일을 되감아 써야 해서 파이프 대신 임시 파일을 쓴다.
-    static byte[] moveIndexToFront(byte[] audio) {
-        Path source = null;
-        Path target = null;
+    static void moveIndexToFront(Path audio) {
+        Path target = createTempFile("stt-faststart-", ".mp4");
         try {
-            source = Files.createTempFile("stt-mp4-", ".tmp");
-            target = Files.createTempFile("stt-faststart-", ".mp4");
-            Files.write(source, audio);
             Process process = new ProcessBuilder(
                     "ffmpeg", "-v", "error", "-y",
-                    "-i", source.toString(),
+                    "-i", audio.toString(),
                     "-vn", "-c:a", "copy", "-movflags", "+faststart", "-f", "mp4", target.toString())
                     .redirectOutput(ProcessBuilder.Redirect.DISCARD)
                     .redirectError(ProcessBuilder.Redirect.DISCARD)
@@ -79,19 +93,26 @@ public class AzureSttClient {
             if (exitCode != 0) {
                 throw new IllegalStateException("ffmpeg faststart 변환 실패: exitCode=" + exitCode);
             }
-            return Files.readAllBytes(target);
+            Files.move(target, audio, StandardCopyOption.REPLACE_EXISTING);
         } catch (IOException e) {
             throw new UncheckedIOException(e);
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
             throw new IllegalStateException("ffmpeg faststart 변환 중단", e);
         } finally {
-            deleteQuietly(source);
             deleteQuietly(target);
         }
     }
 
-    private static void deleteQuietly(Path path) {
+    private static Path createTempFile(String prefix, String suffix) {
+        try {
+            return Files.createTempFile(prefix, suffix);
+        } catch (IOException e) {
+            throw new UncheckedIOException(e);
+        }
+    }
+
+    static void deleteQuietly(Path path) {
         if (path == null) {
             return;
         }

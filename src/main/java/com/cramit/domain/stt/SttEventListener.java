@@ -10,6 +10,8 @@ import org.springframework.stereotype.Component;
 import org.springframework.transaction.event.TransactionPhase;
 import org.springframework.transaction.event.TransactionalEventListener;
 
+import java.nio.file.Path;
+
 @Slf4j
 @Component
 @RequiredArgsConstructor
@@ -21,14 +23,15 @@ public class SttEventListener {
     private final SummaryService summaryService;
     private final PageEmbeddingService pageEmbeddingService;
 
-    @Async("taskExecutor")
+    @Async("sttExecutor")
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
     public void handle(SttRequestedEvent event) {
         Long lectureAudioId = event.lectureAudioId();
         Long weekId;
+        Path audio = null;
         try {
             String fileUrl = sttService.markProcessing(lectureAudioId);
-            byte[] audio = azureSttClient.download(fileUrl);
+            audio = azureSttClient.download(fileUrl);
             Transcription transcription = azureSttClient.transcribe(fileUrl, audio);
             PageMappingService.Result mapped = pageMappingService.map(lectureAudioId, transcription, audio);
             weekId = sttService.saveResult(lectureAudioId, mapped.transcription(), mapped.sections());
@@ -37,6 +40,8 @@ public class SttEventListener {
             log.error("STT 실패: lectureAudioId={}", lectureAudioId, e);
             sttService.markFailed(lectureAudioId, e);
             return;
+        } finally {
+            AzureSttClient.deleteQuietly(audio);
         }
 
         // 요약이 실패해도 이미 COMPLETED인 STT 상태는 그대로 둔다.
