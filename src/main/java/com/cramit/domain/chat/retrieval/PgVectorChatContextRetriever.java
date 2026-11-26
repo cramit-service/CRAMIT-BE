@@ -29,8 +29,9 @@ public class PgVectorChatContextRetriever implements ChatContextRetriever {
 
     // 코사인 거리(0=완전 일치~2=정반대) 기준 임계값. 가장 가까운 페이지조차 이보다 멀면
     // 질문이 이 주차 내용과 무관하다고 보고 Gemini 채팅 생성 호출 자체를 건너뛴다.
-    // 실제 운영 데이터 없이 정한 1차 추정치라, 모니터링하면서 조정이 필요할 수 있다.
-    private static final double OFF_TOPIC_DISTANCE_THRESHOLD = 0.8;
+    // 무료 티어 한도 안에서 더 오래 버티기 위해 0.8 → 0.7로 낮춤 - 비용 절감 효과는 커지지만
+    // 애매하게 관련 있는 질문까지 차단될 위험도 같이 커진다는 점을 감안한 결정.
+    private static final double OFF_TOPIC_DISTANCE_THRESHOLD = 0.7;
 
     private final GeminiEmbeddingClient geminiEmbeddingClient;
     private final ScriptEmbeddingRepository scriptEmbeddingRepository;
