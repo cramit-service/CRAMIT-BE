@@ -43,12 +43,14 @@ jobs:
             --protocol tcp --port 22 --cidr "${RUNNER_IP}/32"
 
       - name: SSH 키 준비
+        # 호스트 키를 ssh-keyscan으로 그때그때 받아 검증 없이 신뢰하는 대신, 서버에서 직접 확인해
+        # Secret으로 저장해 둔 공개 호스트 키를 그대로 사용한다 - 네트워크 중간에서 가로채도 속지 않는다.
         run: |
           set -euo pipefail
           mkdir -p ~/.ssh
           printf '%s\n' "${{ secrets.EC2_SSH_KEY }}" > ~/.ssh/deploy_key
           chmod 600 ~/.ssh/deploy_key
-          ssh-keyscan -H "${{ secrets.EC2_HOST }}" >> ~/.ssh/known_hosts 2>/dev/null
+          echo "${{ secrets.EC2_HOST }} ${{ secrets.EC2_SSH_HOST_KEY }}" >> ~/.ssh/known_hosts
 
       - name: 운영 서버에서 CI 통과한 커밋으로 재배포
         # workflow_run으로 자동 실행될 때는 CI가 성공한 그 커밋(head_sha)에 고정해서 배포한다 -
