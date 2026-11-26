@@ -13,6 +13,12 @@ permissions:
   contents: read
   id-token: write
 
+# 수동 배포(workflow_dispatch)와 자동 배포가 겹치면 같은 서버 디렉터리를 동시에 건드려 꼬일 수 있어서,
+# 동시에 하나만 돌고 나머지는 끝날 때까지 대기열에서 기다리게 한다.
+concurrency:
+  group: cd-deploy
+  cancel-in-progress: false
+
 jobs:
   deploy:
     if: github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success'
@@ -44,26 +50,31 @@ jobs:
           chmod 600 ~/.ssh/deploy_key
           ssh-keyscan -H "${{ secrets.EC2_HOST }}" >> ~/.ssh/known_hosts 2>/dev/null
 
-      - name: 운영 서버에서 최신 develop으로 재배포
-        # 서버에 수동으로 남은 변경사항이 있어도(예: 과거처럼 직접 .env를 고친 경우) 항상 origin/develop
-        # 상태로 맞추기 위해 git pull 대신 reset --hard를 쓴다. 이제 배포는 이 파이프라인으로만 한다는 뜻이다.
+      - name: 운영 서버에서 CI 통과한 커밋으로 재배포
+        # workflow_run으로 자동 실행될 때는 CI가 성공한 그 커밋(head_sha)에 고정해서 배포한다 -
+        # 이 사이 develop에 새 커밋이 더 쌓여도 아직 검증 안 된 커밋이 끼어들지 않는다.
+        # 수동 실행(workflow_dispatch)은 그런 기준 커밋이 없으니 origin/develop 최신 상태로 배포한다.
+        env:
+          DEPLOY_REF: ${{ github.event_name == 'workflow_run' && github.event.workflow_run.head_sha || 'origin/develop' }}
         run: |
           ssh -i ~/.ssh/deploy_key "${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }}" '
             set -e
             cd /home/ubuntu/CRAMIT-BE
             git fetch origin
-            git reset --hard origin/develop
+            git reset --hard '"${DEPLOY_REF}"'
             docker compose -f docker-compose.prod.yml build app
             docker compose -f docker-compose.prod.yml up -d app
+            docker compose -f docker-compose.prod.yml exec -T nginx nginx -s reload
           '
 
       - name: 배포 후 헬스체크
         # 실제로 기동에 ~30초 걸리는 걸 확인했어서, 고정 대기 대신 최대 2분(10회 x 12초)까지 재시도한다.
+        # curl 자체에도 타임아웃을 줘서, 요청이 멈춰버리는 경우에도 전체 재시도 시간이 실제로 지켜지게 한다.
         run: |
           set -uo pipefail
           for i in $(seq 1 10); do
             sleep 12
-            if curl -sf "https://${{ secrets.APP_HEALTH_HOST }}/actuator/health"; then
+            if curl -sf --connect-timeout 5 --max-time 10 "https://${{ secrets.APP_HEALTH_HOST }}/actuator/health"; then
               echo "헬스체크 성공"
               exit 0
             fi
