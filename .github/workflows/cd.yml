@@ -26,6 +26,8 @@ jobs:
           ssh-keyscan -H "${{ secrets.EC2_HOST }}" >> ~/.ssh/known_hosts 2>/dev/null
 
       - name: 운영 서버에서 최신 develop으로 재배포
+        # 서버에 수동으로 남은 변경사항이 있어도(예: 과거처럼 직접 .env를 고친 경우) 항상 origin/develop
+        # 상태로 맞추기 위해 git pull 대신 reset --hard를 쓴다. 이제 배포는 이 파이프라인으로만 한다는 뜻이다.
         run: |
           ssh -i ~/.ssh/deploy_key "${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }}" '
             set -e
@@ -37,10 +39,19 @@ jobs:
           '
 
       - name: 배포 후 헬스체크
+        # 실제로 기동에 ~30초 걸리는 걸 확인했어서, 고정 대기 대신 최대 2분(10회 x 12초)까지 재시도한다.
         run: |
-          set -euo pipefail
-          sleep 25
-          curl -sf "https://${{ secrets.APP_HEALTH_HOST }}/actuator/health"
+          set -uo pipefail
+          for i in $(seq 1 10); do
+            sleep 12
+            if curl -sf "https://${{ secrets.APP_HEALTH_HOST }}/actuator/health"; then
+              echo "헬스체크 성공"
+              exit 0
+            fi
+            echo "헬스체크 재시도 ($i/10)"
+          done
+          echo "헬스체크 실패: 서버가 제시간 안에 올라오지 않음"
+          exit 1
 
       - name: SSH 키 정리
         if: always()
