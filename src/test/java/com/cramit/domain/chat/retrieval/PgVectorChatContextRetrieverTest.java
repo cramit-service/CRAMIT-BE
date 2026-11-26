@@ -46,6 +46,36 @@ class PgVectorChatContextRetrieverTest {
     }
 
     @Test
+    void 거리가_임계값과_정확히_같으면_오프토픽이_아니다() {
+        // OFF_TOPIC_DISTANCE_THRESHOLD(0.7) 경계값: ">" 비교라 0.7은 아직 허용돼야 한다.
+        when(geminiEmbeddingClient.embedQuery("질문")).thenReturn(new float[]{0.1f});
+        when(scriptEmbeddingRepository.findNearest(eq(WEEK_ID), any(), anyInt()))
+                .thenReturn(List.of(new NearestPage(1, 0.7)));
+        when(scriptPageLoader.loadPages(WEEK_ID)).thenReturn(List.of(new PageContext(1, "서론", "짧은 내용")));
+
+        RetrievalResult result = retriever.retrieve(WEEK_ID, "질문");
+
+        assertThat(result.offTopic()).isFalse();
+        assertThat(result.pages()).extracting(PageContext::pageNumber).containsExactly(1);
+    }
+
+    @Test
+    void 거리가_임계값을_살짝_넘으면_오프토픽이다() {
+        // 0.75 > 0.7(임계값)이므로 오프토픽으로 처리돼야 한다. 모든 페이지가 임베딩된 상태로 둬서
+        // isFullyEmbedded 분기 때문에 오프토픽 판정이 가려지지 않게 한다.
+        when(geminiEmbeddingClient.embedQuery("질문")).thenReturn(new float[]{0.1f});
+        when(scriptEmbeddingRepository.findNearest(eq(WEEK_ID), any(), anyInt()))
+                .thenReturn(List.of(new NearestPage(1, 0.75)));
+        when(scriptPageLoader.loadPages(WEEK_ID)).thenReturn(List.of(new PageContext(1, "서론", "짧은 내용")));
+        when(scriptEmbeddingRepository.findEmbeddedPageNumbers(WEEK_ID)).thenReturn(Set.of(1));
+
+        RetrievalResult result = retriever.retrieve(WEEK_ID, "질문");
+
+        assertThat(result.offTopic()).isTrue();
+        assertThat(result.pages()).isEmpty();
+    }
+
+    @Test
     void 모든_페이지가_임베딩된_상태에서_가장_가까운_페이지도_임계값보다_멀면_오프토픽으로_판단해_Gemini_호출_없이_반환한다() {
         when(geminiEmbeddingClient.embedQuery("질문")).thenReturn(new float[]{0.1f});
         when(scriptEmbeddingRepository.findNearest(eq(WEEK_ID), any(), anyInt()))
