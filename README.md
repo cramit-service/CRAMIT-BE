@@ -46,21 +46,10 @@
 
 ## 👤 CRAMIT의 구성원을 소개합니다!
 
-### 🖥️ Frontend Team
-
-| <img src="https://avatars.githubusercontent.com/u/220812782?v=4" width="100"/> | <img src="https://avatars.githubusercontent.com/u/78217274?v=4" width="100"/> |
-|:---:|:---:|
-| [박태현](https://github.com/nuyh-99) | [강준우](https://github.com/oofrog) |
-| 로그인 · 온보딩<br>학습 뷰어 · 챗봇 UI | 홈 화면 · API 연동<br>CI · 배포 |
-
-<br>
-
-### ⌨️ Backend Team
-
-| <img src="https://avatars.githubusercontent.com/u/165226442?v=4" width="100"/> | <img src="https://avatars.githubusercontent.com/u/212656253?v=4" width="100"/> | <img src="https://avatars.githubusercontent.com/u/78217274?v=4" width="100"/> |
-|:---:|:---:|:---:|
-| [배서윤](https://github.com/seooyoon) | [엄정인](https://github.com/jungini1123) | [강준우](https://github.com/oofrog) (FE 겸임) |
-| 인증 · 공통<br>배포 · RAG | 강의 · 주차 · Todo<br>챗봇 · 요약 | STT · PPT 페이지매핑<br>시험일정 · 파일업로드 |
+| <img src="https://avatars.githubusercontent.com/u/165226442?v=4" width="100"/> | <img src="https://avatars.githubusercontent.com/u/212656253?v=4" width="100"/> | <img src="https://avatars.githubusercontent.com/u/78217274?v=4" width="100"/> | <img src="https://avatars.githubusercontent.com/u/220812782?v=4" width="100"/> |
+|:---:|:---:|:---:|:---:|
+| [배서윤](https://github.com/seooyoon) | [엄정인](https://github.com/jungini1123) | [강준우](https://github.com/oofrog) | [박태현](https://github.com/nuyh-99) |
+| 인증(OAuth/JWT)<br>CI/CD · 보안<br>RAG · pgvector | 강의 · 주차 · Todo<br>챗봇 · 요약 | 홈 화면 · API 연동<br>STT · 페이지매핑 | 로그인 · 온보딩<br>학습 뷰어 · 챗봇 UI |
 
 <br>
 
