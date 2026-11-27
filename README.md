@@ -289,13 +289,13 @@ sequenceDiagram
 ├─ 📄 .gitignore
 ├─ 📄 .dockerignore
 ├─ 📄 .env.example               # 로컬 docker-compose용 환경변수 템플릿
-├─ 📄 .env.prod.example     템플릿
+├─ 📄 .env.prod.example          # 운영(EC2) 환경변수 템플릿
 ├─ 📄 Dockerfile
-├─ 📄 docker-compose.yml   vector)·Redis 컨테이너
+├─ 📄 docker-compose.yml         # 로컬 PostgreSQL(pgvector)·Redis 컨테이너
 ├─ 📄 docker-compose.prod.yml    # 운영 배포용(app·nginx·certbot)
 ├─ 📁 docker
 │  ├─ 📁 nginx                   # 운영 리버스 프록시 설정
-│  └─ 📁 certbot
+│  └─ 📁 certbot                 # TLS 인증서 발급
 ├─ 📁 gradle/wrapper
 ├─ 📄 gradlew / gradlew.bat
 ├─ 📁 src
@@ -303,37 +303,36 @@ sequenceDiagram
 │  │  ├─ 📁 java/com/cramit
 │  │  │  ├─ 📄 CramitApplication.java
 │  │  │  ├─ 📁 global
-│  │  │  │  ├─ 📁 config    Querydsl, Resilience 등설정
+│  │  │  │  ├─ 📁 config           # Security, Async, Querydsl, Resilience 등 설정
 │  │  │  │  ├─ 📁 exception        # 전역 예외처리, 에러코드 enum
-│  │  │  │  ├─ 📁 security
+│  │  │  │  ├─ 📁 security         # JWT, OAuth2 관련
 │  │  │  │  ├─ 📁 common           # 공통 응답 포맷, 유틸
 │  │  │  │  ├─ 📁 async            # 비동기 처리 공통 설정
-│  │  │  │  ├─ 📁 external 통 모듈(타임아웃 분류 등)
+│  │  │  │  ├─ 📁 external         # 외부 API 연동 공통 모듈(타임아웃 분류 등)
 │  │  │  │  ├─ 📁 storage          # S3/R2 파일 저장소 설정
 │  │  │  │  └─ 📁 logging          # 요청 추적(traceId) 로깅
 │  │  │  └─ 📁 domain
 │  │  │     ├─ 📁 member           # 회원가입 / 로그인 / 프로필
 │  │  │     ├─ 📁 lecture          # 강의 CRUD
-│  │  │     ├─ 📁 week     음성 자료
+│  │  │     ├─ 📁 week             # 주차 관리 / PDF·음성 자료
 │  │  │     ├─ 📁 file             # 파일 업로드 URL 발급·검증(S3)
-│  │  │     ├─ 📁 stt      hisper)
+│  │  │     ├─ 📁 stt              # 음성 STT (Azure Speech)
 │  │  │     ├─ 📁 todo             # TODO (수동 생성 + AI 생성)
-│  │  │     ├─ 📁 chat
+│  │  │     ├─ 📁 chat             # AI 챗봇
 │  │  │     ├─ 📁 summary          # AI 요약본 생성·조회
-│  │  │     ├─ 📁 learning 습 메모
-│  │  │     ├─ 📁 share     게시판
-│  │  │     ├─ 📁 exam
-│  │  │     ├─ 📁 subscript
-│  │  │     ├─ 📁 term
-│  │  │     └─ 📁 ai       임베딩 공통 모듈
+│  │  │     ├─ 📁 learning         # 학습 포인트 / 학습 메모
+│  │  │     ├─ 📁 share            # 강의 공유 / 공유 게시판
+│  │  │     ├─ 📁 exam             # 시험 일정
+│  │  │     ├─ 📁 subscription     # 구독 / 요금제
+│  │  │     ├─ 📁 term             # 약관
+│  │  │     └─ 📁 ai               # Gemini 프롬프트·임베딩 공통 모듈
 │  │  └─ 📁 resources
-│  │     ├─ 📄 application.
-│  │     ├─ 📄 application-re, 개인 환경변수)
-│  │     ├─ 📄 application-
-│  │     ├─ 📄 application-
-│  │     ├─ 📄 application-
-│  │     └─ 📁 db/migration 이그레이션 스크립트
-(V1~V23)
+│  │     ├─ 📄 application.yml
+│  │     ├─ 📄 application-local.yml       # (gitignore, 개인 환경변수)
+│  │     ├─ 📄 application-local.yml.example
+│  │     ├─ 📄 application-dev.yml
+│  │     ├─ 📄 application-prod.yml
+│  │     └─ 📁 db/migration                # Flyway 마이그레이션 스크립트 (V1~V23)
 │  └─ 📁 test
 ├─ 📄 build.gradle
 └─ 📄 settings.gradle
