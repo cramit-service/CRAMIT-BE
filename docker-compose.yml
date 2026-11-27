@@ -1,0 +1,28 @@
+name: cramit
+
+services:
+  postgres:
+    image: pgvector/pgvector:pg16
+    container_name: cramit-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: cramit
+      POSTGRES_USER: cramit
+      POSTGRES_PASSWORD: ${DB_PASSWORD:?DB_PASSWORD must be set. Copy .env.example to .env and fill it in}
+    ports:
+      - "127.0.0.1:${DB_PORT:-5432}:5432"
+    volumes:
+      - cramit-postgres-data:/var/lib/postgresql/data
+
+  redis:
+    image: redis:7-alpine
+    container_name: cramit-redis
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:${REDIS_PORT:-6379}:6379"
+    volumes:
+      - cramit-redis-data:/data
+
+volumes:
+  cramit-postgres-data:
+  cramit-redis-data:

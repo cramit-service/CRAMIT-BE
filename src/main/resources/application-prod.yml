@@ -1,0 +1,96 @@
+server:
+  tomcat:
+    remoteip:
+      # nginx(docker-compose.prod.yml)의 내부 네트워크 고정 IP. 대역 전체를 허용하면 같은 네트워크의
+      # 다른 컨테이너가 X-Forwarded-For를 위조해도 신뢰하게 되므로 이 주소 하나만 둔다.
+      # .env의 APP_NGINX_INTERNAL_IP를 바꿨다면 이 값도 반드시 그 IP의 정규식(점은 \.)으로 맞춰야 한다.
+      internal-proxies: ${APP_NGINX_INTERNAL_IP_REGEX:172\.28\.0\.10}
+
+spring:
+  datasource:
+    url: jdbc:postgresql://${DB_HOST}:${DB_PORT}/${DB_NAME}
+    username: ${DB_USERNAME}
+    password: ${DB_PASSWORD}
+    hikari:
+      maximum-pool-size: 10
+      minimum-idle: 5
+      connection-timeout: 30000
+      # 커넥션을 60초 넘게 반납하지 않으면 경고 로그를 남긴다 - 커넥션 누수를 운영 장애로 번지기 전에 잡기 위함.
+      leak-detection-threshold: 60000
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    show-sql: false
+  flyway:
+    enabled: true
+  data:
+    redis:
+      host: ${REDIS_HOST}
+      port: ${REDIS_PORT:6379}
+      password: ${REDIS_PASSWORD:}
+  security:
+    oauth2:
+      client:
+        registration:
+          kakao:
+            client-id: ${KAKAO_CLIENT_ID}
+            client-secret: ${KAKAO_CLIENT_SECRET}
+            redirect-uri: ${KAKAO_REDIRECT_URI}
+            authorization-grant-type: authorization_code
+            client-authentication-method: client_secret_post
+            scope: profile_nickname, profile_image
+          google:
+            client-id: ${GOOGLE_CLIENT_ID}
+            client-secret: ${GOOGLE_CLIENT_SECRET}
+            redirect-uri: ${GOOGLE_REDIRECT_URI}
+            authorization-grant-type: authorization_code
+            scope: profile, email
+        provider:
+          kakao:
+            authorization-uri: https://kauth.kakao.com/oauth/authorize
+            token-uri: https://kauth.kakao.com/oauth/token
+            user-info-uri: https://kapi.kakao.com/v2/user/me
+            user-name-attribute: id
+          google:
+            user-info-uri: https://www.googleapis.com/oauth2/v2/userinfo
+            user-name-attribute: id
+
+jwt:
+  secret: ${JWT_SECRET}
+  access-token-expiration: 3600000
+  refresh-token-expiration: 1209600000
+
+app:
+  frontend-origin: ${FRONTEND_ORIGIN}
+  oauth2:
+    success-redirect-uri: ${FRONTEND_OAUTH_SUCCESS_REDIRECT_URI}
+    failure-redirect-uri: ${FRONTEND_OAUTH_FAILURE_REDIRECT_URI}
+
+gemini:
+  api-key: ${GEMINI_API_KEY}
+
+stt:
+  azure:
+    endpoint: ${AZURE_SPEECH_ENDPOINT}
+    api-key: ${AZURE_SPEECH_KEY}
+  download:
+    allowed-url-prefix: ${AWS_S3_PUBLIC_BASE_URL}
+
+aws:
+  access-key: ${AWS_ACCESS_KEY_ID}
+  secret-key: ${AWS_SECRET_ACCESS_KEY}
+  region: ${AWS_REGION:ap-northeast-2}
+  s3:
+    bucket: ${AWS_S3_BUCKET}
+    endpoint: ${AWS_S3_ENDPOINT:}
+    public-base-url: ${AWS_S3_PUBLIC_BASE_URL}
+
+logging:
+  level:
+    com.cramit: INFO
+
+springdoc:
+  api-docs:
+    enabled: false
+  swagger-ui:
+    enabled: false

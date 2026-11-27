@@ -67,12 +67,13 @@
 | Cache | ![Redis](https://img.shields.io/badge/Redis-DC382D?style=for-the-badge&logo=redis&logoColor=white) | 리프레시 토큰 저장 |
 | Migration | ![Flyway](https://img.shields.io/badge/Flyway-CC0200?style=for-the-badge&logo=flyway&logoColor=white) | Schema Version Management |
 | AI | ![Gemini](https://img.shields.io/badge/Gemini%20API-8E75B2?style=for-the-badge&logo=googlegemini&logoColor=white) | AI Features (챗봇·요약·Todo·임베딩) |
-| STT | ![Groq](https://img.shields.io/badge/Groq%20Whisper-F55036?style=for-the-badge&logo=groq&logoColor=white) | Speech-to-Text |
+| STT | ![Azure Speech](https://img.shields.io/badge/Azure%20Speech-0078D4?style=for-the-badge&logo=microsoftazure&logoColor=white) | Speech-to-Text |
 | Storage | ![AWS S3](https://img.shields.io/badge/AWS%20S3-569A31?style=for-the-badge&logo=amazons3&logoColor=white) ![Cloudflare R2](https://img.shields.io/badge/Cloudflare%20R2-F38020?style=for-the-badge&logo=cloudflare&logoColor=white) | File Storage |
 | Async | ![Spring Async](https://img.shields.io/badge/Spring%20Async-6DB33F?style=for-the-badge&logo=spring&logoColor=white) ![Resilience4j](https://img.shields.io/badge/Resilience4j-FF6600?style=for-the-badge) | Async Processing & Fault Tolerance |
 | API Docs | ![Swagger](https://img.shields.io/badge/Swagger-85EA2D?style=for-the-badge&logo=swagger&logoColor=black) | API Documentation |
 | Testing | ![JUnit5](https://img.shields.io/badge/JUnit5-25A162?style=for-the-badge&logo=junit5&logoColor=white) ![Mockito](https://img.shields.io/badge/Mockito-78A641?style=for-the-badge) | Unit & Integration Test |
 | Build & Deploy | ![Gradle](https://img.shields.io/badge/Gradle-02303A?style=for-the-badge&logo=gradle&logoColor=white) ![Docker](https://img.shields.io/badge/Docker-2496ED?style=for-the-badge&logo=docker&logoColor=white) ![AWS EC2](https://img.shields.io/badge/AWS%20EC2-FF9900?style=for-the-badge&logo=amazonec2&logoColor=white) | Build & Deployment |
+
 <br>
 
 ## 아키텍처
@@ -107,12 +108,13 @@ flowchart TB
 
     RESILIENCE --> KAKAO["Kakao / Google OAuth2"]
     RESILIENCE --> GEMINI["Google Gemini API<br/>(챗봇·요약·Todo·임베딩)"]
-    RESILIENCE --> GROQ["Groq Whisper<br/>(STT)"]
+    RESILIENCE --> AZURE_STT["Azure Speech<br/>(STT)"]
 
     DOMAIN --> DB[("PostgreSQL + pgvector<br/>(Flyway 마이그레이션)")]
     DOMAIN --> REDIS[("Redis<br/>(세션/캐시)")]
     DOMAIN --> S3[("AWS S3 / Cloudflare R2<br/>(PPT·음성 파일)")]
 ```
+
 <br>
 
 
@@ -124,7 +126,7 @@ sequenceDiagram
     participant API as CRAMIT-BE
     participant S3 as S3/R2
     participant DB as PostgreSQL(+pgvector)
-    participant STT as Groq Whisper
+    participant STT as Azure Speech
     participant AI as Gemini API
 
     Note over U,API: 1. 강의자료 업로드
@@ -279,18 +281,21 @@ sequenceDiagram
 │  │  ├─ 📄 chore.md             # [CHORE] 이슈 템플릿
 │  │  └─ 📄 bug.md               # [BUG] 이슈 템플릿
 │  ├─ 📁 workflows
-│  │  └─ 📄 ci.yml               # 테스트/보안 스캔 CI
+│  │  ├─ 📄 ci.yml               # 테스트/보안 스캔 CI
+│  │  └─ 📄 cd.yml               # develop 머지 시 운영 서버 자동 배포(CD)
 │  └─ 📄 pull_request_template.md
 ├─ 📄 .coderabbit.yaml           # CodeRabbit 리뷰 언어/설정
 ├─ 📄 .gitattributes             # 줄바꿈(EOL) 통일 설정
 ├─ 📄 .gitignore
 ├─ 📄 .dockerignore
 ├─ 📄 .env.example               # 로컬 docker-compose용 환경변수 템플릿
-├─ 📄 .env.prod.example          # 운영(EC2) 환경변수 템플릿
+├─ 📄 .env.prod.example     템플릿
 ├─ 📄 Dockerfile
-├─ 📄 docker-compose.yml         # 로컬 PostgreSQL(pgvector)·Redis 컨테이너
+├─ 📄 docker-compose.yml   vector)·Redis 컨테이너
+├─ 📄 docker-compose.prod.yml    # 운영 배포용(app·nginx·certbot)
+├─ 📁 docker
 │  ├─ 📁 nginx                   # 운영 리버스 프록시 설정
-│  └─ 📁 certbot                 # TLS 인증서 발급
+│  └─ 📁 certbot
 ├─ 📁 gradle/wrapper
 ├─ 📄 gradlew / gradlew.bat
 ├─ 📁 src
@@ -298,36 +303,37 @@ sequenceDiagram
 │  │  ├─ 📁 java/com/cramit
 │  │  │  ├─ 📄 CramitApplication.java
 │  │  │  ├─ 📁 global
-│  │  │  │  ├─ 📁 config           # Security, Async, Querydsl, Resilience 등 설정
+│  │  │  │  ├─ 📁 config    Querydsl, Resilience 등설정
 │  │  │  │  ├─ 📁 exception        # 전역 예외처리, 에러코드 enum
-│  │  │  │  ├─ 📁 security         # JWT, OAuth2 관련
+│  │  │  │  ├─ 📁 security
 │  │  │  │  ├─ 📁 common           # 공통 응답 포맷, 유틸
 │  │  │  │  ├─ 📁 async            # 비동기 처리 공통 설정
-│  │  │  │  ├─ 📁 external         # 외부 API 연동 공통 모듈(타임아웃 분류 등)
+│  │  │  │  ├─ 📁 external 통 모듈(타임아웃 분류 등)
 │  │  │  │  ├─ 📁 storage          # S3/R2 파일 저장소 설정
 │  │  │  │  └─ 📁 logging          # 요청 추적(traceId) 로깅
 │  │  │  └─ 📁 domain
 │  │  │     ├─ 📁 member           # 회원가입 / 로그인 / 프로필
 │  │  │     ├─ 📁 lecture          # 강의 CRUD
-│  │  │     ├─ 📁 week             # 주차 관리 / PDF·음성 자료
+│  │  │     ├─ 📁 week     음성 자료
 │  │  │     ├─ 📁 file             # 파일 업로드 URL 발급·검증(S3)
-│  │  │     ├─ 📁 stt              # 음성 STT (Groq Whisper)
+│  │  │     ├─ 📁 stt      hisper)
 │  │  │     ├─ 📁 todo             # TODO (수동 생성 + AI 생성)
-│  │  │     ├─ 📁 chat             # AI 챗봇
+│  │  │     ├─ 📁 chat
 │  │  │     ├─ 📁 summary          # AI 요약본 생성·조회
-│  │  │     ├─ 📁 learning         # 학습 포인트 / 학습 메모
-│  │  │     ├─ 📁 share            # 강의 공유 / 공유 게시판
-│  │  │     ├─ 📁 exam             # 시험 일정
-│  │  │     ├─ 📁 subscription     # 구독 / 요금제
-│  │  │     ├─ 📁 term             # 약관
-│  │  │     └─ 📁 ai               # Gemini 프롬프트·임베딩 공통 모듈
+│  │  │     ├─ 📁 learning 습 메모
+│  │  │     ├─ 📁 share     게시판
+│  │  │     ├─ 📁 exam
+│  │  │     ├─ 📁 subscript
+│  │  │     ├─ 📁 term
+│  │  │     └─ 📁 ai       임베딩 공통 모듈
 │  │  └─ 📁 resources
-│  │     ├─ 📄 application.yml
-│  │     ├─ 📄 application-local.yml       # (gitignore, 개인 환경변수)
-│  │     ├─ 📄 application-local.yml.example
-│  │     ├─ 📄 application-dev.yml
-│  │     ├─ 📄 application-prod.yml
-│  │     └─ 📁 db/migration                # Flyway 마이그레이션 스크립트 (V1~V22)
+│  │     ├─ 📄 application.
+│  │     ├─ 📄 application-re, 개인 환경변수)
+│  │     ├─ 📄 application-
+│  │     ├─ 📄 application-
+│  │     ├─ 📄 application-
+│  │     └─ 📁 db/migration 이그레이션 스크립트
+(V1~V23)
 │  └─ 📁 test
 ├─ 📄 build.gradle
 └─ 📄 settings.gradle

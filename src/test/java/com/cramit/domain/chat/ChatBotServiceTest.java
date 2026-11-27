@@ -1,0 +1,274 @@
+package com.cramit.domain.chat;
+
+import java.util.List;
+
+import com.cramit.domain.ai.GeminiChatBotClient;
+import com.cramit.domain.ai.dto.ChatAnswer;
+import com.cramit.domain.chat.repository.ChatBotRepository;
+import com.cramit.domain.chat.retrieval.KeywordChatContextRetriever;
+import com.cramit.domain.chat.retrieval.ScriptPageLoader;
+import com.cramit.domain.week.entity.Script;
+import com.cramit.domain.week.entity.ScriptDetail;
+import com.cramit.domain.week.repository.ScriptDetailRepository;
+import com.cramit.domain.week.repository.ScriptRepository;
+import org.springframework.boot.test.mock.mockito.MockBean;
+import org.junit.jupiter.api.BeforeEach;
+
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.BDDMockito.given;
+
+import com.cramit.domain.chat.dto.ChatBotSessionCreateRequest;
+import com.cramit.domain.chat.dto.ChatMessageRequest;
+import com.cramit.domain.chat.dto.ChatMessageResponse;
+import com.cramit.domain.chat.enums.SenderType;
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
+import org.springframework.context.annotation.Import;
+import org.springframework.test.context.ActiveProfiles;
+
+import com.cramit.domain.lecture.Lecture;
+import com.cramit.domain.lecture.LectureRepository;
+import com.cramit.domain.week.entity.Week;
+import com.cramit.domain.week.repository.WeekRepository;
+import com.cramit.global.config.JpaAuditingConfig;
+import com.cramit.global.exception.BusinessException;
+import com.cramit.global.exception.ErrorCode;
+import org.springframework.test.util.ReflectionTestUtils;
+
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
+
+@DataJpaTest
+@Import({ChatBotService.class, ChatBotSessionService.class, ScriptPageLoader.class, KeywordChatContextRetriever.class, JpaAuditingConfig.class})
+@ActiveProfiles("test")
+class ChatBotServiceTest {
+
+    @MockBean
+    private GeminiChatBotClient geminiChatBotClient;
+
+    @BeforeEach
+    void setUpGeminiStub() {
+        given(geminiChatBotClient.ask(anyString(), anyString())).willReturn(new ChatAnswer("AI 응답입니다.", null));
+    }
+
+    private static final Long MEMBER_ID = 1L;
+    private static final Long OTHER_MEMBER_ID = 2L;
+    private static final java.time.LocalDate WEEK_DATE = java.time.LocalDate.now();
+
+    @Autowired
+    private ChatBotService chatBotService;
+
+    @Autowired
+    private ChatBotSessionService chatBotSessionService;
+
+    @Autowired
+    private ChatBotRepository chatBotRepository;
+
+    @Autowired
+    private WeekRepository weekRepository;
+
+    @Autowired
+    private LectureRepository lectureRepository;
+
+    @Autowired
+    private ScriptRepository scriptRepository;
+
+    @Autowired
+    private ScriptDetailRepository scriptDetailRepository;
+
+    @Test
+    @DisplayName("메시지를 전송하면 사용자 메시지와 AI 응답이 함께 저장된다.")
+    void sendMessage() {
+        // given
+        Long weekId = saveWeek(MEMBER_ID);
+        Long sessionId = chatBotSessionService.createSession(
+                new ChatBotSessionCreateRequest(weekId, "DP 질문"), MEMBER_ID).chatBotSessionId();
+
+        // when
+        List<ChatMessageResponse> response = chatBotService.sendMessage(
+                sessionId, new ChatMessageRequest("메모이제이션이 뭐야?"), MEMBER_ID);
+
+        // then
+        assertThat(response).hasSize(2);
+        assertThat(response.get(0).senderType()).isEqualTo(SenderType.USER);
+        assertThat(response.get(0).message()).isEqualTo("메모이제이션이 뭐야?");
+        assertThat(response.get(1).senderType()).isEqualTo(SenderType.AI);
+    }
+
+    @Test
+    @DisplayName("본인 소유가 아닌 세션에는 메시지를 전송할 수 없다.")
+    void sendMessageForbidden() {
+        // given
+        Long weekId = saveWeek(OTHER_MEMBER_ID);
+        Long sessionId = chatBotSessionService.createSession(
+                new ChatBotSessionCreateRequest(weekId, "DP 질문"), OTHER_MEMBER_ID).chatBotSessionId();
+
+        // when & then
+        assertThatThrownBy(() -> chatBotService.sendMessage(
+                sessionId, new ChatMessageRequest("질문"), MEMBER_ID))
+                .isInstanceOfSatisfying(BusinessException.class, ex ->
+                        assertThat(ex.getErrorCode()).isEqualTo(ErrorCode.CHATBOT_ACCESS_DENIED));
+    }
+
+    @Test
+    @DisplayName("메시지 목록을 시간순으로 조회한다.")
+    void getMessages() {
+        // given
+        Long weekId = saveWeek(MEMBER_ID);
+        Long sessionId = chatBotSessionService.createSession(
+                new ChatBotSessionCreateRequest(weekId, "DP 질문"), MEMBER_ID).chatBotSessionId();
+        chatBotService.sendMessage(sessionId, new ChatMessageRequest("질문1"), MEMBER_ID);
+        chatBotService.sendMessage(sessionId, new ChatMessageRequest("질문2"), MEMBER_ID);
+
+        // when
+        List<ChatMessageResponse> response = chatBotService.getMessages(sessionId, MEMBER_ID);
+
+        // then
+        assertThat(response).hasSize(4); // 질문2 + 답변2
+    }
+
+    @Test
+    @DisplayName("본인 소유가 아닌 세션의 메시지는 조회할 수 없다.")
+    void getMessagesForbidden() {
+        // given
+        Long weekId = saveWeek(OTHER_MEMBER_ID);
+        Long sessionId = chatBotSessionService.createSession(
+                new ChatBotSessionCreateRequest(weekId, "DP 질문"), OTHER_MEMBER_ID).chatBotSessionId();
+
+        // when & then
+        assertThatThrownBy(() -> chatBotService.getMessages(sessionId, MEMBER_ID))
+                .isInstanceOfSatisfying(BusinessException.class, ex ->
+                        assertThat(ex.getErrorCode()).isEqualTo(ErrorCode.CHATBOT_ACCESS_DENIED));
+    }
+
+    @Test
+    @DisplayName("AI 응답에 실패하면 질문도 저장하지 않는다.")
+    void sendMessageAiFailure() {
+        // given
+        Long weekId = saveWeek(MEMBER_ID);
+        Long sessionId = chatBotSessionService.createSession(
+                new ChatBotSessionCreateRequest(weekId, "DP 질문"), MEMBER_ID).chatBotSessionId();
+        given(geminiChatBotClient.ask(anyString(), anyString()))
+                .willThrow(new BusinessException(ErrorCode.AI_TIMEOUT));
+
+        // when & then
+        assertThatThrownBy(() -> chatBotService.sendMessage(
+                sessionId, new ChatMessageRequest("질문"), MEMBER_ID))
+                .isInstanceOfSatisfying(BusinessException.class, ex ->
+                        assertThat(ex.getErrorCode()).isEqualTo(ErrorCode.AI_TIMEOUT));
+        assertThat(chatBotRepository.count()).isZero();
+    }
+
+    @Test
+    @DisplayName("스크립트가 있으면 관련 페이지를 context로 사용하고, 후보 페이지의 referencedPage는 그대로 저장된다.")
+    void sendMessageWithScriptPage() {
+        // given
+        Long weekId = saveWeek(MEMBER_ID);
+        saveScriptPage(weekId, 3, "재귀와 메모이제이션", "메모이제이션은 계산 결과를 저장해 재사용하는 기법입니다.");
+        Long sessionId = chatBotSessionService.createSession(
+                new ChatBotSessionCreateRequest(weekId, "DP 질문"), MEMBER_ID).chatBotSessionId();
+        given(geminiChatBotClient.ask(anyString(), anyString()))
+                .willReturn(new ChatAnswer("메모이제이션은 계산 결과를 저장하는 기법입니다.", 3));
+
+        // when
+        List<ChatMessageResponse> response = chatBotService.sendMessage(
+                sessionId, new ChatMessageRequest("메모이제이션이 뭐야?"), MEMBER_ID);
+
+        // then
+        assertThat(response.get(1).referencedPage()).isEqualTo(3);
+    }
+
+    @Test
+    @DisplayName("AI가 후보에 없는 페이지를 근거로 제시하면 referencedPage를 신뢰하지 않고 null로 저장한다.")
+    void sendMessageIgnoresHallucinatedReferencedPage() {
+        // given
+        Long weekId = saveWeek(MEMBER_ID);
+        saveScriptPage(weekId, 1, "서론", "강의 소개입니다.");
+        Long sessionId = chatBotSessionService.createSession(
+                new ChatBotSessionCreateRequest(weekId, "DP 질문"), MEMBER_ID).chatBotSessionId();
+        given(geminiChatBotClient.ask(anyString(), anyString()))
+                .willReturn(new ChatAnswer("답변입니다.", 999));
+
+        // when
+        List<ChatMessageResponse> response = chatBotService.sendMessage(
+                sessionId, new ChatMessageRequest("질문"), MEMBER_ID);
+
+        // then
+        assertThat(response.get(1).referencedPage()).isNull();
+    }
+
+    @Test
+    @DisplayName("1차 요약본이 없는 주차에는 메시지를 전송할 수 없다.")
+    void sendMessageNoContext() {
+        // given
+        Long weekId = saveWeekWithoutSummary(MEMBER_ID);
+        Long sessionId = chatBotSessionService.createSession(
+                new ChatBotSessionCreateRequest(weekId, "DP 질문"), MEMBER_ID).chatBotSessionId();
+
+        // when & then
+        assertThatThrownBy(() -> chatBotService.sendMessage(
+                sessionId, new ChatMessageRequest("질문"), MEMBER_ID))
+                .isInstanceOfSatisfying(BusinessException.class, ex ->
+                        assertThat(ex.getErrorCode()).isEqualTo(ErrorCode.NO_CONTEXT));
+        assertThat(chatBotRepository.count()).isZero();
+    }
+
+    private void saveScriptPage(Long weekId, Integer pageNumber, String title, String content) {
+        Script script = scriptRepository.save(Script.builder()
+                .weekId(weekId)
+                .pageNumber(pageNumber)
+                .startSec(0)
+                .endSec(60)
+                .title(title)
+                .sequence(1)
+                .build());
+
+        scriptDetailRepository.save(ScriptDetail.builder()
+                .scriptId(script.getScriptId())
+                .timeSec(0)
+                .content(content)
+                .sequence(1)
+                .build());
+    }
+
+    private Long saveWeek(Long ownerId) {
+        Long lectureId = lectureRepository.save(
+                Lecture.builder()
+                        .memberId(ownerId)
+                        .title("알고리즘")
+                        .professorName("박지훈")
+                        .colorIndex(1)
+                        .build()
+        ).getLectureId();
+
+        Week week = Week.builder()
+                .lectureId(lectureId)
+                .title("1주차")
+                .weekDate(WEEK_DATE)
+                .build();
+        ReflectionTestUtils.setField(week, "firstSummaryMd", "1차 요약본 내용입니다.");
+
+        return weekRepository.save(week).getWeekId();
+    }
+
+    private Long saveWeekWithoutSummary(Long ownerId) {
+        Long lectureId = lectureRepository.save(
+                Lecture.builder()
+                        .memberId(ownerId)
+                        .title("알고리즘")
+                        .professorName("박지훈")
+                        .colorIndex(1)
+                        .build()
+        ).getLectureId();
+
+        return weekRepository.save(
+                Week.builder()
+                        .lectureId(lectureId)
+                        .title("1주차")
+                        .weekDate(WEEK_DATE)
+                        .build()
+        ).getWeekId();
+    }
+}

@@ -1,0 +1,128 @@
+package com.cramit.domain.chat;
+
+import com.cramit.domain.ai.GeminiChatBotClient;
+import com.cramit.domain.ai.dto.ChatAnswer;
+import com.cramit.domain.chat.dto.ChatMessageRequest;
+import com.cramit.domain.chat.dto.ChatMessageResponse;
+import com.cramit.domain.chat.entity.ChatMessage;
+import com.cramit.domain.chat.entity.ChatBotSession;
+import com.cramit.domain.chat.enums.SenderType;
+import com.cramit.domain.chat.repository.ChatBotRepository;
+import com.cramit.domain.chat.repository.ChatBotSessionRepository;
+import com.cramit.domain.chat.retrieval.ChatContextRetriever;
+import com.cramit.domain.chat.retrieval.PageContext;
+import com.cramit.domain.chat.retrieval.RetrievalResult;
+import com.cramit.domain.week.entity.Week;
+import com.cramit.domain.week.repository.WeekRepository;
+import com.cramit.global.exception.BusinessException;
+import com.cramit.global.exception.ErrorCode;
+import lombok.RequiredArgsConstructor;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.util.List;
+import java.util.stream.Collectors;
+
+@Service
+@RequiredArgsConstructor
+public class ChatBotService {
+
+    // 강의 내용과 무관하다고 판단된 질문에 Gemini 호출 없이 바로 돌려주는 고정 안내 문구.
+    static final String OFF_TOPIC_MESSAGE = "이 질문은 강의 내용과 관련이 없어 보여요. 강의 주제에 맞는 질문을 해주시면 답변해 드릴게요!";
+
+    private final ChatBotRepository chatBotRepository;
+    private final ChatBotSessionRepository chatBotSessionRepository;
+    private final WeekRepository weekRepository;
+    private final GeminiChatBotClient geminiChatBotClient;
+    private final ChatContextRetriever chatContextRetriever;
+
+    @Transactional(readOnly = true)
+    public List<ChatMessageResponse> getMessages(Long sessionId, Long memberId) {
+        ChatBotSession session = chatBotSessionRepository.findById(sessionId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.ENTITY_NOT_FOUND));
+
+        if (!session.isOwnedBy(memberId)) {
+            throw new BusinessException(ErrorCode.CHATBOT_ACCESS_DENIED);
+        }
+
+        List<ChatMessage> messages = chatBotRepository.findByChatBotSessionIdOrderByChatMessageIdAsc(sessionId);
+
+        return messages.stream()
+                .map(ChatMessageResponse::from)
+                .toList();
+    }
+
+    public List<ChatMessageResponse> sendMessage(Long sessionId, ChatMessageRequest request, Long memberId) {
+        ChatBotSession session = chatBotSessionRepository.findById(sessionId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.ENTITY_NOT_FOUND));
+
+        if (!session.isOwnedBy(memberId)) {
+            throw new BusinessException(ErrorCode.CHATBOT_ACCESS_DENIED);
+        }
+
+        // context 조회 (1차 요약본)
+        Week week = weekRepository.findById(session.getWeekId())
+                .orElseThrow(() -> new BusinessException(ErrorCode.ENTITY_NOT_FOUND));
+
+        if (week.getFirstSummaryMd() == null || week.getFirstSummaryMd().isBlank()) {
+            throw new BusinessException(ErrorCode.NO_CONTEXT);
+        }
+
+        // 질문과 관련된 페이지만 추려서 context로 쓰고, 후보가 없으면(스크립트 미존재 등) 1차 요약본으로 대체한다.
+        RetrievalResult retrieval = chatContextRetriever.retrieve(session.getWeekId(), request.message());
+        if (retrieval.offTopic()) {
+            return saveExchange(memberId, session.getWeekId(), sessionId, request.message(), OFF_TOPIC_MESSAGE, null);
+        }
+
+        List<PageContext> pages = retrieval.pages();
+        String context = pages.isEmpty() ? week.getFirstSummaryMd() : buildContext(pages);
+
+        // AI 응답을 먼저 받고, 성공했을 때만 질문과 답변을 함께 저장한다.
+        ChatAnswer result = geminiChatBotClient.ask(request.message(), context);
+
+        return saveExchange(memberId, session.getWeekId(), sessionId, request.message(), result.answer(),
+                validateReferencedPage(result.referencedPage(), pages));
+    }
+
+    private List<ChatMessageResponse> saveExchange(Long memberId, Long weekId, Long sessionId,
+                                                    String question, String answer, Integer referencedPage) {
+        ChatMessage userMessage = ChatMessage.builder()
+                .memberId(memberId)
+                .weekId(weekId)
+                .chatBotSessionId(sessionId)
+                .senderType(SenderType.USER)
+                .message(question)
+                .build();
+
+        ChatMessage aiMessage = ChatMessage.builder()
+                .memberId(memberId)
+                .weekId(weekId)
+                .chatBotSessionId(sessionId)
+                .senderType(SenderType.AI)
+                .message(answer)
+                .referencedPage(referencedPage)
+                .build();
+
+        chatBotRepository.saveAll(List.of(userMessage, aiMessage));
+
+        return List.of(
+                ChatMessageResponse.from(userMessage),
+                ChatMessageResponse.from(aiMessage)
+        );
+    }
+
+    private String buildContext(List<PageContext> pages) {
+        return pages.stream()
+                .map(PageContext::formatted)
+                .collect(Collectors.joining(PageContext.SEPARATOR));
+    }
+
+    // 모델이 근거로 제시한 페이지가 실제로 context에 포함된 후보인지 검증한다. 벗어나면 신뢰하지 않는다.
+    private Integer validateReferencedPage(Integer referencedPage, List<PageContext> candidates) {
+        if (referencedPage == null) {
+            return null;
+        }
+        boolean isCandidate = candidates.stream().anyMatch(page -> page.pageNumber().equals(referencedPage));
+        return isCandidate ? referencedPage : null;
+    }
+}

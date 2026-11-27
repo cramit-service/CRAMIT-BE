@@ -1,0 +1,2 @@
+ALTER TABLE member ADD COLUMN onboarding_completed BOOLEAN NOT NULL DEFAULT TRUE;
+ALTER TABLE member ALTER COLUMN onboarding_completed SET DEFAULT FALSE;
