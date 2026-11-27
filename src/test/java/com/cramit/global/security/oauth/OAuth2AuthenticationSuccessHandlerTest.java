@@ -38,9 +38,15 @@ class OAuth2AuthenticationSuccessHandlerTest {
 				response,
 				new UsernamePasswordAuthenticationToken(principal, null, principal.getAuthorities()));
 
-		assertThat(response.getRedirectedUrl())
-				.contains("accessToken=access-token")
-				.contains("isNewUser=true");
+		// URI를 통째로 contains 검사하면 accessToken이 쿼리에 있어도 통과해버려서, 쿼리와 fragment를
+		// 나눠서 accessToken은 fragment에만, isNewUser는 쿼리에만 있는지 각각 확인한다.
+		String redirectedUrl = response.getRedirectedUrl();
+		int fragmentIndex = redirectedUrl.indexOf('#');
+		String query = redirectedUrl.substring(0, fragmentIndex);
+		String fragment = redirectedUrl.substring(fragmentIndex + 1);
+
+		assertThat(query).contains("isNewUser=true").doesNotContain("accessToken");
+		assertThat(fragment).isEqualTo("accessToken=access-token");
 	}
 
 	@Test
