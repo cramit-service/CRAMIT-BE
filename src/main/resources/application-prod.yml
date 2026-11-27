@@ -11,6 +11,12 @@ spring:
     url: jdbc:postgresql://${DB_HOST}:${DB_PORT}/${DB_NAME}
     username: ${DB_USERNAME}
     password: ${DB_PASSWORD}
+    hikari:
+      maximum-pool-size: 10
+      minimum-idle: 5
+      connection-timeout: 30000
+      # 커넥션을 60초 넘게 반납하지 않으면 경고 로그를 남긴다 - 커넥션 누수를 운영 장애로 번지기 전에 잡기 위함.
+      leak-detection-threshold: 60000
   jpa:
     hibernate:
       ddl-auto: validate
