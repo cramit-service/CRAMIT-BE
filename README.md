@@ -193,6 +193,32 @@ sequenceDiagram
   ./gradlew bootRun
   ```
 
+- **Swagger**
+
+  ```text
+  http://localhost:8080/swagger-ui/index.html
+  ```
+
+<br>
+
+## 🏗️ 인프라 구성 관리 주체
+
+**CRAMIT-BE**는 저장소 안에서 코드로 관리하는 부분과, AWS·외부 서비스 콘솔에서 직접 관리하는 부분을 나누어 운영합니다.
+
+### 저장소에서 관리하는 구성
+
+- `docker-compose.yml` / `docker-compose.prod.yml`에서 app(Backend) · Redis · Nginx · certbot 컨테이너를 정의하고, 하나의 **AWS EC2** 인스턴스에서 함께 운영합니다.
+- `.github/workflows/cd.yml`에서 **GitHub Actions**가 OIDC로 발급받은 임시 자격 증명으로 EC2에 SSH 접속해, 별도 이미지 레지스트리(Docker Hub 등) 없이 EC2 안에서 직접 `docker compose build/up`까지 수행합니다.
+- `docker/nginx`, `docker/certbot`에서 리버스 프록시 설정과 Let's Encrypt 인증서 발급 스크립트를 관리합니다.
+- `application-prod.yml`에서 외부 PostgreSQL(RDS), S3/R2, OAuth Redirect URI 등 운영 환경 연동 설정을 관리합니다.
+
+### 저장소 외부(AWS 콘솔 등)에서 관리하는 인프라
+
+- **AWS RDS(PostgreSQL) · S3 / Cloudflare R2**: 영구 데이터와 파일 데이터를 분리해 저장하며, 각 콘솔에서 직접 프로비저닝합니다. 접속 정보는 환경 변수로만 주입합니다.
+- **도메인 · DNS**: 백엔드 도메인(`cramit-api.me`)의 DNS 레코드와 TLS 인증서 발급 상태는 레지스트라·서버에만 존재하며 저장소에 커밋되지 않습니다.
+- **GitHub Actions Secrets · IAM 최소 권한 정책 · CloudTrail**: 배포에 필요한 자격 증명과 AWS 계정 보안 설정은 각 콘솔의 UI로만 관리하고, 코드로 드러나지 않습니다.
+- **Kakao/Google OAuth 소셜 로그인 · Gemini API · Azure Speech**: 외부 서비스로 연동하여 운영 편의성, 데이터 안정성, 서비스 간 역할 분리 및 확장성을 확보했습니다.
+
 <br>
 
 ## 🔗 Git Convention
